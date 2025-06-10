@@ -1,0 +1,69 @@
+// File: src/api/index.test.ts
+
+import '@testing-library/jest-dom';
+import { api, computeMetrics, fetchBalanceSheet, fetchMetrics, importDropship, importShopee, reconcile } from './index';
+
+// Turn the axios‐style api.post and api.get into Jest mocks
+(api.post as jest.Mock) = jest.fn();
+(api.get  as jest.Mock) = jest.fn();
+
+describe('API layer', () => {
+  beforeEach(() => {
+    // Clear call history between tests
+    (api.post as jest.Mock).mockClear();
+    (api.get  as jest.Mock).mockClear();
+  });
+
+  it('importDropship calls api.post correctly and resolves data', async () => {
+    (api.post as jest.Mock).mockResolvedValue({ data: { success: true } });
+
+    const result = await importDropship('file.csv');
+    expect(api.post).toHaveBeenCalledWith('/dropship/import', { file_path: 'file.csv' });
+    expect(result).toEqual({ data: { success: true } });
+  });
+
+  it('importShopee calls api.post correctly and resolves data', async () => {
+    (api.post as jest.Mock).mockResolvedValue({ data: { imported: 5 } });
+
+    const result = await importShopee('orders.csv');
+    expect(api.post).toHaveBeenCalledWith('/shopee/import', { file_path: 'orders.csv' });
+    expect(result).toEqual({ data: { imported: 5 } });
+  });
+
+  it('reconcile calls api.post correctly and resolves', async () => {
+    (api.post as jest.Mock).mockResolvedValue({ data: { matched: true } });
+
+    const result = await reconcile('P1', 'O1', 'ShopX');
+    expect(api.post).toHaveBeenCalledWith('/reconcile', {
+      purchase_id: 'P1',
+      order_id:    'O1',
+      shop:        'ShopX',
+    });
+    expect(result).toEqual({ data: { matched: true } });
+  });
+
+  it('computeMetrics calls api.post correctly and resolves', async () => {
+    (api.post as jest.Mock).mockResolvedValue({ data: {} });
+
+    await expect(computeMetrics('ShopX', '2025-05')).resolves.toEqual({ data: {} });
+    expect(api.post).toHaveBeenCalledWith('/metrics', { shop: 'ShopX', period: '2025-05' });
+  });
+
+  it('fetchMetrics calls api.get and returns typed data', async () => {
+    const fakeMetric = { shop_username: 'ShopX', period: '2025-05', sum_revenue: 0, sum_cogs: 0, sum_fees: 0, net_profit: 42, ending_cash_balance: 100 };
+    (api.get as jest.Mock).mockResolvedValue({ data: fakeMetric });
+
+    const res = await fetchMetrics('ShopX', '2025-05');
+    expect(api.get).toHaveBeenCalledWith(`/metrics?shop=ShopX&period=2025-05`);
+    expect(res.data).toEqual(fakeMetric);
+  });
+
+  it('fetchBalanceSheet calls api.get and returns typed array', async () => {
+    const fakeSheet = [{ category: 'Assets', accounts: [], total: 500 }];
+    (api.get as jest.Mock).mockResolvedValue({ data: fakeSheet });
+
+    const res = await fetchBalanceSheet('ShopX', '2025-05');
+    expect(api.get).toHaveBeenCalledWith(`/balancesheet?shop=ShopX&period=2025-05`);
+    expect(res.data).toEqual(fakeSheet);
+  });
+});

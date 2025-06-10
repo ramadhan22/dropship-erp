@@ -1,0 +1,19 @@
+# Mac system files
+.DS_Store
+
+# Node modules (frontend)
+frontend/dropship-erp-ui/node_modules
+frontend/dropship-erp-ui/build
+
+# Go build artifacts
+backend/bin/
+backend/pkg/
+
+# IDE settings
+.vscode/
+
+# Log files
+*.log
+
+# Environment files
+**/*.env
