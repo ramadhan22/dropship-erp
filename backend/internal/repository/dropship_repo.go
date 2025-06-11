@@ -33,9 +33,20 @@ func (r *DropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.Dro
             :jenis_channel, :nama_toko, :kode_invoice_channel, :gudang_pengiriman,
             :jenis_ekspedisi, :cashless, :nomor_resi, :waktu_pengiriman,
             :provinsi, :kota
-        )`
+        )
+        ON CONFLICT (kode_pesanan) DO NOTHING`
 	_, err := r.db.NamedExecContext(ctx, query, p)
 	return err
+}
+
+// ExistsDropshipPurchase checks if a dropship purchase with the given kode_pesanan already exists.
+func (r *DropshipRepo) ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error) {
+	var exists bool
+	err := r.db.GetContext(ctx, &exists, `SELECT EXISTS(SELECT 1 FROM dropship_purchases WHERE kode_pesanan = $1)`, kodePesanan)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // InsertDropshipPurchaseDetail inserts a record into dropship_purchase_details.

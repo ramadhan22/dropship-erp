@@ -18,6 +18,7 @@ import (
 type DropshipRepoInterface interface {
 	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
+	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
@@ -52,6 +53,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error 
 	}
 
 	inserted := make(map[string]bool)
+	skipped := make(map[string]bool)
 
 	for {
 		record, err := reader.Read()
@@ -101,11 +103,23 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error 
 			Kota:                  record[26],
 		}
 
-		if !inserted[header.KodePesanan] {
-			if err := s.repo.InsertDropshipPurchase(ctx, header); err != nil {
-				return fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
+		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {
+			exists, err := s.repo.ExistsDropshipPurchase(ctx, header.KodePesanan)
+			if err != nil {
+				return fmt.Errorf("check exists %s: %w", header.KodePesanan, err)
 			}
-			inserted[header.KodePesanan] = true
+			if exists {
+				skipped[header.KodePesanan] = true
+			} else {
+				if err := s.repo.InsertDropshipPurchase(ctx, header); err != nil {
+					return fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
+				}
+				inserted[header.KodePesanan] = true
+			}
+		}
+
+		if skipped[header.KodePesanan] {
+			continue
 		}
 
 		detail := &models.DropshipPurchaseDetail{
