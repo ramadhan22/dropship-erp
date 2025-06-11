@@ -15,21 +15,40 @@ type Account struct {
 	UpdatedAt   time.Time `db:"updated_at"`
 }
 
-// DropshipPurchase represents the D2 table: dropship_purchases
+// DropshipPurchase represents the header table: dropship_purchases
 type DropshipPurchase struct {
-	ID             int64     `db:"id"`
-	SellerUsername string    `db:"seller_username"`
-	PurchaseID     string    `db:"purchase_id"`
-	OrderID        *string   `db:"order_id"` // NULLABLE
-	SKU            string    `db:"sku"`
-	Quantity       int       `db:"qty"`
-	PurchasePrice  float64   `db:"purchase_price"`
-	PurchaseFee    float64   `db:"purchase_fee"`
-	Status         string    `db:"status"`
-	PurchaseDate   time.Time `db:"purchase_date"`
-	SupplierName   *string   `db:"supplier_name"` // NULLABLE
-	CreatedAt      time.Time `db:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at"`
+	KodePesanan           string    `db:"kode_pesanan"`
+	KodeTransaksi         string    `db:"kode_transaksi"`
+	WaktuPesananTerbuat   time.Time `db:"waktu_pesanan_terbuat"`
+	StatusPesananTerakhir string    `db:"status_pesanan_terakhir"`
+	BiayaLainnya          float64   `db:"biaya_lainnya"`
+	BiayaMitraJakmall     float64   `db:"biaya_mitra_jakmall"`
+	TotalTransaksi        float64   `db:"total_transaksi"`
+	DibuatOleh            string    `db:"dibuat_oleh"`
+	JenisChannel          string    `db:"jenis_channel"`
+	NamaToko              string    `db:"nama_toko"`
+	KodeInvoiceChannel    string    `db:"kode_invoice_channel"`
+	GudangPengiriman      string    `db:"gudang_pengiriman"`
+	JenisEkspedisi        string    `db:"jenis_ekspedisi"`
+	Cashless              string    `db:"cashless"`
+	NomorResi             string    `db:"nomor_resi"`
+	WaktuPengiriman       time.Time `db:"waktu_pengiriman"`
+	Provinsi              string    `db:"provinsi"`
+	Kota                  string    `db:"kota"`
+}
+
+// DropshipPurchaseDetail represents the detail table: dropship_purchase_details
+type DropshipPurchaseDetail struct {
+	ID                      int64   `db:"id"`
+	KodePesanan             string  `db:"kode_pesanan"`
+	SKU                     string  `db:"sku"`
+	NamaProduk              string  `db:"nama_produk"`
+	HargaProduk             float64 `db:"harga_produk"`
+	Qty                     int     `db:"qty"`
+	TotalHargaProduk        float64 `db:"total_harga_produk"`
+	HargaProdukChannel      float64 `db:"harga_produk_channel"`
+	TotalHargaProdukChannel float64 `db:"total_harga_produk_channel"`
+	PotensiKeuntungan       float64 `db:"potensi_keuntungan"`
 }
 
 // ShopeeSettledOrder represents the D1 table: shopee_settled_orders

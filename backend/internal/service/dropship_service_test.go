@@ -8,22 +8,27 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // fakeDropshipRepo captures calls to InsertDropshipPurchase.
 type fakeDropshipRepo struct {
-	inserted []*models.DropshipPurchase
-	errOn    string // if PurchaseID equals this, return error
+	insertedHeader []*models.DropshipPurchase
+	insertedDetail []*models.DropshipPurchaseDetail
+	errOn          string
 }
 
 func (f *fakeDropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
-	if p.PurchaseID == f.errOn {
+	if p.KodePesanan == f.errOn {
 		return os.ErrInvalid
 	}
-	f.inserted = append(f.inserted, p)
+	f.insertedHeader = append(f.insertedHeader, p)
+	return nil
+}
+
+func (f *fakeDropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error {
+	f.insertedDetail = append(f.insertedDetail, d)
 	return nil
 }
 
@@ -37,15 +42,9 @@ func TestImportFromCSV_Success(t *testing.T) {
 
 	// Prepare CSV content
 	w := csv.NewWriter(tmp)
-	headers := []string{
-		"seller_username", "purchase_id", "order_id", "sku", "qty",
-		"purchase_price", "purchase_fee", "status", "purchase_date", "supplier_name",
-	}
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
 	w.Write(headers)
-	row := []string{
-		"MyShop", "PS-123", "", "SKU1", "2",
-		"15.75", "0.50", "completed", "2025-05-10", "SupplierA",
-	}
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-123", "TRX1", "SKU1", "ProdukA", "15.75", "2", "31.50", "1", "0.5", "33.0", "15.75", "31.50", "2.0", "user", "online", "MyShop", "INV1", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
 	w.Write(row)
 	w.Flush()
 	tmp.Close()
@@ -60,20 +59,16 @@ func TestImportFromCSV_Success(t *testing.T) {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
 
-	// Expect exactly one inserted purchase
-	if len(fake.inserted) != 1 {
-		t.Fatalf("expected 1 insert, got %d", len(fake.inserted))
+	if len(fake.insertedHeader) != 1 || len(fake.insertedDetail) != 1 {
+		t.Fatalf("expected 1 header and 1 detail insert, got %d/%d", len(fake.insertedHeader), len(fake.insertedDetail))
 	}
-	inserted := fake.inserted[0]
-	if inserted.PurchaseID != "PS-123" {
-		t.Errorf("expected PurchaseID 'PS-123', got '%s'", inserted.PurchaseID)
+	inserted := fake.insertedHeader[0]
+	if inserted.KodePesanan != "PS-123" {
+		t.Errorf("expected KodePesanan 'PS-123', got '%s'", inserted.KodePesanan)
 	}
-	if inserted.SKU != "SKU1" || inserted.Quantity != 2 {
-		t.Errorf("unexpected SKU/Quantity: %s/%d", inserted.SKU, inserted.Quantity)
-	}
-	// Check purchase_date was parsed
-	if !inserted.PurchaseDate.Equal(time.Date(2025, 5, 10, 0, 0, 0, 0, time.UTC)) {
-		t.Errorf("unexpected PurchaseDate: %v", inserted.PurchaseDate)
+	d := fake.insertedDetail[0]
+	if d.SKU != "SKU1" || d.Qty != 2 {
+		t.Errorf("unexpected SKU/Qty: %s/%d", d.SKU, d.Qty)
 	}
 }
 
@@ -86,12 +81,8 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	defer os.Remove(tmp.Name())
 
 	w := csv.NewWriter(tmp)
-	w.Write([]string{
-		"seller_username", "purchase_id", "order_id", "sku", "qty",
-		"purchase_price", "purchase_fee", "status", "purchase_date", "supplier_name",
-	})
-	// qty = "two" (invalid)
-	w.Write([]string{"MyShop", "PS-456", "", "SKU2", "two", "10.00", "0.25", "completed", "2025-05-11", ""})
+	w.Write([]string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"})
+	w.Write([]string{"1", "01 January 2025, 10:00:00", "selesai", "PS-456", "TRX1", "SKU2", "ProdukB", "15.00", "two", "30", "1", "0.5", "31.5", "15", "30", "2", "user", "online", "Shop", "INV", "G", "JNE", "Ya", "RESI", "02 January 2025, 10:00:00", "Jawa", "Bandung"})
 	w.Flush()
 	tmp.Close()
 
@@ -102,7 +93,7 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 		t.Fatal("expected parse error, got nil")
 	}
 	// The fake repo should not have been called
-	if len(fake.inserted) != 0 {
-		t.Errorf("expected no inserts, got %d", len(fake.inserted))
+	if len(fake.insertedHeader) != 0 {
+		t.Errorf("expected no inserts, got %d", len(fake.insertedHeader))
 	}
 }

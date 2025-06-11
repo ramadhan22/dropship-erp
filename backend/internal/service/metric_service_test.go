@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // fakes for each repo interface
@@ -40,12 +41,12 @@ func (f *fakeShopeeRepoM) ListShopeeOrdersByShopAndDate(
 }
 
 type fakeJournalRepoM struct {
-	data map[string][]AccountBalance
+	data map[string][]repository.AccountBalance
 }
 
 func (f *fakeJournalRepoM) GetAccountBalancesAsOf(
 	ctx context.Context, shop string, asOfDate time.Time,
-) ([]AccountBalance, error) {
+) ([]repository.AccountBalance, error) {
 	if bs, ok := f.data[shop]; ok {
 		return bs, nil
 	}
@@ -78,38 +79,43 @@ func TestCalculateAndCacheMetrics(t *testing.T) {
 
 	fDrop := &fakeDropRepoM{
 		data: map[string][]models.DropshipPurchase{
-			shop: {{
-				PurchaseID:     "DP-1",
-				SellerUsername: shop,
-				PurchasePrice:  50.00,
-				PurchaseFee:    2.00,
-				PurchaseDate:   start.AddDate(0, 0, 5),
-			}},
+			shop: {
+				{
+					KodePesanan:         "DP-1",
+					NamaToko:            shop,
+					TotalTransaksi:      52.00,
+					WaktuPesananTerbuat: start.AddDate(0, 0, 5),
+				},
+			},
 		},
 	}
 	fShopee := &fakeShopeeRepoM{
 		data: map[string][]models.ShopeeSettledOrder{
-			shop: {{
-				OrderID:         "SO-1",
-				NetIncome:       100.00,
-				ServiceFee:      3.00,
-				CampaignFee:     0.00,
-				CreditCardFee:   1.50,
-				ShippingSubsidy: 0.00,
-				TaxImportFee:    0.00,
-				SettledDate:     start.AddDate(0, 0, 10),
-			}},
+			shop: {
+				{
+					OrderID:         "SO-1",
+					NetIncome:       100.00,
+					ServiceFee:      3.00,
+					CampaignFee:     0.00,
+					CreditCardFee:   1.50,
+					ShippingSubsidy: 0.00,
+					TaxImportFee:    0.00,
+					SettledDate:     start.AddDate(0, 0, 10),
+				},
+			},
 		},
 	}
 	fJournal := &fakeJournalRepoM{
-		data: map[string][]AccountBalance{
-			shop: {{
-				AccountID:   1001,
-				AccountCode: "1001",
-				AccountName: "Cash",
-				AccountType: "Asset",
-				Balance:     200.00,
-			}},
+		data: map[string][]repository.AccountBalance{
+			shop: {
+				{
+					AccountID:   1001,
+					AccountCode: "1001",
+					AccountName: "Cash",
+					AccountType: "Asset",
+					Balance:     200.00,
+				},
+			},
 		},
 	}
 	fMetric := &fakeMetricRepoM{}
@@ -124,7 +130,7 @@ func TestCalculateAndCacheMetrics(t *testing.T) {
 		t.Fatalf("expected 1 CachedMetric, got %d", len(fMetric.saved))
 	}
 	cm := fMetric.saved[0]
-	// sumRevenue=100.00, sumFees=3+1.5=4.5, sumCOGS=50+2=52, netProfit=100-4.5-52=43.5
+	// sumRevenue=100.00, sumFees=3+1.5=4.5, sumCOGS=52, netProfit=100-4.5-52=43.5
 	if cm.NetProfit != 43.5 {
 		t.Errorf("unexpected NetProfit: %f", cm.NetProfit)
 	}

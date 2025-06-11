@@ -12,11 +12,6 @@ type DropshipRepo struct {
 	db *sqlx.DB
 }
 
-// UpdateDropshipPurchase implements service.DropshipRepoInterface2.
-func (r *DropshipRepo) UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
-	panic("unimplemented")
-}
-
 // NewDropshipRepo constructs a DropshipRepo given an *sqlx.DB connection.
 func NewDropshipRepo(db *sqlx.DB) *DropshipRepo {
 	return &DropshipRepo{db: db}
@@ -27,22 +22,44 @@ func NewDropshipRepo(db *sqlx.DB) *DropshipRepo {
 func (r *DropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
 	query := `
         INSERT INTO dropship_purchases (
-            seller_username, purchase_id, order_id, sku, qty,
-            purchase_price, purchase_fee, status, purchase_date, supplier_name
+            kode_pesanan, kode_transaksi, waktu_pesanan_terbuat, status_pesanan_terakhir,
+            biaya_lainnya, biaya_mitra_jakmall, total_transaksi, dibuat_oleh,
+            jenis_channel, nama_toko, kode_invoice_channel, gudang_pengiriman,
+            jenis_ekspedisi, cashless, nomor_resi, waktu_pengiriman,
+            provinsi, kota
         ) VALUES (
-            :seller_username, :purchase_id, :order_id, :sku, :qty,
-            :purchase_price, :purchase_fee, :status, :purchase_date, :supplier_name
+            :kode_pesanan, :kode_transaksi, :waktu_pesanan_terbuat, :status_pesanan_terakhir,
+            :biaya_lainnya, :biaya_mitra_jakmall, :total_transaksi, :dibuat_oleh,
+            :jenis_channel, :nama_toko, :kode_invoice_channel, :gudang_pengiriman,
+            :jenis_ekspedisi, :cashless, :nomor_resi, :waktu_pengiriman,
+            :provinsi, :kota
         )`
 	_, err := r.db.NamedExecContext(ctx, query, p)
 	return err
 }
 
+// InsertDropshipPurchaseDetail inserts a record into dropship_purchase_details.
+func (r *DropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error {
+	query := `
+        INSERT INTO dropship_purchase_details (
+            kode_pesanan, sku, nama_produk, harga_produk, qty,
+            total_harga_produk, harga_produk_channel, total_harga_produk_channel,
+            potensi_keuntungan
+        ) VALUES (
+            :kode_pesanan, :sku, :nama_produk, :harga_produk, :qty,
+            :total_harga_produk, :harga_produk_channel, :total_harga_produk_channel,
+            :potensi_keuntungan
+        )`
+	_, err := r.db.NamedExecContext(ctx, query, d)
+	return err
+}
+
 // GetDropshipPurchaseByID looks up a single row by purchase_id (the unique identifier in that table).
 // It fills a models.DropshipPurchase struct with all columns from that row.
-func (r *DropshipRepo) GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error) {
+func (r *DropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error) {
 	var p models.DropshipPurchase
 	err := r.db.GetContext(ctx, &p,
-		`SELECT * FROM dropship_purchases WHERE purchase_id = $1`, purchaseID)
+		`SELECT * FROM dropship_purchases WHERE kode_pesanan = $1`, kodePesanan)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +77,9 @@ func (r *DropshipRepo) ListDropshipPurchasesByShopAndDate(
 	var list []models.DropshipPurchase
 	err := r.db.SelectContext(ctx, &list,
 		`SELECT * FROM dropship_purchases
-         WHERE seller_username = $1
-           AND purchase_date BETWEEN $2 AND $3
-         ORDER BY purchase_date`,
+         WHERE nama_toko = $1
+           AND waktu_pesanan_terbuat BETWEEN $2 AND $3
+         ORDER BY waktu_pesanan_terbuat`,
 		shop, from, to)
 	return list, err
 }

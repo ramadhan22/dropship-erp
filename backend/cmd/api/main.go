@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
+	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
@@ -26,10 +27,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("DB connection failed: %v", err)
 	}
+	if err := migrations.Run(repo.DB.DB); err != nil {
+		log.Fatalf("DB migrations failed: %v", err)
+	}
 
 	// 3) Initialize services with the appropriate repo interfaces
 	dropshipSvc := service.NewDropshipService(repo.DropshipRepo)
-	shopeeSvc := service.NewShopeeService(repo.ShopeeRepo, repo.DropshipRepo)
+	shopeeSvc := service.NewShopeeService(repo.ShopeeRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
 	)
@@ -42,7 +46,7 @@ func main() {
 	router := gin.Default()
 	// CORS configuration – allow your Vite dev server origin
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5175"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5175"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
