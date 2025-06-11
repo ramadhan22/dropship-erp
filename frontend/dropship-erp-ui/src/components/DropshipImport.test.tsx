@@ -13,7 +13,7 @@ jest.mock("../api", () => ({
 describe("DropshipImport", () => {
   it("renders input and button", () => {
     render(<DropshipImport />);
-    expect(screen.getByLabelText(/Local file path/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/CSV file/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
   });
 
@@ -22,8 +22,9 @@ describe("DropshipImport", () => {
     (api.importDropship as jest.Mock).mockResolvedValue({} as any);
 
     render(<DropshipImport />);
-    fireEvent.change(screen.getByLabelText(/Local file path/i), {
-      target: { value: "data.csv" },
+    const file = new File(["data"], "data.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText(/CSV file/i), {
+      target: { files: [file] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 
@@ -33,12 +34,12 @@ describe("DropshipImport", () => {
   });
 
   it("shows error message on failure", async () => {
-    // Arrange: mock implementation of importDropship to reject
     (api.importDropship as jest.Mock).mockRejectedValue(new Error("boom"));
 
     render(<DropshipImport />);
-    fireEvent.change(screen.getByLabelText(/Local file path/i), {
-      target: { value: "bad.csv" },
+    const file = new File(["bad"], "bad.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText(/CSV file/i), {
+      target: { files: [file] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 

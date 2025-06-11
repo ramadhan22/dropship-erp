@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,11 +17,11 @@ import (
 
 // fakeDropshipService implements the DropshipServiceInterface for testing.
 type fakeDropshipService struct {
-	errOn string
+	fail bool
 }
 
-func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, path string) error {
-	if path == f.errOn {
+func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error {
+	if f.fail {
 		return errors.New("fail import")
 	}
 	return nil
@@ -35,9 +37,14 @@ func TestHandleImport_Success(t *testing.T) {
 	router := gin.New()
 	router.POST("/api/dropship/import", h.HandleImport)
 
-	body := `{"file_path":"good.csv"}`
-	req := httptest.NewRequest("POST", "/api/dropship/import", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "good.csv")
+	part.Write([]byte("csv"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/dropship/import", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -54,9 +61,7 @@ func TestHandleImport_BadRequest(t *testing.T) {
 	router := gin.New()
 	router.POST("/api/dropship/import", h.HandleImport)
 
-	// Missing file_path
-	req := httptest.NewRequest("POST", "/api/dropship/import", bytes.NewBufferString(`{}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("POST", "/api/dropship/import", nil)
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
@@ -66,16 +71,21 @@ func TestHandleImport_BadRequest(t *testing.T) {
 
 func TestHandleImport_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	svc := &fakeDropshipService{errOn: "bad.csv"}
+	svc := &fakeDropshipService{fail: true}
 	h := NewDropshipHandler(svc)
 
 	rec := httptest.NewRecorder()
 	router := gin.New()
 	router.POST("/api/dropship/import", h.HandleImport)
 
-	body := `{"file_path":"bad.csv"}`
-	req := httptest.NewRequest("POST", "/api/dropship/import", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "bad.csv")
+	part.Write([]byte("csv"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/dropship/import", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {

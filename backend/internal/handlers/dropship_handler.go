@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,7 @@ import (
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
-	ImportFromCSV(ctx context.Context, filePath string) error
+	ImportFromCSV(ctx context.Context, r io.Reader) error
 }
 
 type DropshipHandler struct {
@@ -22,14 +23,19 @@ func NewDropshipHandler(svc DropshipServiceInterface) *DropshipHandler {
 }
 
 func (h *DropshipHandler) HandleImport(c *gin.Context) {
-	var req struct {
-		FilePath string `json:"file_path" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
-	if err := h.svc.ImportFromCSV(context.Background(), req.FilePath); err != nil {
+	f, err := fileHeader.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer f.Close()
+
+	if err := h.svc.ImportFromCSV(context.Background(), f); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -7,7 +7,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"time"
 
@@ -46,14 +45,8 @@ func NewDropshipService(repo DropshipRepoInterface) *DropshipService {
 //	9: supplier_name
 //
 // Any parse error aborts the import and returns it.
-func (s *DropshipService) ImportFromCSV(ctx context.Context, filePath string) error {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("open CSV: %w", err)
-	}
-	defer f.Close()
-
-	reader := csv.NewReader(f)
+func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error {
+	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
 		return fmt.Errorf("read header: %w", err)
 	}
