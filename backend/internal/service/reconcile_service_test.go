@@ -24,8 +24,8 @@ func (f *fakeDropRepoRec) GetDropshipPurchaseByID(ctx context.Context, purchaseI
 	return nil, errors.New("not found")
 }
 func (f *fakeDropRepoRec) UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
-	if _, ok := f.data[p.PurchaseID]; ok {
-		f.data[p.PurchaseID] = p
+	if _, ok := f.data[p.KodePesanan]; ok {
+		f.data[p.KodePesanan] = p
 		return nil
 	}
 	return errors.New("not found")
@@ -74,7 +74,7 @@ func TestMatchAndJournal_Success(t *testing.T) {
 	// Prepare fake repos with preloaded data
 	fDrop := &fakeDropRepoRec{
 		data: map[string]*models.DropshipPurchase{
-			"DP-111": {PurchaseID: "DP-111", SellerUsername: "ShopA", PurchasePrice: 50.00},
+			"DP-111": {KodePesanan: "DP-111", TotalTransaksi: 50.00},
 		},
 	}
 	fShopee := &fakeShopeeRepoRec{

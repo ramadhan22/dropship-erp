@@ -89,7 +89,7 @@ func (s *MetricService) CalculateAndCacheMetrics(
 	}
 	var sumCOGS float64
 	for _, dp := range purchases {
-		sumCOGS += dp.PurchasePrice + dp.PurchaseFee
+		sumCOGS += dp.TotalTransaksi
 	}
 
 	// Calculate net profit

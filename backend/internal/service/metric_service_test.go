@@ -79,11 +79,10 @@ func TestCalculateAndCacheMetrics(t *testing.T) {
 	fDrop := &fakeDropRepoM{
 		data: map[string][]models.DropshipPurchase{
 			shop: {{
-				PurchaseID:     "DP-1",
-				SellerUsername: shop,
-				PurchasePrice:  50.00,
-				PurchaseFee:    2.00,
-				PurchaseDate:   start.AddDate(0, 0, 5),
+				KodePesanan:         "DP-1",
+				NamaToko:            shop,
+				TotalTransaksi:      52.00,
+				WaktuPesananTerbuat: start.AddDate(0, 0, 5),
 			}},
 		},
 	}
@@ -124,7 +123,7 @@ func TestCalculateAndCacheMetrics(t *testing.T) {
 		t.Fatalf("expected 1 CachedMetric, got %d", len(fMetric.saved))
 	}
 	cm := fMetric.saved[0]
-	// sumRevenue=100.00, sumFees=3+1.5=4.5, sumCOGS=50+2=52, netProfit=100-4.5-52=43.5
+	// sumRevenue=100.00, sumFees=3+1.5=4.5, sumCOGS=52, netProfit=100-4.5-52=43.5
 	if cm.NetProfit != 43.5 {
 		t.Errorf("unexpected NetProfit: %f", cm.NetProfit)
 	}

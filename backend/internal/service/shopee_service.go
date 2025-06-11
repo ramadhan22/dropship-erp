@@ -18,20 +18,15 @@ import (
 type ShopeeRepoInterface interface {
 	InsertShopeeOrder(ctx context.Context, o *models.ShopeeSettledOrder) error
 }
-type DropshipRepoInterface2 interface {
-	GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error)
-	UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
-}
 
 // ShopeeService handles CSV import of settled Shopee orders and links to dropship purchases.
 type ShopeeService struct {
 	shopeeRepo ShopeeRepoInterface
-	dropRepo   DropshipRepoInterface2
 }
 
 // NewShopeeService constructs a ShopeeService with the given repos.
-func NewShopeeService(sr ShopeeRepoInterface, dr DropshipRepoInterface2) *ShopeeService {
-	return &ShopeeService{shopeeRepo: sr, dropRepo: dr}
+func NewShopeeService(sr ShopeeRepoInterface) *ShopeeService {
+	return &ShopeeService{shopeeRepo: sr}
 }
 
 // ImportSettledOrdersCSV reads a Shopee CSV and:
@@ -72,11 +67,7 @@ func (s *ShopeeService) ImportSettledOrdersCSV(ctx context.Context, filePath str
 			return fmt.Errorf("parse settled_date '%s': %w", record[7], err)
 		}
 
-		// purchase_id might be at column 8 (if present), else empty
-		var purchaseID string
-		if len(record) > 8 {
-			purchaseID = record[8]
-		}
+		// purchase_id at column 8 is ignored with new schema
 
 		so := &models.ShopeeSettledOrder{
 			OrderID:         record[0],
@@ -95,17 +86,7 @@ func (s *ShopeeService) ImportSettledOrdersCSV(ctx context.Context, filePath str
 			return fmt.Errorf("insert order %s: %w", so.OrderID, err)
 		}
 
-		// If purchaseID is present, link DropshipPurchase
-		if purchaseID != "" {
-			dp, err := s.dropRepo.GetDropshipPurchaseByID(ctx, purchaseID)
-			if err == nil && dp != nil {
-				dp.OrderID = &so.OrderID
-				dp.UpdatedAt = time.Now()
-				if err := s.dropRepo.UpdateDropshipPurchase(ctx, dp); err != nil {
-					return fmt.Errorf("update DropshipPurchase %s: %w", purchaseID, err)
-				}
-			}
-		}
+		// linking to dropship purchases is no longer performed
 	}
 	return nil
 }

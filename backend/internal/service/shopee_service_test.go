@@ -25,28 +25,6 @@ func (f *fakeShopeeRepo) InsertShopeeOrder(ctx context.Context, o *models.Shopee
 	return nil
 }
 
-// fakeDropshipRepo2 simulates getting and updating DropshipPurchase.
-type fakeDropshipRepo2 struct {
-	storage map[string]*models.DropshipPurchase
-	errOn   string // if Get purchaseID == this, return error
-}
-
-func (f *fakeDropshipRepo2) GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error) {
-	if purchaseID == f.errOn {
-		return nil, errors.New("not found")
-	}
-	return f.storage[purchaseID], nil
-}
-
-func (f *fakeDropshipRepo2) UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
-	if existing, ok := f.storage[p.PurchaseID]; ok {
-		existing.OrderID = p.OrderID
-		existing.UpdatedAt = p.UpdatedAt
-		return nil
-	}
-	return errors.New("no such purchase")
-}
-
 func TestImportSettledOrdersCSV(t *testing.T) {
 	// Create a fake CSV in memory (represent it as []byte)
 	csvContent := []byte(`order_id,net_income,service_fee,campaign_fee,credit_card_fee,shipping_subsidy,tax_import_fee,settled_date,purchase_id,seller_username
@@ -60,13 +38,7 @@ SO-001,30.00,1.00,0.00,0.20,0.00,0.00,2025-05-15,DP-123,MyShop
 
 	// Setup fake repos
 	fakeS := &fakeShopeeRepo{}
-	fakeD := &fakeDropshipRepo2{
-		storage: map[string]*models.DropshipPurchase{
-			"DP-123": {PurchaseID: "DP-123", SellerUsername: "MyShop"},
-		},
-	}
-
-	svc := NewShopeeService(fakeS, fakeD)
+	svc := NewShopeeService(fakeS)
 
 	err := svc.ImportSettledOrdersCSV(context.Background(), tmp)
 	if err != nil {
@@ -82,9 +54,4 @@ SO-001,30.00,1.00,0.00,0.20,0.00,0.00,2025-05-15,DP-123,MyShop
 		t.Errorf("unexpected inserted Shopee: %+v", ins)
 	}
 
-	// Verify Dropship Purchase got linked
-	dp := fakeD.storage["DP-123"]
-	if dp.OrderID == nil || *dp.OrderID != "SO-001" {
-		t.Errorf("expected DropshipPurchase.OrderID to be 'SO-001', got %v", dp.OrderID)
-	}
 }

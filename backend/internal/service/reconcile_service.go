@@ -87,12 +87,12 @@ func (s *ReconcileService) MatchAndJournal(
 	}
 
 	// 4. Debit COGS (account_id=5001) and credit Cash (account_id=1001)
-	//    Amounts: dp.PurchasePrice debited, so.NetIncome credited
+	//    Amounts: dp.TotalTransaksi debited, so.NetIncome credited
 	jl1 := &models.JournalLine{
 		JournalID: journalID,
 		AccountID: 5001, // COGS
 		IsDebit:   true,
-		Amount:    dp.PurchasePrice,
+		Amount:    dp.TotalTransaksi,
 		Memo:      ptrString("COGS for " + purchaseID),
 	}
 	if err := s.journalRepo.InsertJournalLine(ctx, jl1); err != nil {
@@ -112,7 +112,7 @@ func (s *ReconcileService) MatchAndJournal(
 	// 5. Insert into reconciled_transactions
 	rt := &models.ReconciledTransaction{
 		ShopUsername: shop,
-		DropshipID:   &dp.PurchaseID,
+		DropshipID:   &dp.KodePesanan,
 		ShopeeID:     &so.OrderID,
 		Status:       "matched",
 		MatchedAt:    time.Now(),
