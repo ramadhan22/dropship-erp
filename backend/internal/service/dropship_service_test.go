@@ -3,9 +3,9 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/csv"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -33,28 +33,20 @@ func (f *fakeDropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *
 }
 
 func TestImportFromCSV_Success(t *testing.T) {
-	// Create a temporary CSV file
-	tmp, err := ioutil.TempFile("", "dspurchases-*.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmp.Name())
-
-	// Prepare CSV content
-	w := csv.NewWriter(tmp)
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
 	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
 	w.Write(headers)
 	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-123", "TRX1", "SKU1", "ProdukA", "15.75", "2", "31.50", "1", "0.5", "33.0", "15.75", "31.50", "2.0", "user", "online", "MyShop", "INV1", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
 	w.Write(row)
 	w.Flush()
-	tmp.Close()
 
 	// Use fake repo
 	fake := &fakeDropshipRepo{}
 	svc := NewDropshipService(fake)
 
 	ctx := context.Background()
-	err = svc.ImportFromCSV(ctx, tmp.Name())
+	err := svc.ImportFromCSV(ctx, &buf)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -73,22 +65,15 @@ func TestImportFromCSV_Success(t *testing.T) {
 }
 
 func TestImportFromCSV_ParseError(t *testing.T) {
-	// CSV with invalid qty (not an integer)
-	tmp, err := ioutil.TempFile("", "badqty-*.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmp.Name())
-
-	w := csv.NewWriter(tmp)
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
 	w.Write([]string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"})
 	w.Write([]string{"1", "01 January 2025, 10:00:00", "selesai", "PS-456", "TRX1", "SKU2", "ProdukB", "15.00", "two", "30", "1", "0.5", "31.5", "15", "30", "2", "user", "online", "Shop", "INV", "G", "JNE", "Ya", "RESI", "02 January 2025, 10:00:00", "Jawa", "Bandung"})
 	w.Flush()
-	tmp.Close()
 
 	fake := &fakeDropshipRepo{}
 	svc := NewDropshipService(fake)
-	err = svc.ImportFromCSV(context.Background(), tmp.Name())
+	err := svc.ImportFromCSV(context.Background(), &buf)
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
 	}

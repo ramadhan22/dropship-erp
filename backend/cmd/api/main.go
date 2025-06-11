@@ -3,11 +3,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
 	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
@@ -28,7 +30,11 @@ func main() {
 		log.Fatalf("DB connection failed: %v", err)
 	}
 	if err := migrations.Run(repo.DB.DB); err != nil {
-		log.Fatalf("DB migrations failed: %v", err)
+		if errors.Is(err, migrate.ErrNoChange) {
+			log.Printf("DB migrations: %v", err)
+		} else {
+			log.Fatalf("DB migrations failed: %v", err)
+		}
 	}
 
 	// 3) Initialize services with the appropriate repo interfaces

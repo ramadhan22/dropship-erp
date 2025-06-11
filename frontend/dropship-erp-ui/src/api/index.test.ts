@@ -17,8 +17,13 @@ describe('API layer', () => {
   it('importDropship calls api.post correctly and resolves data', async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { success: true } });
 
-    const result = await importDropship('file.csv');
-    expect(api.post).toHaveBeenCalledWith('/dropship/import', { file_path: 'file.csv' });
+    const file = new File(['data'], 'file.csv', { type: 'text/csv' });
+    const result = await importDropship(file);
+    expect(api.post).toHaveBeenCalledWith(
+      '/dropship/import',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
     expect(result).toEqual({ data: { success: true } });
   });
 

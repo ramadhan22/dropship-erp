@@ -3,7 +3,14 @@ module.exports = {
   testEnvironment: "jsdom",
   moduleFileExtensions: ["ts", "tsx", "js"],
   transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest"
+    "^.+\\.(ts|tsx)$": ["ts-jest", { useESM: true }]
+  },
+  extensionsToTreatAsEsm: [".ts", ".tsx"],
+  globals: {
+    "ts-jest": {
+      useESM: true,
+      tsconfig: "./tsconfig.json",
+    },
   },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"]
 };

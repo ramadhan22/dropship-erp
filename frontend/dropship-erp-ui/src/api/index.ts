@@ -4,15 +4,28 @@ import type { BalanceCategory, Metric } from "../types";
 // Base URL for API calls. In Jest/Node we read from process.env; in Vite builds
 // you can still set VITE_API_URL, otherwise we fall back to localhost.
 // Base URL for API calls – in Vite builds import.meta.env is available; otherwise we default to localhost
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080/api";
+let BASE_URL = process.env.VITE_API_URL ?? "http://localhost:8080/api";
+try {
+  // Access import.meta dynamically so tests running in CommonJS don't fail
+  const meta = Function("return import.meta")();
+  if (meta?.env?.VITE_API_URL) {
+    BASE_URL = meta.env.VITE_API_URL;
+  }
+} catch {
+  // ignore if import.meta is not available
+}
 
 export const api = axios.create({
   baseURL: BASE_URL,
 });
 
 // Dropship import
-export function importDropship(filePath: string) {
-  return api.post("/dropship/import", { file_path: filePath });
+export function importDropship(file: File) {
+  const data = new FormData();
+  data.append("file", file);
+  return api.post("/dropship/import", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 // Shopee import
