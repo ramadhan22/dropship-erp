@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
+	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
@@ -25,6 +26,9 @@ func main() {
 	repo, err := repository.NewPostgresRepository(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("DB connection failed: %v", err)
+	}
+	if err := migrations.Run(repo.DB.DB); err != nil {
+		log.Fatalf("DB migrations failed: %v", err)
 	}
 
 	// 3) Initialize services with the appropriate repo interfaces
