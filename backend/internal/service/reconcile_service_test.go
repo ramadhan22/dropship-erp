@@ -23,13 +23,6 @@ func (f *fakeDropRepoRec) GetDropshipPurchaseByID(ctx context.Context, purchaseI
 	}
 	return nil, errors.New("not found")
 }
-func (f *fakeDropRepoRec) UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
-	if _, ok := f.data[p.KodePesanan]; ok {
-		f.data[p.KodePesanan] = p
-		return nil
-	}
-	return errors.New("not found")
-}
 
 type fakeShopeeRepoRec struct {
 	data map[string]*models.ShopeeSettledOrder

@@ -12,9 +12,7 @@ import (
 
 // ReconcileRepoInterface defines just the methods needed from each repo.
 type ReconcileServiceDropshipRepo interface {
-	// We only need to update the Dropship record’s status or link.
 	GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error)
-	UpdateDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 }
 type ReconcileServiceShopeeRepo interface {
 	// We only need to fetch the settled order.
