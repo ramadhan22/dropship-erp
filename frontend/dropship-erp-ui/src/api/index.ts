@@ -4,7 +4,12 @@ import type { BalanceCategory, Metric } from "../types";
 // Base URL for API calls. In Jest/Node we read from process.env; in Vite builds
 // you can still set VITE_API_URL, otherwise we fall back to localhost.
 // Base URL for API calls – in Vite builds import.meta.env is available; otherwise we default to localhost
-let BASE_URL = process.env.VITE_API_URL ?? "http://localhost:8080/api";
+let BASE_URL = "http://localhost:8080/api";
+
+if (typeof process !== "undefined" && process.env?.VITE_API_URL) {
+  BASE_URL = process.env.VITE_API_URL;
+}
+
 try {
   // Access import.meta dynamically so tests running in CommonJS don't fail
   const meta = Function("return import.meta")();
