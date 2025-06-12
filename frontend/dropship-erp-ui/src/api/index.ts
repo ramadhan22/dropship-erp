@@ -103,6 +103,26 @@ export function listStores(channelId: number) {
 
 
 export function listShopeeSettled(params: {
+  channel?: string;
+  store?: string;
+  date?: string;
+  month?: string;
+  year?: string;
+  page?: number;
+  page_size?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  return api.get<{ data: ShopeeSettled[]; total: number }>(
+    `/shopee/settled?${q.toString()}`
+  );
+}
 
 export interface DropshipPurchaseList {
   data: DropshipPurchase[];
@@ -118,19 +138,6 @@ export function listDropshipPurchases(params: {
   page?: number;
   page_size?: number;
 }) {
-
-  const sp = new URLSearchParams();
-  if (params.channel) sp.append("channel", params.channel);
-  if (params.store) sp.append("store", params.store);
-  if (params.date) sp.append("date", params.date);
-  if (params.month) sp.append("month", params.month);
-  if (params.year) sp.append("year", params.year);
-  if (params.page) sp.append("page", String(params.page));
-  if (params.page_size) sp.append("page_size", String(params.page_size));
-  return api.get<{ data: ShopeeSettled[]; total: number }>(
-    `/shopee/settled?${sp.toString()}`,
-  );
-
   const q = new URLSearchParams();
   if (params.channel) q.append("channel", params.channel);
   if (params.store) q.append("store", params.store);
