@@ -15,6 +15,7 @@ type Repository struct {
 	JournalRepo   *JournalRepo
 	MetricRepo    *MetricRepo
 	ChannelRepo   *ChannelRepo
+	AccountRepo   *AccountRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -33,6 +34,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	journalRepo := NewJournalRepo(db)
 	metricRepo := NewMetricRepo(db)
 	channelRepo := NewChannelRepo(db)
+	accountRepo := NewAccountRepo(db)
 
 	return &Repository{
 		DB:            db,
@@ -42,6 +44,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		JournalRepo:   journalRepo,
 		MetricRepo:    metricRepo,
 		ChannelRepo:   channelRepo,
+		AccountRepo:   accountRepo,
 	}, nil
 }
 

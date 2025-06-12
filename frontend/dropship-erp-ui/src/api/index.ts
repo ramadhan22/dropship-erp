@@ -1,5 +1,11 @@
 import axios from "axios";
-import type { BalanceCategory, Metric, JenisChannel, Store } from "../types";
+import type {
+  BalanceCategory,
+  Metric,
+  JenisChannel,
+  Store,
+  Account,
+} from "../types";
 
 export interface ImportResponse {
   inserted: number;
@@ -90,4 +96,25 @@ export function listJenisChannels() {
 
 export function listStores(channelId: number) {
   return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
+}
+
+// === Accounts CRUD ===
+export function createAccount(acc: Partial<Account>) {
+  return api.post("/accounts", acc);
+}
+
+export function listAccounts() {
+  return api.get<Account[]>("/accounts");
+}
+
+export function getAccount(id: number) {
+  return api.get<Account>(`/accounts/${id}`);
+}
+
+export function updateAccount(id: number, acc: Partial<Account>) {
+  return api.put(`/accounts/${id}`, acc);
+}
+
+export function deleteAccount(id: number) {
+  return api.delete(`/accounts/${id}`);
 }
