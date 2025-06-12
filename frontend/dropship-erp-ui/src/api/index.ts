@@ -34,8 +34,12 @@ export function importDropship(file: File) {
 }
 
 // Shopee import
-export function importShopee(filePath: string) {
-  return api.post("/shopee/import", { file_path: filePath });
+export function importShopee(file: File) {
+  const data = new FormData();
+  data.append("file", file);
+  return api.post("/shopee/import", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 // Reconcile

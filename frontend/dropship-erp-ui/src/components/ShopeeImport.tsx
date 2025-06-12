@@ -1,9 +1,9 @@
-import { Alert, Button, TextField } from "@mui/material";
+import { Alert, Button } from "@mui/material";
 import { useState } from "react";
 import { importShopee } from "../api";
 
 export default function ShopeeImport() {
-  const [path, setPath] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -11,7 +11,8 @@ export default function ShopeeImport() {
 
   const handleSubmit = async () => {
     try {
-      await importShopee(path);
+      if (!file) return;
+      await importShopee(file);
       setMsg({ type: "success", text: "Shopee import successful!" });
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -20,12 +21,11 @@ export default function ShopeeImport() {
 
   return (
     <div>
-      <h2>Import Shopee CSV</h2>
-      <TextField
-        label="Local file path"
-        fullWidth
-        value={path}
-        onChange={(e) => setPath(e.target.value)}
+      <h2>Import Shopee XLSX</h2>
+      <input
+        type="file"
+        aria-label="XLSX file"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
       />
       <Button variant="contained" onClick={handleSubmit} sx={{ mt: 2 }}>
         Import

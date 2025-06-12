@@ -16,8 +16,11 @@ describe("ShopeeImport", () => {
     (api.importShopee as jest.Mock).mockResolvedValue({} as any);
 
     render(<ShopeeImport />);
-    fireEvent.change(screen.getByLabelText(/Local file path/i), {
-      target: { value: "orders.csv" },
+    const file = new File(["data"], "orders.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    fireEvent.change(screen.getByLabelText(/XLSX file/i), {
+      target: { files: [file] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 
@@ -31,8 +34,11 @@ describe("ShopeeImport", () => {
     (api.importShopee as jest.Mock).mockRejectedValue(new Error("fail"));
 
     render(<ShopeeImport />);
-    fireEvent.change(screen.getByLabelText(/Local file path/i), {
-      target: { value: "bad.csv" },
+    const file = new File(["bad"], "bad.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    fireEvent.change(screen.getByLabelText(/XLSX file/i), {
+      target: { files: [file] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 

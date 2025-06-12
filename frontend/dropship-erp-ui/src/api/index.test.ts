@@ -30,8 +30,13 @@ describe('API layer', () => {
   it('importShopee calls api.post correctly and resolves data', async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { imported: 5 } });
 
-    const result = await importShopee('orders.csv');
-    expect(api.post).toHaveBeenCalledWith('/shopee/import', { file_path: 'orders.csv' });
+    const file = new File(['data'], 'orders.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const result = await importShopee(file);
+    expect(api.post).toHaveBeenCalledWith(
+      '/shopee/import',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
     expect(result).toEqual({ data: { imported: 5 } });
   });
 
