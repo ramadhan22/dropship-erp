@@ -9,7 +9,7 @@ The backend lives under [`backend`](backend) and exposes a REST API using [Gin](
 Main features:
 
 - Import dropship purchases from CSV files.
-- Import settled Shopee orders from CSV files.
+- Import settled Shopee orders from XLSX files.
 - Reconcile purchases with orders which creates journal entries and lines.
 - Calculate revenue/COGS/fees/net profit metrics and cache them.
 - Retrieve balance sheet data grouped by Assets, Liabilities and Equity.

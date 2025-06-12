@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,14 +15,14 @@ import (
 
 // fake service
 type fakeShopeeService struct {
-	errOn string
+	err bool
 }
 
-func (f *fakeShopeeService) ImportSettledOrdersCSV(ctx context.Context, path string) error {
-	if path == f.errOn {
-		return errors.New("fail import")
+func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error) {
+	if f.err {
+		return 0, errors.New("fail import")
 	}
-	return nil
+	return 1, nil
 }
 
 func TestShopeeHandleImport_Success(t *testing.T) {
@@ -32,8 +34,14 @@ func TestShopeeHandleImport_Success(t *testing.T) {
 	r := gin.New()
 	r.POST("/api/shopee/import", h.HandleImport)
 
-	req := httptest.NewRequest("POST", "/api/shopee/import", bytes.NewBufferString(`{"file_path":"ok.csv"}`))
-	req.Header.Set("Content-Type", "application/json")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "ok.xlsx")
+	part.Write([]byte("xlsx"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/shopee/import", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	r.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -43,15 +51,21 @@ func TestShopeeHandleImport_Success(t *testing.T) {
 
 func TestShopeeHandleImport_Error(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	svc := &fakeShopeeService{errOn: "bad.csv"}
+	svc := &fakeShopeeService{err: true}
 	h := NewShopeeHandler(svc)
 
 	rec := httptest.NewRecorder()
 	r := gin.New()
 	r.POST("/api/shopee/import", h.HandleImport)
 
-	req := httptest.NewRequest("POST", "/api/shopee/import", bytes.NewBufferString(`{"file_path":"bad.csv"}`))
-	req.Header.Set("Content-Type", "application/json")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "bad.xlsx")
+	part.Write([]byte("xlsx"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/shopee/import", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	r.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusInternalServerError {
