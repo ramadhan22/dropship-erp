@@ -35,7 +35,8 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 	}
 	defer f.Close()
 
-	count, err := h.svc.ImportSettledOrdersXLSX(context.Background(), f)
+	ctx := c.Request.Context()
+	count, err := h.svc.ImportSettledOrdersXLSX(ctx, f)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
