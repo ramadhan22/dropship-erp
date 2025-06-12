@@ -94,3 +94,40 @@ func (r *DropshipRepo) ListDropshipPurchasesByShopAndDate(
 		shop, from, to)
 	return list, err
 }
+
+// ListDropshipPurchases returns dropship purchases filtered by optional channel,
+// store, date, month and year with pagination.
+// Empty filter values are ignored. Pagination uses limit & offset.
+func (r *DropshipRepo) ListDropshipPurchases(
+	ctx context.Context,
+	channel, store, date, month, year string,
+	limit, offset int,
+) ([]models.DropshipPurchase, int, error) {
+	countQuery := `SELECT COUNT(*) FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) = $3::date)
+                  AND ($4 = '' OR EXTRACT(MONTH FROM waktu_pesanan_terbuat) = $4::int)
+                  AND ($5 = '' OR EXTRACT(YEAR FROM waktu_pesanan_terbuat) = $5::int)`
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery,
+		channel, store, date, month, year); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT * FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) = $3::date)
+                  AND ($4 = '' OR EXTRACT(MONTH FROM waktu_pesanan_terbuat) = $4::int)
+                  AND ($5 = '' OR EXTRACT(YEAR FROM waktu_pesanan_terbuat) = $5::int)
+                ORDER BY waktu_pesanan_terbuat DESC
+                LIMIT $6 OFFSET $7`
+	var list []models.DropshipPurchase
+	err := r.db.SelectContext(ctx, &list, query,
+		channel, store, date, month, year, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
