@@ -28,7 +28,7 @@ import type {
 } from "../types";
 
 export default function DropshipImport() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -89,13 +89,17 @@ export default function DropshipImport() {
 
   const handleSubmit = async () => {
     try {
-      if (!file) return;
-      const res = await importDropship(file);
+      if (!files || files.length === 0) return;
+      let inserted = 0;
+      for (const f of Array.from(files)) {
+        const res = await importDropship(f);
+        inserted += res.data.inserted;
+      }
       setMsg({
         type: "success",
-        text: `Imported ${res.data.inserted} rows successfully!`,
+        text: `Imported ${inserted} rows from ${files.length} files successfully!`,
       });
-      setFile(null);
+      setFiles(null);
       fetchData();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -285,8 +289,9 @@ export default function DropshipImport() {
         <DialogContent>
           <input
             type="file"
-            aria-label="CSV file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            multiple
+            aria-label="CSV files"
+            onChange={(e) => setFiles(e.target.files)}
           />
           {msg && (
             <Alert severity={msg.type} sx={{ mt: 2 }}>

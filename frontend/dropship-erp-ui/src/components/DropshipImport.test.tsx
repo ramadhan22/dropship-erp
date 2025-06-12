@@ -23,30 +23,31 @@ describe("DropshipImport", () => {
     const btn = screen.getByRole("button", { name: /Import/i });
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
-    expect(screen.getByLabelText(/CSV file/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/CSV files/i)).toBeInTheDocument();
   });
 
   it("shows success message on successful import", async () => {
-    // Arrange: mock implementation of importDropship to resolve
-    (api.importDropship as jest.Mock).mockResolvedValue({
-      data: { inserted: 3 },
-    });
+    (api.importDropship as jest.Mock)
+      .mockResolvedValueOnce({ data: { inserted: 2 } })
+      .mockResolvedValueOnce({ data: { inserted: 1 } });
 
     render(<DropshipImport />);
     await waitFor(() => expect(api.listDropshipPurchases).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
     const dialog = await screen.findByRole("dialog");
-    const file = new File(["data"], "data.csv", { type: "text/csv" });
-    fireEvent.change(within(dialog).getByLabelText(/CSV file/i), {
-      target: { files: [file] },
+    const file1 = new File(["data1"], "1.csv", { type: "text/csv" });
+    const file2 = new File(["data2"], "2.csv", { type: "text/csv" });
+    fireEvent.change(within(dialog).getByLabelText(/CSV files/i), {
+      target: { files: [file1, file2] },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: /Import/i }));
 
     await waitFor(() =>
       expect(
-        screen.getByText(/Imported 3 rows successfully!/i),
+        screen.getByText(/Imported 3 rows from 2 files successfully!/i),
       ).toBeInTheDocument(),
     );
+    expect(api.importDropship).toHaveBeenCalledTimes(2);
   });
 
   it("shows error message on failure", async () => {
@@ -57,7 +58,7 @@ describe("DropshipImport", () => {
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
     const dialog = await screen.findByRole("dialog");
     const file = new File(["bad"], "bad.csv", { type: "text/csv" });
-    fireEvent.change(within(dialog).getByLabelText(/CSV file/i), {
+    fireEvent.change(within(dialog).getByLabelText(/CSV files/i), {
       target: { files: [file] },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: /Import/i }));
