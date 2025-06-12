@@ -10,7 +10,7 @@ import (
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
-	ImportFromCSV(ctx context.Context, r io.Reader) error
+	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
 }
 
 type DropshipHandler struct {
@@ -35,9 +35,10 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 	}
 	defer f.Close()
 
-	if err := h.svc.ImportFromCSV(context.Background(), f); err != nil {
+	count, err := h.svc.ImportFromCSV(context.Background(), f)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "dropship import successful"})
+	c.JSON(http.StatusOK, gin.H{"inserted": count})
 }

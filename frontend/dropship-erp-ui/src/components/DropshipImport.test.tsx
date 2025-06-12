@@ -19,7 +19,9 @@ describe("DropshipImport", () => {
 
   it("shows success message on successful import", async () => {
     // Arrange: mock implementation of importDropship to resolve
-    (api.importDropship as jest.Mock).mockResolvedValue({} as any);
+    (api.importDropship as jest.Mock).mockResolvedValue({
+      data: { inserted: 3 },
+    });
 
     render(<DropshipImport />);
     const file = new File(["data"], "data.csv", { type: "text/csv" });
@@ -29,7 +31,9 @@ describe("DropshipImport", () => {
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Imported successfully!/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Imported 3 rows successfully!/i),
+      ).toBeInTheDocument(),
     );
   });
 

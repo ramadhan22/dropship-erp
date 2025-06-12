@@ -13,7 +13,9 @@ jest.mock("../api", () => ({
 describe("ShopeeImport", () => {
   it("shows success message on successful import", async () => {
     // Arrange: mock implementation of importShopee to resolve
-    (api.importShopee as jest.Mock).mockResolvedValue({} as any);
+    (api.importShopee as jest.Mock).mockResolvedValue({
+      data: { inserted: 2 },
+    });
 
     render(<ShopeeImport />);
     const file = new File(["data"], "orders.xlsx", {
@@ -25,7 +27,9 @@ describe("ShopeeImport", () => {
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Shopee import successful!/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Imported 2 rows successfully!/i),
+      ).toBeInTheDocument(),
     );
   });
 

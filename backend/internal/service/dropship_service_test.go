@@ -51,9 +51,12 @@ func TestImportFromCSV_Success(t *testing.T) {
 	svc := NewDropshipService(fake)
 
 	ctx := context.Background()
-	err := svc.ImportFromCSV(ctx, &buf)
+	count, err := svc.ImportFromCSV(ctx, &buf)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected count 1, got %d", count)
 	}
 
 	if len(fake.insertedHeader) != 1 || len(fake.insertedDetail) != 1 {
@@ -78,9 +81,12 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 
 	fake := &fakeDropshipRepo{}
 	svc := NewDropshipService(fake)
-	err := svc.ImportFromCSV(context.Background(), &buf)
+	count, err := svc.ImportFromCSV(context.Background(), &buf)
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
+	}
+	if count != 0 {
+		t.Errorf("expected count 0, got %d", count)
 	}
 	// The fake repo should not have been called
 	if len(fake.insertedHeader) != 0 {
@@ -99,8 +105,12 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
 	svc := NewDropshipService(fake)
-	if err := svc.ImportFromCSV(context.Background(), &buf); err != nil {
+	count, err := svc.ImportFromCSV(context.Background(), &buf)
+	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected count 0, got %d", count)
 	}
 	if len(fake.insertedHeader) != 0 || len(fake.insertedDetail) != 0 {
 		t.Fatalf("expected no inserts, got %d/%d", len(fake.insertedHeader), len(fake.insertedDetail))

@@ -46,26 +46,28 @@ func NewDropshipService(repo DropshipRepoInterface) *DropshipService {
 //	9: supplier_name
 //
 // Any parse error aborts the import and returns it.
-func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error {
+// ImportFromCSV inserts rows from a CSV reader and returns how many rows were inserted.
+func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, error) {
 	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
-		return fmt.Errorf("read header: %w", err)
+		return 0, fmt.Errorf("read header: %w", err)
 	}
 
 	inserted := make(map[string]bool)
 	skipped := make(map[string]bool)
+	count := 0
 
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return fmt.Errorf("read row: %w", err)
+			return count, fmt.Errorf("read row: %w", err)
 		}
 
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
-			return fmt.Errorf("parse qty '%s': %w", record[8], err)
+			return count, fmt.Errorf("parse qty '%s': %w", record[8], err)
 		}
 		hargaProduk, _ := strconv.ParseFloat(record[7], 64)
 		totalHargaProduk, _ := strconv.ParseFloat(record[9], 64)
@@ -78,7 +80,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error 
 
 		waktuPesanan, err := time.Parse("02 January 2006, 15:04:05", record[1])
 		if err != nil {
-			return fmt.Errorf("parse waktu_pesanan '%s': %w", record[1], err)
+			return count, fmt.Errorf("parse waktu_pesanan '%s': %w", record[1], err)
 		}
 		waktuKirim, _ := time.Parse("02 January 2006, 15:04:05", record[24])
 
@@ -106,13 +108,13 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error 
 		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {
 			exists, err := s.repo.ExistsDropshipPurchase(ctx, header.KodePesanan)
 			if err != nil {
-				return fmt.Errorf("check exists %s: %w", header.KodePesanan, err)
+				return count, fmt.Errorf("check exists %s: %w", header.KodePesanan, err)
 			}
 			if exists {
 				skipped[header.KodePesanan] = true
 			} else {
 				if err := s.repo.InsertDropshipPurchase(ctx, header); err != nil {
-					return fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
+					return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
 				}
 				inserted[header.KodePesanan] = true
 			}
@@ -134,8 +136,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error 
 			PotensiKeuntungan:       potensi,
 		}
 		if err := s.repo.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
-			return fmt.Errorf("insert detail %s: %w", header.KodePesanan, err)
+			return count, fmt.Errorf("insert detail %s: %w", header.KodePesanan, err)
 		}
+		count++
 	}
-	return nil
+	return count, nil
 }

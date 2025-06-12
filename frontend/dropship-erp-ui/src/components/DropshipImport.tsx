@@ -12,8 +12,11 @@ export default function DropshipImport() {
   const handleSubmit = async () => {
     try {
       if (!file) return;
-      await importDropship(file);
-      setMsg({ type: "success", text: "Imported successfully!" });
+      const res = await importDropship(file);
+      setMsg({
+        type: "success",
+        text: `Imported ${res.data.inserted} rows successfully!`,
+      });
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }

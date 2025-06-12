@@ -12,8 +12,11 @@ export default function ShopeeImport() {
   const handleSubmit = async () => {
     try {
       if (!file) return;
-      await importShopee(file);
-      setMsg({ type: "success", text: "Shopee import successful!" });
+      const res = await importShopee(file);
+      setMsg({
+        type: "success",
+        text: `Imported ${res.data.inserted} rows successfully!`,
+      });
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
