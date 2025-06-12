@@ -13,6 +13,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  BarChart,
+  Bar,
 } from "recharts";
 
 export default function SalesSummaryPage() {
@@ -24,6 +26,9 @@ export default function SalesSummaryPage() {
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
+  const [countData, setCountData] = useState<{ date: string; count: number }[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
@@ -51,13 +56,22 @@ export default function SalesSummaryPage() {
         page: 1,
         page_size: 1000,
       });
-      const map = new Map<string, number>();
+      const amountMap = new Map<string, number>();
+      const countMap = new Map<string, number>();
+      let totalAmt = 0;
       res.data.data.forEach((d) => {
-        const key = new Date(d.waktu_pesanan_dibuat).toISOString().split("T")[0];
-        map.set(key, (map.get(key) || 0) + d.total_penerimaan);
+        const dateStr = (d as any).waktu_pesanan_dibuat ?? (d as any).tanggal_dana_dilepaskan;
+        const key = new Date(dateStr).toISOString().split("T")[0];
+        amountMap.set(key, (amountMap.get(key) || 0) + d.total_penerimaan);
+        countMap.set(key, (countMap.get(key) || 0) + 1);
+        totalAmt += d.total_penerimaan;
       });
-      const arr = Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+      const arr = Array.from(amountMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+      const arrCount = Array.from(countMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
       setData(arr.map(([date, total]) => ({ date, total })));
+      setCountData(arrCount.map(([date, count]) => ({ date, count })));
+      setTotalRevenue(totalAmt);
+      setTotalOrders(res.data.data.length);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -119,13 +133,23 @@ export default function SalesSummaryPage() {
           {msg.text}
         </Alert>
       )}
-      <LineChart width={600} height={300} data={data}>
+      <div style={{ marginBottom: "1rem" }}>
+        <strong>Total Revenue:</strong> {totalRevenue} | <strong>Total Orders:</strong> {totalOrders}
+      </div>
+      <LineChart width={600} height={300} data={data} style={{ marginBottom: "1rem" }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
         <YAxis />
         <Tooltip />
         <Line type="monotone" dataKey="total" stroke="#8884d8" />
       </LineChart>
+      <BarChart width={600} height={300} data={countData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="count" fill="#82ca9d" />
+      </BarChart>
     </div>
   );
 }
