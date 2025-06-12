@@ -14,8 +14,8 @@ import (
 )
 
 // expectedHeaders lists column names (excluding the leading "No." column)
-// that must appear in the header row at index 4. These were derived from the
-// provided sample file.
+// that must appear in the header row at index 5. These were derived from the
+// provided sample file located under sample_data.
 var expectedHeaders = []string{
 	"No. Pesanan",
 	"No. Pengajuan",
@@ -26,24 +26,25 @@ var expectedHeaders = []string{
 	"Harga Asli Produk",
 	"Total Diskon Produk",
 	"Jumlah Pengembalian Dana ke Pembeli",
-	"Komisi Shopee",
-	"Biaya Admin Shopee",
-	"Biaya Layanan",
-	"Biaya Layanan Ekstra",
-	"Biaya Penyedia Pembayaran",
-	"Asuransi",
-	"Total Biaya Transaksi",
-	"Biaya Pengiriman",
-	"Total Diskon Pengiriman",
-	"Promo Gratis Ongkir Shopee",
-	"Promo Gratis Ongkir dari Penjual",
-	"Promo Diskon Shopee",
-	"Promo Diskon Penjual",
-	"Cashback Shopee",
-	"Cashback Penjual",
-	"Koin Shopee",
-	"Potongan Lainnya",
-	"Total Penerimaan",
+	"Diskon Produk dari Shopee",
+	"Diskon Voucher Ditanggung Penjual",
+	"Cashback Koin yang Ditanggung Penjual",
+	"Ongkir Dibayar Pembeli",
+	"Diskon Ongkir Ditanggung Jasa Kirim",
+	"Gratis Ongkir dari Shopee",
+	"Ongkir yang Diteruskan oleh Shopee ke Jasa Kirim",
+	"Ongkos Kirim Pengembalian Barang",
+	"Pengembalian Biaya Kirim",
+	"Biaya Komisi AMS",
+	"Biaya Administrasi",
+	"Biaya Layanan (termasuk PPN 11%)",
+	"Premi",
+	"Biaya Program",
+	"Biaya Kartu Kredit",
+	"Biaya Kampanye",
+	"Bea Masuk, PPN & PPh",
+	"Total Penghasilan",
+	"Kode Voucher",
 	"Kompensasi",
 	"Promo Gratis Ongkir dari Penjual",
 	"Jasa Kirim",
@@ -51,8 +52,8 @@ var expectedHeaders = []string{
 	"Pengembalian Dana ke Pembeli",
 	"Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang",
 	"Pro-rata Voucher Shopee untuk Pengembalian Barang",
-	"Pro-rated Bank Payment Channel Promotion for returns",
-	"Pro-rated Shopee Payment Channel Promotion for returns",
+	"Pro-rated Bank Payment Channel Promotion  for return refund Items",
+	"Pro-rated Shopee Payment Channel Promotion  for return refund Items",
 }
 
 // ShopeeRepoInterface defines methods used by ShopeeService.
@@ -88,13 +89,13 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		return 0, fmt.Errorf("read rows: %w", err)
 	}
 
-	// Validate header row at index 4 matches expected columns (after the
+	// Validate header row at index 5 matches expected columns (after the
 	// first \"No.\" column). If headers don't match we fail early so the
 	// caller is aware the template changed.
-	if len(rows) <= 4 {
+	if len(rows) <= 5 {
 		return 0, fmt.Errorf("header row missing")
 	}
-	header := rows[4]
+	header := rows[5]
 	if len(header) < len(expectedHeaders)+1 { // +1 for the \"No.\" column
 		return 0, fmt.Errorf("invalid header length")
 	}
@@ -105,7 +106,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	}
 
 	inserted := 0
-	for i := 5; i < len(rows); i++ {
+	for i := 6; i < len(rows); i++ {
 		row := rows[i]
 		if len(row) < 37 {
 			continue
@@ -223,27 +224,28 @@ func parseShopeeRow(row []string) (*models.ShopeeSettled, error) {
 	if res.TotalPenerimaan, err = parseFloat(row[27]); err != nil {
 		return nil, err
 	}
-	if res.Kompensasi, err = parseFloat(row[28]); err != nil {
+	// skip row[28] which stores voucher code in the new template
+	if res.Kompensasi, err = parseFloat(row[29]); err != nil {
 		return nil, err
 	}
-	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[29]); err != nil {
+	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[30]); err != nil {
 		return nil, err
 	}
-	res.JasaKirim = row[30]
-	res.NamaKurir = row[31]
-	if res.PengembalianDanaKePembeli, err = parseFloat(row[32]); err != nil {
+	res.JasaKirim = row[31]
+	res.NamaKurir = row[32]
+	if res.PengembalianDanaKePembeli, err = parseFloat(row[33]); err != nil {
 		return nil, err
 	}
-	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[33]); err != nil {
+	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[34]); err != nil {
 		return nil, err
 	}
-	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[34]); err != nil {
+	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[35]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[35]); err != nil {
+	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[36]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[36]); err != nil {
+	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[37]); err != nil {
 		return nil, err
 	}
 	return res, nil
