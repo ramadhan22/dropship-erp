@@ -18,9 +18,9 @@ export interface Account {
 }
 
 export interface BalanceCategory {
-  category: string;       // e.g. "Assets"
-  accounts: Account[];    // list of accounts in this category
-  total: number;          // aggregated total
+  category: string; // e.g. "Assets"
+  accounts: Account[]; // list of accounts in this category
+  total: number; // aggregated total
 }
 
 export interface JenisChannel {
@@ -32,4 +32,25 @@ export interface Store {
   store_id: number;
   jenis_channel_id: number;
   nama_toko: string;
+}
+
+export interface DropshipPurchase {
+  kode_pesanan: string;
+  kode_transaksi: string;
+  waktu_pesanan_terbuat: string;
+  status_pesanan_terakhir: string;
+  biaya_lainnya: number;
+  biaya_mitra_jakmall: number;
+  total_transaksi: number;
+  dibuat_oleh: string;
+  jenis_channel: string;
+  nama_toko: string;
+  kode_invoice_channel: string;
+  gudang_pengiriman: string;
+  jenis_ekspedisi: string;
+  cashless: string;
+  nomor_resi: string;
+  waktu_pengiriman: string;
+  provinsi: string;
+  kota: string;
 }

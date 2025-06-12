@@ -19,6 +19,7 @@ type DropshipRepoInterface interface {
 	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
 	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
@@ -141,4 +142,13 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 		count++
 	}
 	return count, nil
+}
+
+// ListDropshipPurchases proxies to the repository to fetch filtered purchases.
+func (s *DropshipService) ListDropshipPurchases(
+	ctx context.Context,
+	channel, store, date, month, year string,
+	limit, offset int,
+) ([]models.DropshipPurchase, int, error) {
+	return s.repo.ListDropshipPurchases(ctx, channel, store, date, month, year, limit, offset)
 }

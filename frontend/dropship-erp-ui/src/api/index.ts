@@ -1,5 +1,11 @@
 import axios from "axios";
-import type { BalanceCategory, Metric, JenisChannel, Store } from "../types";
+import type {
+  BalanceCategory,
+  Metric,
+  JenisChannel,
+  Store,
+  DropshipPurchase,
+} from "../types";
 
 export interface ImportResponse {
   inserted: number;
@@ -90,4 +96,31 @@ export function listJenisChannels() {
 
 export function listStores(channelId: number) {
   return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
+}
+
+export interface DropshipPurchaseList {
+  data: DropshipPurchase[];
+  total: number;
+}
+
+export function listDropshipPurchases(params: {
+  channel?: string;
+  store?: string;
+  date?: string;
+  month?: string;
+  year?: string;
+  page?: number;
+  page_size?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  const qs = q.toString();
+  const url = qs ? `/dropship/purchases?${qs}` : "/dropship/purchases";
+  return api.get<DropshipPurchaseList>(url);
 }

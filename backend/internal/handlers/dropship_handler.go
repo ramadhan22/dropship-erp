@@ -4,13 +4,16 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
 	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
 }
 
 type DropshipHandler struct {
@@ -41,4 +44,32 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"inserted": count})
+}
+
+// HandleList returns dropship purchases with optional filters and pagination.
+func (h *DropshipHandler) HandleList(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	date := c.Query("date")
+	month := c.Query("month")
+	year := c.Query("year")
+	pageStr := c.DefaultQuery("page", "1")
+	sizeStr := c.DefaultQuery("page_size", "10")
+	page, _ := strconv.Atoi(pageStr)
+	size, _ := strconv.Atoi(sizeStr)
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 10
+	}
+	limit := size
+	offset := (page - 1) * size
+
+	list, total, err := h.svc.ListDropshipPurchases(context.Background(), channel, store, date, month, year, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
 }
