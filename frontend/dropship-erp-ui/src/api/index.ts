@@ -1,6 +1,10 @@
 import axios from "axios";
 import type { BalanceCategory, Metric, JenisChannel, Store } from "../types";
 
+export interface ImportResponse {
+  inserted: number;
+}
+
 // Base URL for API calls. In Jest/Node we read from process.env; in Vite builds
 // you can still set VITE_API_URL, otherwise we fall back to localhost.
 // Base URL for API calls – in Vite builds import.meta.env is available; otherwise we default to localhost
@@ -28,7 +32,7 @@ export const api = axios.create({
 export function importDropship(file: File) {
   const data = new FormData();
   data.append("file", file);
-  return api.post("/dropship/import", data, {
+  return api.post<ImportResponse>("/dropship/import", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
@@ -37,17 +41,13 @@ export function importDropship(file: File) {
 export function importShopee(file: File) {
   const data = new FormData();
   data.append("file", file);
-  return api.post("/shopee/import", data, {
+  return api.post<ImportResponse>("/shopee/import", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
 
 // Reconcile
-export function reconcile(
-  purchaseId: string,
-  orderId: string,
-  shop: string
-) {
+export function reconcile(purchaseId: string, orderId: string, shop: string) {
   return api.post("/reconcile", {
     purchase_id: purchaseId,
     order_id: orderId,
@@ -68,7 +68,7 @@ export function fetchMetrics(shop: string, period: string) {
 // Fetch balance sheet
 export function fetchBalanceSheet(shop: string, period: string) {
   return api.get<BalanceCategory[]>(
-    `/balancesheet?shop=${shop}&period=${period}`
+    `/balancesheet?shop=${shop}&period=${period}`,
   );
 }
 
