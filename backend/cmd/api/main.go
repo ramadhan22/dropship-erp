@@ -46,9 +46,13 @@ func main() {
 	metricSvc := service.NewMetricService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
 	)
+	expenseSvc := service.NewExpenseService(repo.DB, repository.NewExpenseRepo(repo.DB), repo.JournalRepo)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
+	journalSvc := service.NewJournalService(repo.JournalRepo)
+	plSvc := service.NewPLService(repo.MetricRepo)
+	glSvc := service.NewGLService(repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -62,20 +66,20 @@ func main() {
 
 	apiGroup := router.Group("/api")
 	{
-               apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
-               apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
-               apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
-               apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
+		apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
+		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
+		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
+		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)
 		apiGroup.GET("/metrics", handlers.NewMetricHandler(metricSvc).HandleGetMetrics)
 		apiGroup.GET("/balancesheet", handlers.NewBalanceHandler(balanceSvc).HandleGetBalanceSheet)
 		apiGroup.POST("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleCreateJenisChannel)
-               apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
-               apiGroup.GET("/stores", handlers.NewChannelHandler(channelSvc).HandleListStoresByName)
-               apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
-               apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
+		apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
+		apiGroup.GET("/stores", handlers.NewChannelHandler(channelSvc).HandleListStoresByName)
+		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
+		apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
 
 		accHandler := handlers.NewAccountHandler(accountSvc)
 		apiGroup.POST("/accounts", accHandler.HandleCreateAccount)
@@ -83,6 +87,16 @@ func main() {
 		apiGroup.GET("/accounts/:id", accHandler.HandleGetAccount)
 		apiGroup.PUT("/accounts/:id", accHandler.HandleUpdateAccount)
 		apiGroup.DELETE("/accounts/:id", accHandler.HandleDeleteAccount)
+
+		expHandler := handlers.NewExpenseHandler(expenseSvc)
+		expHandler.RegisterRoutes(apiGroup)
+
+		jHandler := handlers.NewJournalHandler(journalSvc)
+		jHandler.RegisterRoutes(apiGroup)
+
+		handlers.NewPLHandler(plSvc).RegisterRoutes(apiGroup)
+		handlers.NewGLHandler(glSvc).RegisterRoutes(apiGroup)
+		handlers.NewReconcileExtraHandler(reconSvc).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server

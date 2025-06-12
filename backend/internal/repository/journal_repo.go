@@ -111,3 +111,25 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
 	}
 	return result, nil
 }
+
+// GetJournalEntry fetches a journal entry by id.
+func (r *JournalRepo) GetJournalEntry(ctx context.Context, id int64) (*models.JournalEntry, error) {
+	var je models.JournalEntry
+	if err := r.db.GetContext(ctx, &je, `SELECT * FROM journal_entries WHERE journal_id=$1`, id); err != nil {
+		return nil, err
+	}
+	return &je, nil
+}
+
+// ListJournalEntries returns all entries ordered by date desc.
+func (r *JournalRepo) ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error) {
+	var list []models.JournalEntry
+	err := r.db.SelectContext(ctx, &list, `SELECT * FROM journal_entries ORDER BY entry_date DESC`)
+	return list, err
+}
+
+// DeleteJournalEntry removes the entry (lines cascade).
+func (r *JournalRepo) DeleteJournalEntry(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM journal_entries WHERE journal_id=$1`, id)
+	return err
+}

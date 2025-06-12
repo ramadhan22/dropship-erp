@@ -73,3 +73,31 @@ export interface DropshipPurchaseDetail {
   total_harga_produk_channel: number;
   potensi_keuntungan: number;
 }
+
+export interface Expense {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  account_id: number;
+  created_at: string;
+}
+
+export interface JournalEntry {
+  journal_id: number;
+  entry_date: string;
+  description: string | null;
+  source_type: string;
+  source_id: string;
+  shop_username: string;
+  created_at: string;
+}
+
+export interface ReconciledTransaction {
+  id: number;
+  shop_username: string;
+  dropship_id: string | null;
+  shopee_id: string | null;
+  status: string;
+  matched_at: string;
+}
