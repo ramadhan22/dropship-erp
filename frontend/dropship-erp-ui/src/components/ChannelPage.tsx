@@ -70,7 +70,7 @@ export default function ChannelPage() {
           value={selected}
           onChange={(e) => handleSelect(Number(e.target.value))}
         >
-          <option value="" key="">Select Channel</option>
+          <option value="" key="placeholder">Select Channel</option>
           {channels.map((c) => (
             <option key={c.jenis_channel_id} value={c.jenis_channel_id}>
               {c.jenis_channel}
