@@ -34,6 +34,12 @@ export interface Store {
   nama_toko: string;
 }
 
+export interface ShopeeSettled {
+  nama_toko: string;
+  no_pesanan: string;
+  tanggal_dana_dilepaskan: string;
+  total_penerimaan: number;
+}
 export interface DropshipPurchase {
   kode_pesanan: string;
   kode_transaksi: string;

@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { BalanceCategory, Metric, JenisChannel, Store, ShopeeSettled } from "../types";
 import type {
   BalanceCategory,
   Metric,
@@ -7,6 +8,7 @@ import type {
   DropshipPurchase,
   Account,
 } from "../types";
+
 
 export interface ImportResponse {
   inserted: number;
@@ -100,6 +102,8 @@ export function listStores(channelId: number) {
 }
 
 
+export function listShopeeSettled(params: {
+
 export interface DropshipPurchaseList {
   data: DropshipPurchase[];
   total: number;
@@ -114,6 +118,19 @@ export function listDropshipPurchases(params: {
   page?: number;
   page_size?: number;
 }) {
+
+  const sp = new URLSearchParams();
+  if (params.channel) sp.append("channel", params.channel);
+  if (params.store) sp.append("store", params.store);
+  if (params.date) sp.append("date", params.date);
+  if (params.month) sp.append("month", params.month);
+  if (params.year) sp.append("year", params.year);
+  if (params.page) sp.append("page", String(params.page));
+  if (params.page_size) sp.append("page_size", String(params.page_size));
+  return api.get<{ data: ShopeeSettled[]; total: number }>(
+    `/shopee/settled?${sp.toString()}`,
+  );
+
   const q = new URLSearchParams();
   if (params.channel) q.append("channel", params.channel);
   if (params.store) q.append("store", params.store);

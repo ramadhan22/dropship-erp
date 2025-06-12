@@ -65,6 +65,7 @@ func main() {
 		apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
 		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
 		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
+		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)
 		apiGroup.GET("/metrics", handlers.NewMetricHandler(metricSvc).HandleGetMetrics)

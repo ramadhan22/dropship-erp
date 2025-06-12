@@ -60,6 +60,7 @@ var expectedHeaders = []string{
 // ShopeeRepoInterface defines methods used by ShopeeService.
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
+	ListShopeeSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -270,4 +271,13 @@ func formatNamaToko(username string) string {
 	}
 	u = strings.ReplaceAll(u, ".", " ")
 	return strings.ToUpper(u[:1]) + u[1:]
+}
+
+// ListSettled proxies to the repository for fetching settled orders with filters.
+func (s *ShopeeService) ListSettled(
+	ctx context.Context,
+	channel, store, date, month, year string,
+	limit, offset int,
+) ([]models.ShopeeSettled, int, error) {
+	return s.repo.ListShopeeSettled(ctx, channel, store, date, month, year, limit, offset)
 }
