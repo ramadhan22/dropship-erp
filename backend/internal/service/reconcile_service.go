@@ -124,3 +124,23 @@ func (s *ReconcileService) MatchAndJournal(
 
 // ptrString helper
 func ptrString(s string) *string { return &s }
+
+// ListUnmatched delegates to repo to list unmatched rows.
+func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error) {
+	if repo, ok := s.recRepo.(interface {
+		ListUnmatched(context.Context, string) ([]models.ReconciledTransaction, error)
+	}); ok {
+		return repo.ListUnmatched(ctx, shop)
+	}
+	return nil, fmt.Errorf("not implemented")
+}
+
+// BulkReconcile simply loops MatchAndJournal over pairs.
+func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error {
+	for _, p := range pairs {
+		if err := s.MatchAndJournal(ctx, p[0], p[1], shop); err != nil {
+			return err
+		}
+	}
+	return nil
+}

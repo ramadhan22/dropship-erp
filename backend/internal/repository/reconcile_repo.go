@@ -47,3 +47,11 @@ func (r *ReconcileRepo) GetReconciledTransactionsByShopAndPeriod(
 		shop, period)
 	return list, err
 }
+
+// ListUnmatched returns rows with status='unmatched'.
+func (r *ReconcileRepo) ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error) {
+	var list []models.ReconciledTransaction
+	err := r.db.SelectContext(ctx, &list,
+		`SELECT * FROM reconciled_transactions WHERE shop_username=$1 AND status='unmatched'`, shop)
+	return list, err
+}
