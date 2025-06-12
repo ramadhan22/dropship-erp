@@ -5,6 +5,7 @@ import type {
   JenisChannel,
   Store,
   DropshipPurchase,
+  Account,
 } from "../types";
 
 export interface ImportResponse {
@@ -98,6 +99,7 @@ export function listStores(channelId: number) {
   return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
 }
 
+
 export interface DropshipPurchaseList {
   data: DropshipPurchase[];
   total: number;
@@ -123,4 +125,24 @@ export function listDropshipPurchases(params: {
   const qs = q.toString();
   const url = qs ? `/dropship/purchases?${qs}` : "/dropship/purchases";
   return api.get<DropshipPurchaseList>(url);
+}
+// === Accounts CRUD ===
+export function createAccount(acc: Partial<Account>) {
+  return api.post("/accounts", acc);
+}
+
+export function listAccounts() {
+  return api.get<Account[]>("/accounts");
+}
+
+export function getAccount(id: number) {
+  return api.get<Account>(`/accounts/${id}`);
+}
+
+export function updateAccount(id: number, acc: Partial<Account>) {
+  return api.put(`/accounts/${id}`, acc);
+}
+
+export function deleteAccount(id: number) {
+  return api.delete(`/accounts/${id}`);
 }
