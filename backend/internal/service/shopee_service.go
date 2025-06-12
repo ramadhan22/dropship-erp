@@ -26,33 +26,35 @@ var expectedHeaders = []string{
 	"Harga Asli Produk",
 	"Total Diskon Produk",
 	"Jumlah Pengembalian Dana ke Pembeli",
-	"Komisi Shopee",
-	"Biaya Admin Shopee",
-	"Biaya Layanan",
-	"Biaya Layanan Ekstra",
-	"Biaya Penyedia Pembayaran",
-	"Asuransi",
-	"Total Biaya Transaksi",
-	"Biaya Pengiriman",
-	"Total Diskon Pengiriman",
-	"Promo Gratis Ongkir Shopee",
-	"Promo Gratis Ongkir dari Penjual",
-	"Promo Diskon Shopee",
-	"Promo Diskon Penjual",
-	"Cashback Shopee",
-	"Cashback Penjual",
-	"Koin Shopee",
-	"Potongan Lainnya",
-	"Total Penerimaan",
+	"Diskon Produk dari Shopee",
+	"Diskon Voucher Ditanggung Penjual",
+	"Cashback Koin yang Ditanggung Penjual",
+	"Ongkir Dibayar Pembeli",
+	"Diskon Ongkir Ditanggung Jasa Kirim",
+	"Gratis Ongkir dari Shopee",
+	"Ongkir yang Diteruskan oleh Shopee ke Jasa Kirim",
+	"Ongkos Kirim Pengembalian Barang",
+	"Pengembalian Biaya Kirim",
+	"Biaya Komisi AMS",
+	"Biaya Administrasi",
+	"Biaya Layanan (termasuk PPN 11%)",
+	"Premi",
+	"Biaya Program",
+	"Biaya Kartu Kredit",
+	"Biaya Kampanye",
+	"Bea Masuk, PPN & PPh",
+	"Total Penghasilan",
+	"Kode Voucher",
 	"Kompensasi",
 	"Promo Gratis Ongkir dari Penjual",
 	"Jasa Kirim",
 	"Nama Kurir",
+	"",
 	"Pengembalian Dana ke Pembeli",
 	"Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang",
 	"Pro-rata Voucher Shopee untuk Pengembalian Barang",
-	"Pro-rated Bank Payment Channel Promotion for returns",
-	"Pro-rated Shopee Payment Channel Promotion for returns",
+	"Pro-rated Bank Payment Channel Promotion  for return refund Items",
+	"Pro-rated Shopee Payment Channel Promotion  for return refund Items",
 }
 
 // ShopeeRepoInterface defines methods used by ShopeeService.
@@ -230,27 +232,29 @@ func parseShopeeRow(row []string, namaToko string) (*models.ShopeeSettled, error
 	if res.TotalPenerimaan, err = parseFloat(row[27]); err != nil {
 		return nil, err
 	}
-	if res.Kompensasi, err = parseFloat(row[28]); err != nil {
+	// column 28 is "Kode Voucher" and is ignored
+	if res.Kompensasi, err = parseFloat(row[29]); err != nil {
 		return nil, err
 	}
-	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[29]); err != nil {
+	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[30]); err != nil {
 		return nil, err
 	}
-	res.JasaKirim = row[30]
-	res.NamaKurir = row[31]
-	if res.PengembalianDanaKePembeli, err = parseFloat(row[32]); err != nil {
+	res.JasaKirim = row[31]
+	res.NamaKurir = row[32]
+	// column 33 is blank
+	if res.PengembalianDanaKePembeli, err = parseFloat(row[34]); err != nil {
 		return nil, err
 	}
-	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[33]); err != nil {
+	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[35]); err != nil {
 		return nil, err
 	}
-	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[34]); err != nil {
+	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[36]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[35]); err != nil {
+	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[37]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[36]); err != nil {
+	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[38]); err != nil {
 		return nil, err
 	}
 	return res, nil
