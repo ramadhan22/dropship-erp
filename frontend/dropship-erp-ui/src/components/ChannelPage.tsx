@@ -28,8 +28,13 @@ export default function ChannelPage() {
 
   const handleSelect = async (id: number) => {
     setSelected(id);
-    const res = await listStores(id);
-    setStores(res.data);
+    try {
+      const res = await listStores(id);
+      setStores(res.data ?? []);
+    } catch (e: any) {
+      setStores([]);
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    }
   };
 
   const handleCreateStore = async () => {
@@ -65,7 +70,7 @@ export default function ChannelPage() {
           value={selected}
           onChange={(e) => handleSelect(Number(e.target.value))}
         >
-          <option value="">Select Channel</option>
+          <option value="" key="">Select Channel</option>
           {channels.map((c) => (
             <option key={c.jenis_channel_id} value={c.jenis_channel_id}>
               {c.jenis_channel}
