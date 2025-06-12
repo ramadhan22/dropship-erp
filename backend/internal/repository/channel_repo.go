@@ -54,3 +54,16 @@ func (r *ChannelRepo) ListStoresByChannel(ctx context.Context, channelID int64) 
 	}
 	return list, nil
 }
+
+// ListStoresByChannelName returns stores by joining with jenis_channels using the channel name.
+func (r *ChannelRepo) ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error) {
+        var list []models.Store
+        query := `SELECT st.* FROM stores st
+                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
+                WHERE jc.jenis_channel = $1
+                ORDER BY st.store_id`
+        if err := r.db.SelectContext(ctx, &list, query, channelName); err != nil {
+                return nil, err
+        }
+        return list, nil
+}

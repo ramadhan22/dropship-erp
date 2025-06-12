@@ -17,9 +17,15 @@ import {
   importDropship,
   listDropshipPurchases,
   listJenisChannels,
-  listStores,
+  listStoresByChannelName,
+  getDropshipPurchaseDetails,
 } from "../api";
-import type { DropshipPurchase, JenisChannel, Store } from "../types";
+import type {
+  DropshipPurchase,
+  JenisChannel,
+  Store,
+  DropshipPurchaseDetail,
+} from "../types";
 
 export default function DropshipImport() {
   const [file, setFile] = useState<File | null>(null);
@@ -32,8 +38,6 @@ export default function DropshipImport() {
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
   const [date, setDate] = useState("");
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -41,6 +45,9 @@ export default function DropshipImport() {
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<DropshipPurchase[]>([]);
   const [total, setTotal] = useState(0);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [details, setDetails] = useState<DropshipPurchaseDetail[]>([]);
+  const [selected, setSelected] = useState<DropshipPurchase | null>(null);
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));
@@ -48,7 +55,7 @@ export default function DropshipImport() {
 
   useEffect(() => {
     if (channel) {
-      listStores(Number(channel)).then((res) => setStores(res.data ?? []));
+      listStoresByChannelName(channel).then((res) => setStores(res.data ?? []));
     } else {
       setStores([]);
     }
@@ -59,8 +66,6 @@ export default function DropshipImport() {
       channel,
       store,
       date,
-      month,
-      year,
       page,
       page_size: pageSize,
     });
@@ -70,7 +75,7 @@ export default function DropshipImport() {
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, date, month, year, page]);
+  }, [channel, store, date, page]);
 
   const handleSubmit = async () => {
     try {
@@ -125,33 +130,57 @@ export default function DropshipImport() {
           ))}
         </select>
         <TextField
-          label="Date (YYYY-MM-DD)"
+          label="Date"
+          type="date"
           value={date}
           onChange={(e) => {
             setDate(e.target.value);
             setPage(1);
           }}
           size="small"
-        />
-        <TextField
-          label="Month"
-          value={month}
-          onChange={(e) => {
-            setMonth(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-        />
-        <TextField
-          label="Year"
-          value={year}
-          onChange={(e) => {
-            setYear(e.target.value);
-            setPage(1);
-          }}
-          size="small"
+          InputLabelProps={{ shrink: true }}
         />
       </div>
+
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+        <DialogTitle>Purchase Detail</DialogTitle>
+        <DialogContent>
+          {selected && (
+            <div style={{ marginBottom: "1rem" }}>
+              <div>Kode Pesanan: {selected.kode_pesanan}</div>
+              <div>Nama Toko: {selected.nama_toko}</div>
+            </div>
+          )}
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>SKU</TableCell>
+                <TableCell>Nama Produk</TableCell>
+                <TableCell>Qty</TableCell>
+                <TableCell>Harga</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {details.map((dt) => (
+                <TableRow key={dt.id}>
+                  <TableCell>{dt.sku}</TableCell>
+                  <TableCell>{dt.nama_produk}</TableCell>
+                  <TableCell>{dt.qty}</TableCell>
+                  <TableCell>
+                    {dt.total_harga_produk.toLocaleString("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                    })}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -159,8 +188,9 @@ export default function DropshipImport() {
             <TableCell>Store</TableCell>
             <TableCell>Channel</TableCell>
             <TableCell>Date</TableCell>
-            <TableCell>Total</TableCell>
-          </TableRow>
+          <TableCell>Total</TableCell>
+          <TableCell>Action</TableCell>
+        </TableRow>
         </TableHead>
         <TableBody>
           {data.map((d) => (
@@ -168,8 +198,28 @@ export default function DropshipImport() {
               <TableCell>{d.kode_pesanan}</TableCell>
               <TableCell>{d.nama_toko}</TableCell>
               <TableCell>{d.jenis_channel}</TableCell>
-              <TableCell>{d.waktu_pesanan_terbuat}</TableCell>
-              <TableCell>{d.total_transaksi}</TableCell>
+              <TableCell>
+                {new Date(d.waktu_pesanan_terbuat).toLocaleDateString("id-ID")}
+              </TableCell>
+              <TableCell>
+                {d.total_transaksi.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="small"
+                  onClick={async () => {
+                    const res = await getDropshipPurchaseDetails(d.kode_pesanan);
+                    setDetails(res.data);
+                    setSelected(d);
+                    setDetailOpen(true);
+                  }}
+                >
+                  Detail
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

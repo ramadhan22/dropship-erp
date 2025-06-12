@@ -99,9 +99,9 @@ func (r *DropshipRepo) ListDropshipPurchasesByShopAndDate(
 // store, date, month and year with pagination.
 // Empty filter values are ignored. Pagination uses limit & offset.
 func (r *DropshipRepo) ListDropshipPurchases(
-	ctx context.Context,
-	channel, store, date, month, year string,
-	limit, offset int,
+        ctx context.Context,
+        channel, store, date, month, year string,
+        limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
 	countQuery := `SELECT COUNT(*) FROM dropship_purchases
                 WHERE ($1 = '' OR jenis_channel = $1)
@@ -130,4 +130,14 @@ func (r *DropshipRepo) ListDropshipPurchases(
 		return nil, 0, err
 	}
 	return list, total, nil
+}
+
+// ListDropshipPurchaseDetails returns detail rows for a given kode_pesanan.
+func (r *DropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error) {
+        var list []models.DropshipPurchaseDetail
+        query := `SELECT * FROM dropship_purchase_details WHERE kode_pesanan=$1 ORDER BY id`
+        if err := r.db.SelectContext(ctx, &list, query, kodePesanan); err != nil {
+                return nil, err
+        }
+        return list, nil
 }

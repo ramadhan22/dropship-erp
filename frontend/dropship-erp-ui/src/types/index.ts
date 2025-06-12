@@ -60,3 +60,16 @@ export interface DropshipPurchase {
   provinsi: string;
   kota: string;
 }
+
+export interface DropshipPurchaseDetail {
+  id: number;
+  kode_pesanan: string;
+  sku: string;
+  nama_produk: string;
+  harga_produk: number;
+  qty: number;
+  total_harga_produk: number;
+  harga_produk_channel: number;
+  total_harga_produk_channel: number;
+  potensi_keuntungan: number;
+}

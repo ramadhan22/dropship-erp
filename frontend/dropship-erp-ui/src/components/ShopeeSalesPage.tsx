@@ -17,19 +17,17 @@ import { useEffect, useState } from "react";
 import {
   importShopee,
   listJenisChannels,
-  listStores,
+  listStoresByChannelName,
   listShopeeSettled,
 } from "../api";
 import type { JenisChannel, Store, ShopeeSettled } from "../types";
 
 export default function ShopeeSalesPage() {
   const [channels, setChannels] = useState<JenisChannel[]>([]);
-  const [channelId, setChannelId] = useState<number | "">("");
+  const [channel, setChannel] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState("");
   const [date, setDate] = useState("");
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ShopeeSettled[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,26 +44,19 @@ export default function ShopeeSalesPage() {
   }, []);
 
   useEffect(() => {
-    if (channelId !== "") {
-      listStores(Number(channelId)).then((res) => setStores(res.data ?? []));
+    if (channel) {
+      listStoresByChannelName(channel).then((res) => setStores(res.data ?? []));
     } else {
       setStores([]);
     }
-  }, [channelId]);
+  }, [channel]);
 
   const fetchData = async () => {
     try {
-      const channelName =
-        channelId === ""
-          ? undefined
-          : channels.find((c) => c.jenis_channel_id === Number(channelId))?.
-              jenis_channel;
       const res = await listShopeeSettled({
-        channel: channelName,
+        channel: channel || undefined,
         store,
         date,
-        month,
-        year,
         page,
         page_size: pageSize,
       });
@@ -80,7 +71,7 @@ export default function ShopeeSalesPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, store, date, month, year, page]);
+  }, [channel, store, date, page]);
 
   const handleImport = async () => {
     try {
@@ -107,12 +98,12 @@ export default function ShopeeSalesPage() {
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
         <select
           aria-label="Channel"
-          value={channelId}
-          onChange={(e) => setChannelId(e.target.value as any)}
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
         >
           <option value="">All Channels</option>
           {channels.map((c) => (
-            <option key={c.jenis_channel_id} value={c.jenis_channel_id}>
+            <option key={c.jenis_channel_id} value={c.jenis_channel}>
               {c.jenis_channel}
             </option>
           ))}
@@ -132,18 +123,6 @@ export default function ShopeeSalesPage() {
           onChange={(e) => setDate(e.target.value)}
           size="small"
           InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label="Month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          size="small"
-        />
-        <TextField
-          label="Year"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          size="small"
         />
       </div>
       {msg && (
@@ -165,8 +144,15 @@ export default function ShopeeSalesPage() {
             <TableRow key={i}>
               <TableCell>{d.no_pesanan}</TableCell>
               <TableCell>{d.nama_toko}</TableCell>
-              <TableCell>{d.tanggal_dana_dilepaskan}</TableCell>
-              <TableCell>{d.total_penerimaan}</TableCell>
+              <TableCell>
+                {new Date(d.tanggal_dana_dilepaskan).toLocaleDateString("id-ID")}
+              </TableCell>
+              <TableCell>
+                {d.total_penerimaan.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

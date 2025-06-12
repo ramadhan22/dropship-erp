@@ -38,7 +38,15 @@ func (f *fakeDropshipRepo) ExistsDropshipPurchase(ctx context.Context, kode stri
 }
 
 func (f *fakeDropshipRepo) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
-	return nil, 0, nil
+        return nil, 0, nil
+}
+
+func (f *fakeDropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
+        return nil, nil
+}
+
+func (f *fakeDropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kode string) ([]models.DropshipPurchaseDetail, error) {
+        return nil, nil
 }
 
 func TestImportFromCSV_Success(t *testing.T) {
