@@ -70,12 +70,12 @@ func (r *JournalRepo) GetJournalLinesByShopAndDate(
 // AccountBalance is a helper type for producing Balance Sheet data.
 // It represents the net (debit – credit) balance of one account as of a given date.
 type AccountBalance struct {
-	AccountID   int64   `db:"account_id"`
-	AccountCode string  `db:"account_code"`
-	AccountName string  `db:"account_name"`
-	AccountType string  `db:"account_type"` // e.g. “Asset”/“Liability”/“Equity”
-	ParentID    *int64  `db:"parent_id"`
-	Balance     float64 `db:"balance"`
+	AccountID   int64   `db:"account_id" json:"account_id"`
+	AccountCode string  `db:"account_code" json:"account_code"`
+	AccountName string  `db:"account_name" json:"account_name"`
+	AccountType string  `db:"account_type" json:"account_type"` // e.g. “Asset”/“Liability”/“Equity”
+	ParentID    *int64  `db:"parent_id" json:"parent_id"`
+	Balance     float64 `db:"balance" json:"balance"`
 }
 
 // GetAccountBalancesAsOf returns each account’s cumulative balance up to and including asOfDate.

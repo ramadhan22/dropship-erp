@@ -16,9 +16,9 @@ type BalanceServiceJournalRepo interface {
 
 // CategoryBalance groups account balances under a category (Assets, Liabilities, Equity).
 type CategoryBalance struct {
-	Category string                      // e.g. "Assets"
-	Accounts []repository.AccountBalance // list of account balances in this category
-	Total    float64                     // sum of balances
+	Category string                      `json:"category"` // e.g. "Assets"
+	Accounts []repository.AccountBalance `json:"accounts"` // list of account balances in this category
+	Total    float64                     `json:"total"`    // sum of balances
 }
 
 // BalanceService provides balance sheet data by category.
