@@ -44,6 +44,9 @@ func (r *AccountRepo) GetAccountByID(ctx context.Context, id int64) (*models.Acc
 func (r *AccountRepo) ListAccounts(ctx context.Context) ([]models.Account, error) {
 	var list []models.Account
 	err := r.db.SelectContext(ctx, &list, `SELECT * FROM accounts ORDER BY account_code`)
+	if list == nil {
+		list = []models.Account{}
+	}
 	return list, err
 }
 

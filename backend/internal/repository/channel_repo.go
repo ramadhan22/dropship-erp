@@ -43,6 +43,9 @@ func (r *ChannelRepo) ListJenisChannels(ctx context.Context) ([]models.JenisChan
 	if err := r.db.SelectContext(ctx, &list, `SELECT * FROM jenis_channels ORDER BY jenis_channel_id`); err != nil {
 		return nil, err
 	}
+	if list == nil {
+		list = []models.JenisChannel{}
+	}
 	return list, nil
 }
 
@@ -52,18 +55,24 @@ func (r *ChannelRepo) ListStoresByChannel(ctx context.Context, channelID int64) 
 	if err := r.db.SelectContext(ctx, &list, `SELECT * FROM stores WHERE jenis_channel_id=$1 ORDER BY store_id`, channelID); err != nil {
 		return nil, err
 	}
+	if list == nil {
+		list = []models.Store{}
+	}
 	return list, nil
 }
 
 // ListStoresByChannelName returns stores by joining with jenis_channels using the channel name.
 func (r *ChannelRepo) ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error) {
-        var list []models.Store
-        query := `SELECT st.* FROM stores st
+	var list []models.Store
+	query := `SELECT st.* FROM stores st
                 JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
                 WHERE jc.jenis_channel = $1
                 ORDER BY st.store_id`
-        if err := r.db.SelectContext(ctx, &list, query, channelName); err != nil {
-                return nil, err
-        }
-        return list, nil
+	if err := r.db.SelectContext(ctx, &list, query, channelName); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.Store{}
+	}
+	return list, nil
 }

@@ -28,6 +28,9 @@ func (r *ExpenseRepo) GetByID(ctx context.Context, id string) (*models.Expense, 
 func (r *ExpenseRepo) List(ctx context.Context) ([]models.Expense, error) {
 	var list []models.Expense
 	err := r.db.SelectContext(ctx, &list, `SELECT * FROM expenses ORDER BY date DESC`)
+	if list == nil {
+		list = []models.Expense{}
+	}
 	return list, err
 }
 

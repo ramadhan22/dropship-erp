@@ -45,6 +45,9 @@ func (r *ReconcileRepo) GetReconciledTransactionsByShopAndPeriod(
            AND to_char(matched_at, 'YYYY-MM') = $2
          ORDER BY matched_at`,
 		shop, period)
+	if list == nil {
+		list = []models.ReconciledTransaction{}
+	}
 	return list, err
 }
 
@@ -53,5 +56,8 @@ func (r *ReconcileRepo) ListUnmatched(ctx context.Context, shop string) ([]model
 	var list []models.ReconciledTransaction
 	err := r.db.SelectContext(ctx, &list,
 		`SELECT * FROM reconciled_transactions WHERE shop_username=$1 AND status='unmatched'`, shop)
+	if list == nil {
+		list = []models.ReconciledTransaction{}
+	}
 	return list, err
 }
