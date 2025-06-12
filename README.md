@@ -31,7 +31,7 @@ go test ./...
 
 ## Frontend
 
-The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is a Vite powered React + TypeScript project using Material UI and React Query for data fetching.
+The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is a Vite powered React + TypeScript project using Material UI, React Query and Recharts for graphing. The home page now shows a sales summary chart that can be filtered by channel, store and date.
 
 To develop the frontend:
 

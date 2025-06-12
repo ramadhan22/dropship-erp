@@ -1,13 +1,8 @@
 // File: src/components/DropshipImport.test.tsx
 
 import "@testing-library/jest-dom";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/dom";
 import * as api from "../api";
 import DropshipImport from "./DropshipImport";
 
