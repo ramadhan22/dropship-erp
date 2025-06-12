@@ -154,13 +154,13 @@ type CachedMetric struct {
 
 // JenisChannel represents e-commerce channel types such as Shopee or Tokopedia.
 type JenisChannel struct {
-	JenisChannelID int64  `db:"jenis_channel_id"`
-	JenisChannel   string `db:"jenis_channel"`
+	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`
+	JenisChannel   string `db:"jenis_channel" json:"jenis_channel"`
 }
 
 // Store represents a store/shop under a jenis channel.
 type Store struct {
-	StoreID        int64  `db:"store_id"`
-	JenisChannelID int64  `db:"jenis_channel_id"`
-	NamaToko       string `db:"nama_toko"`
+	StoreID        int64  `db:"store_id" json:"store_id"`
+	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`
+	NamaToko       string `db:"nama_toko" json:"nama_toko"`
 }
