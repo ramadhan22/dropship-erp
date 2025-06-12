@@ -54,3 +54,22 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
 	}
 }
+
+func TestImportSettledOrdersXLSX_HeaderMismatch(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Data")
+	// Write an invalid header on row 5
+	f.SetCellValue("Data", "B5", "WRONG")
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeShopeeRepo{}
+	svc := NewShopeeService(repo)
+	_, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	if err == nil {
+		t.Fatalf("expected error due to header mismatch")
+	}
+}

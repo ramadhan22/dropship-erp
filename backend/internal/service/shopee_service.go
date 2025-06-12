@@ -13,6 +13,48 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
+// expectedHeaders lists column names (excluding the leading "No." column)
+// that must appear in the header row at index 4. These were derived from the
+// provided sample file.
+var expectedHeaders = []string{
+	"No. Pesanan",
+	"No. Pengajuan",
+	"Username (Pembeli)",
+	"Waktu Pesanan Dibuat",
+	"Metode pembayaran pembeli",
+	"Tanggal Dana Dilepaskan",
+	"Harga Asli Produk",
+	"Total Diskon Produk",
+	"Jumlah Pengembalian Dana ke Pembeli",
+	"Komisi Shopee",
+	"Biaya Admin Shopee",
+	"Biaya Layanan",
+	"Biaya Layanan Ekstra",
+	"Biaya Penyedia Pembayaran",
+	"Asuransi",
+	"Total Biaya Transaksi",
+	"Biaya Pengiriman",
+	"Total Diskon Pengiriman",
+	"Promo Gratis Ongkir Shopee",
+	"Promo Gratis Ongkir dari Penjual",
+	"Promo Diskon Shopee",
+	"Promo Diskon Penjual",
+	"Cashback Shopee",
+	"Cashback Penjual",
+	"Koin Shopee",
+	"Potongan Lainnya",
+	"Total Penerimaan",
+	"Kompensasi",
+	"Promo Gratis Ongkir dari Penjual",
+	"Jasa Kirim",
+	"Nama Kurir",
+	"Pengembalian Dana ke Pembeli",
+	"Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang",
+	"Pro-rata Voucher Shopee untuk Pengembalian Barang",
+	"Pro-rated Bank Payment Channel Promotion for returns",
+	"Pro-rated Shopee Payment Channel Promotion for returns",
+}
+
 // ShopeeRepoInterface defines methods used by ShopeeService.
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
@@ -44,6 +86,22 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	rows, err := f.GetRows(sheet)
 	if err != nil {
 		return 0, fmt.Errorf("read rows: %w", err)
+	}
+
+	// Validate header row at index 4 matches expected columns (after the
+	// first \"No.\" column). If headers don't match we fail early so the
+	// caller is aware the template changed.
+	if len(rows) <= 4 {
+		return 0, fmt.Errorf("header row missing")
+	}
+	header := rows[4]
+	if len(header) < len(expectedHeaders)+1 { // +1 for the \"No.\" column
+		return 0, fmt.Errorf("invalid header length")
+	}
+	for i, name := range expectedHeaders {
+		if strings.TrimSpace(header[i+1]) != name {
+			return 0, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
+		}
 	}
 
 	inserted := 0
