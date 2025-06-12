@@ -5,6 +5,7 @@ import type {
   JenisChannel,
   Store,
   DropshipPurchase,
+  DropshipPurchaseDetail,
   Account,
   ShopeeSettled,
 } from "../types";
@@ -101,6 +102,11 @@ export function listStores(channelId: number) {
   return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
 }
 
+export function listStoresByChannelName(channel: string) {
+  const q = new URLSearchParams({ channel });
+  return api.get<Store[]>(`/stores?${q.toString()}`);
+}
+
 
 export function listShopeeSettled(params: {
   channel?: string;
@@ -169,4 +175,8 @@ export function updateAccount(id: number, acc: Partial<Account>) {
 
 export function deleteAccount(id: number) {
   return api.delete(`/accounts/${id}`);
+}
+
+export function getDropshipPurchaseDetails(id: string) {
+  return api.get<DropshipPurchaseDetail[]>(`/dropship/purchases/${id}/details`);
 }

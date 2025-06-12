@@ -11,10 +11,11 @@ import (
 
 // ChannelServiceInterface defines methods required by the handler.
 type ChannelServiceInterface interface {
-	CreateJenisChannel(ctx context.Context, jenisChannel string) (int64, error)
-	CreateStore(ctx context.Context, channelID int64, namaToko string) (int64, error)
-	ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
-	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
+        CreateJenisChannel(ctx context.Context, jenisChannel string) (int64, error)
+        CreateStore(ctx context.Context, channelID int64, namaToko string) (int64, error)
+        ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
+        ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
+        ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
 }
 
 type ChannelHandler struct {
@@ -79,5 +80,20 @@ func (h *ChannelHandler) HandleListStores(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, list)
+        c.JSON(http.StatusOK, list)
+}
+
+// HandleListStoresByName returns stores filtered by channel name provided as query param "channel".
+func (h *ChannelHandler) HandleListStoresByName(c *gin.Context) {
+        channel := c.Query("channel")
+        if channel == "" {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "channel is required"})
+                return
+        }
+        list, err := h.svc.ListStoresByChannelName(context.Background(), channel)
+        if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+                return
+        }
+        c.JSON(http.StatusOK, list)
 }
