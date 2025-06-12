@@ -1,5 +1,4 @@
 import axios from "axios";
-import type { BalanceCategory, Metric, JenisChannel, Store, ShopeeSettled } from "../types";
 import type {
   BalanceCategory,
   Metric,
@@ -7,6 +6,7 @@ import type {
   Store,
   DropshipPurchase,
   Account,
+  ShopeeSettled,
 } from "../types";
 
 
