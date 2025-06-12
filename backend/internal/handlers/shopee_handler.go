@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,7 @@ import (
 
 // ShopeeServiceInterface defines only the method the handler needs.
 type ShopeeServiceInterface interface {
-	ImportSettledOrdersCSV(ctx context.Context, filePath string) error
+	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error)
 }
 
 type ShopeeHandler struct {
@@ -22,16 +23,22 @@ func NewShopeeHandler(svc ShopeeServiceInterface) *ShopeeHandler {
 }
 
 func (h *ShopeeHandler) HandleImport(c *gin.Context) {
-	var req struct {
-		FilePath string `json:"file_path" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
-	if err := h.svc.ImportSettledOrdersCSV(context.Background(), req.FilePath); err != nil {
+	f, err := fileHeader.Open()
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "shopee import successful"})
+	defer f.Close()
+
+	count, err := h.svc.ImportSettledOrdersXLSX(context.Background(), f)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"inserted": count})
 }

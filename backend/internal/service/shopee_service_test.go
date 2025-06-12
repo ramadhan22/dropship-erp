@@ -1,57 +1,56 @@
-// File: backend/internal/service/shopee_service_test.go
-
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"os"
 	"testing"
+
+	"github.com/xuri/excelize/v2"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
-// fakeShopeeRepo captures calls to InsertShopeeOrder.
+// fakeShopeeRepo captures inserted rows.
 type fakeShopeeRepo struct {
-	inserted []*models.ShopeeSettledOrder
-	errOn    string // if OrderID equals this, return error
+	count int
+	fail  bool
 }
 
-func (f *fakeShopeeRepo) InsertShopeeOrder(ctx context.Context, o *models.ShopeeSettledOrder) error {
-	if o.OrderID == f.errOn {
-		return errors.New("forced error")
+func (f *fakeShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error {
+	if f.fail {
+		return errors.New("fail")
 	}
-	f.inserted = append(f.inserted, o)
+	f.count++
 	return nil
 }
 
-func TestImportSettledOrdersCSV(t *testing.T) {
-	// Create a fake CSV in memory (represent it as []byte)
-	csvContent := []byte(`order_id,net_income,service_fee,campaign_fee,credit_card_fee,shipping_subsidy,tax_import_fee,settled_date,purchase_id,seller_username
-SO-001,30.00,1.00,0.00,0.20,0.00,0.00,2025-05-15,DP-123,MyShop
-`)
-	// Write to a temp file
-	tmp := t.TempDir() + "/shp.csv"
-	if err := os.WriteFile(tmp, csvContent, 0644); err != nil {
+func TestImportSettledOrdersXLSX(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Data")
+	headers := []string{"No.", "No. Pesanan", "No. Pengajuan", "Username (Pembeli)", "Waktu Pesanan Dibuat", "Metode pembayaran pembeli", "Tanggal Dana Dilepaskan", "Harga Asli Produk", "Total Diskon Produk", "Jumlah Pengembalian Dana ke Pembeli", "Komisi Shopee", "Biaya Admin Shopee", "Biaya Layanan", "Biaya Layanan Ekstra", "Biaya Penyedia Pembayaran", "Asuransi", "Total Biaya Transaksi", "Biaya Pengiriman", "Total Diskon Pengiriman", "Promo Gratis Ongkir Shopee", "Promo Gratis Ongkir dari Penjual", "Promo Diskon Shopee", "Promo Diskon Penjual", "Cashback Shopee", "Cashback Penjual", "Koin Shopee", "Potongan Lainnya", "Total Penerimaan", "Kompensasi", "Promo Gratis Ongkir dari Penjual", "Jasa Kirim", "Nama Kurir", "Pengembalian Dana ke Pembeli", "Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang", "Pro-rata Voucher Shopee untuk Pengembalian Barang", "Pro-rated Bank Payment Channel Promotion for returns", "Pro-rated Shopee Payment Channel Promotion for returns"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		f.SetCellValue("Data", cell, h)
+	}
+	data := []interface{}{1, "SO-1", "NG-1", "user", "2025-01-01", "COD", "2025-01-02", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, "jne", "kurir", 1, 1, 1, 1, 1}
+	for i, v := range data {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		f.SetCellValue("Data", cell, v)
+	}
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
 		t.Fatal(err)
 	}
 
-	// Setup fake repos
-	fakeS := &fakeShopeeRepo{}
-	svc := NewShopeeService(fakeS)
-
-	err := svc.ImportSettledOrdersCSV(context.Background(), tmp)
+	repo := &fakeShopeeRepo{}
+	svc := NewShopeeService(repo)
+	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
-		t.Fatalf("ImportSettledOrdersCSV failed: %v", err)
+		t.Fatalf("import error: %v", err)
 	}
-
-	// Verify Shopee insertion
-	if len(fakeS.inserted) != 1 {
-		t.Fatalf("expected 1 Shopee insert, got %d", len(fakeS.inserted))
+	if inserted != 1 || repo.count != 1 {
+		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
 	}
-	ins := fakeS.inserted[0]
-	if ins.OrderID != "SO-001" || ins.NetIncome != 30.00 {
-		t.Errorf("unexpected inserted Shopee: %+v", ins)
-	}
-
 }

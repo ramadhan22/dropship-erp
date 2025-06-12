@@ -67,6 +67,46 @@ type ShopeeSettledOrder struct {
 	UpdatedAt       time.Time `db:"updated_at"`
 }
 
+// ShopeeSettled represents rows of the shopee_settled table.
+type ShopeeSettled struct {
+	NoPesanan                                        string    `db:"no_pesanan"`
+	NoPengajuan                                      string    `db:"no_pengajuan"`
+	UsernamePembeli                                  string    `db:"username_pembeli"`
+	WaktuPesananDibuat                               time.Time `db:"waktu_pesanan_dibuat"`
+	MetodePembayaranPembeli                          string    `db:"metode_pembayaran_pembeli"`
+	TanggalDanaDilepaskan                            time.Time `db:"tanggal_dana_dilepaskan"`
+	HargaAsliProduk                                  float64   `db:"harga_asli_produk"`
+	TotalDiskonProduk                                float64   `db:"total_diskon_produk"`
+	JumlahPengembalianDanaKePembeli                  float64   `db:"jumlah_pengembalian_dana_ke_pembeli"`
+	KomisiShopee                                     float64   `db:"komisi_shopee"`
+	BiayaAdminShopee                                 float64   `db:"biaya_admin_shopee"`
+	BiayaLayanan                                     float64   `db:"biaya_layanan"`
+	BiayaLayananEkstra                               float64   `db:"biaya_layanan_ekstra"`
+	BiayaPenyediaPembayaran                          float64   `db:"biaya_penyedia_pembayaran"`
+	Asuransi                                         float64   `db:"asuransi"`
+	TotalBiayaTransaksi                              float64   `db:"total_biaya_transaksi"`
+	BiayaPengiriman                                  float64   `db:"biaya_pengiriman"`
+	TotalDiskonPengiriman                            float64   `db:"total_diskon_pengiriman"`
+	PromoGratisOngkirShopee                          float64   `db:"promo_gratis_ongkir_shopee"`
+	PromoGratisOngkirPenjual                         float64   `db:"promo_gratis_ongkir_penjual"`
+	PromoDiskonShopee                                float64   `db:"promo_diskon_shopee"`
+	PromoDiskonPenjual                               float64   `db:"promo_diskon_penjual"`
+	CashbackShopee                                   float64   `db:"cashback_shopee"`
+	CashbackPenjual                                  float64   `db:"cashback_penjual"`
+	KoinShopee                                       float64   `db:"koin_shopee"`
+	PotonganLainnya                                  float64   `db:"potongan_lainnya"`
+	TotalPenerimaan                                  float64   `db:"total_penerimaan"`
+	Kompensasi                                       float64   `db:"kompensasi"`
+	PromoGratisOngkirDariPenjual                     float64   `db:"promo_gratis_ongkir_dari_penjual"`
+	JasaKirim                                        string    `db:"jasa_kirim"`
+	NamaKurir                                        string    `db:"nama_kurir"`
+	PengembalianDanaKePembeli                        float64   `db:"pengembalian_dana_ke_pembeli"`
+	ProRataKoinYangDitukarkanUntukPengembalianBarang float64   `db:"pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang"`
+	ProRataVoucherShopeeUntukPengembalianBarang      float64   `db:"pro_rata_voucher_shopee_untuk_pengembalian_barang"`
+	ProRatedBankPaymentChannelPromotionForReturns    float64   `db:"pro_rated_bank_payment_channel_promotion_for_returns"`
+	ProRatedShopeePaymentChannelPromotionForReturns  float64   `db:"pro_rated_shopee_payment_channel_promotion_for_returns"`
+}
+
 // JournalEntry represents the D7 header table: journal_entries
 type JournalEntry struct {
 	JournalID    int64     `db:"journal_id"`
