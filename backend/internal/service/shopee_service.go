@@ -88,13 +88,20 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		return 0, fmt.Errorf("read rows: %w", err)
 	}
 
-	// Validate header row at index 4 matches expected columns (after the
-	// first \"No.\" column). If headers don't match we fail early so the
-	// caller is aware the template changed.
-	if len(rows) <= 4 {
-		return 0, fmt.Errorf("header row missing")
+	storeUsername, _ := f.GetCellValue(sheet, "A2")
+	namaToko := formatNamaToko(storeUsername)
+
+	headerIndex := -1
+	for i, row := range rows {
+		if len(row) > 1 && strings.TrimSpace(row[1]) == expectedHeaders[0] {
+			headerIndex = i
+			break
+		}
 	}
-	header := rows[4]
+	if headerIndex == -1 {
+		return 0, fmt.Errorf("header row not found")
+	}
+	header := rows[headerIndex]
 	if len(header) < len(expectedHeaders)+1 { // +1 for the \"No.\" column
 		return 0, fmt.Errorf("invalid header length")
 	}
@@ -105,7 +112,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	}
 
 	inserted := 0
-	for i := 5; i < len(rows); i++ {
+	for i := headerIndex + 1; i < len(rows); i++ {
 		row := rows[i]
 		if len(row) < 37 {
 			continue
@@ -114,7 +121,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 			continue
 		}
 
-		entry, err := parseShopeeRow(row)
+		entry, err := parseShopeeRow(row, namaToko)
 		if err != nil {
 			continue
 		}
@@ -147,9 +154,9 @@ func parseFloat(s string) (float64, error) {
 	return strconv.ParseFloat(s, 64)
 }
 
-func parseShopeeRow(row []string) (*models.ShopeeSettled, error) {
+func parseShopeeRow(row []string, namaToko string) (*models.ShopeeSettled, error) {
 	var err error
-	res := &models.ShopeeSettled{}
+	res := &models.ShopeeSettled{NamaToko: namaToko}
 	res.NoPesanan = row[1]
 	res.NoPengajuan = row[2]
 	res.UsernamePembeli = row[3]
@@ -247,4 +254,16 @@ func parseShopeeRow(row []string) (*models.ShopeeSettled, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func formatNamaToko(username string) string {
+	u := strings.ToLower(strings.TrimSpace(username))
+	if u == "" {
+		return ""
+	}
+	if u == "mrest0re" {
+		return "MR eStore Shopee"
+	}
+	u = strings.ReplaceAll(u, ".", " ")
+	return strings.ToUpper(u[:1]) + u[1:]
 }

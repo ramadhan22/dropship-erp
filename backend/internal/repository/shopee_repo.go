@@ -43,7 +43,7 @@ func (r *ShopeeRepo) InsertShopeeOrder(ctx context.Context, o *models.ShopeeSett
 func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error {
 	query := `
         INSERT INTO shopee_settled (
-            no_pesanan, no_pengajuan, username_pembeli, waktu_pesanan_dibuat,
+            nama_toko, no_pesanan, no_pengajuan, username_pembeli, waktu_pesanan_dibuat,
             metode_pembayaran_pembeli, tanggal_dana_dilepaskan, harga_asli_produk,
             total_diskon_produk, jumlah_pengembalian_dana_ke_pembeli, komisi_shopee,
             biaya_admin_shopee, biaya_layanan, biaya_layanan_ekstra,
@@ -58,7 +58,7 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             pro_rated_bank_payment_channel_promotion_for_returns,
             pro_rated_shopee_payment_channel_promotion_for_returns
         ) VALUES (
-            :no_pesanan, :no_pengajuan, :username_pembeli, :waktu_pesanan_dibuat,
+            :nama_toko, :no_pesanan, :no_pengajuan, :username_pembeli, :waktu_pesanan_dibuat,
             :metode_pembayaran_pembeli, :tanggal_dana_dilepaskan, :harga_asli_produk,
             :total_diskon_produk, :jumlah_pengembalian_dana_ke_pembeli, :komisi_shopee,
             :biaya_admin_shopee, :biaya_layanan, :biaya_layanan_ekstra,

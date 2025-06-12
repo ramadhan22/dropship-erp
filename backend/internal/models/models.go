@@ -69,6 +69,7 @@ type ShopeeSettledOrder struct {
 
 // ShopeeSettled represents rows of the shopee_settled table.
 type ShopeeSettled struct {
+	NamaToko                                         string    `db:"nama_toko"`
 	NoPesanan                                        string    `db:"no_pesanan"`
 	NoPengajuan                                      string    `db:"no_pengajuan"`
 	UsernamePembeli                                  string    `db:"username_pembeli"`
