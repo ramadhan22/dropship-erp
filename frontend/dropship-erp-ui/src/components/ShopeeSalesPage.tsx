@@ -28,9 +28,12 @@ export default function ShopeeSalesPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState("");
   const [date, setDate] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ShopeeSettled[]>([]);
   const [total, setTotal] = useState(0);
+  const [pageTotal, setPageTotal] = useState(0);
   const pageSize = 10;
 
   const [importOpen, setImportOpen] = useState(false);
@@ -57,11 +60,18 @@ export default function ShopeeSalesPage() {
         channel: channel || undefined,
         store,
         date,
+        month,
+        year,
         page,
         page_size: pageSize,
       });
       setData(res.data.data);
       setTotal(res.data.total);
+      const sum = res.data.data.reduce(
+        (acc, cur) => acc + cur.total_penerimaan,
+        0,
+      );
+      setPageTotal(sum);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -71,7 +81,7 @@ export default function ShopeeSalesPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, store, date, page]);
+  }, [channel, store, date, month, year, page]);
 
   const handleImport = async () => {
     try {
@@ -124,12 +134,40 @@ export default function ShopeeSalesPage() {
           size="small"
           InputLabelProps={{ shrink: true }}
         />
+        <TextField
+          label="Month"
+          type="number"
+          value={month}
+          onChange={(e) => {
+            setMonth(e.target.value);
+            setPage(1);
+          }}
+          size="small"
+          sx={{ width: 100 }}
+        />
+        <TextField
+          label="Year"
+          type="number"
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value);
+            setPage(1);
+          }}
+          size="small"
+          sx={{ width: 100 }}
+        />
       </div>
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>
           {msg.text}
         </Alert>
       )}
+      <div style={{ marginBottom: "0.5rem" }}>
+        <strong>Page Total:</strong>{" "}
+        {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {" | "}
+        <strong>Total Rows:</strong> {total}
+      </div>
       <Table size="small">
         <TableHead>
           <TableRow>

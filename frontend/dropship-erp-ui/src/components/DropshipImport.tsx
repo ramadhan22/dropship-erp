@@ -38,6 +38,8 @@ export default function DropshipImport() {
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
   const [date, setDate] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -45,6 +47,7 @@ export default function DropshipImport() {
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<DropshipPurchase[]>([]);
   const [total, setTotal] = useState(0);
+  const [pageTotal, setPageTotal] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
   const [details, setDetails] = useState<DropshipPurchaseDetail[]>([]);
   const [selected, setSelected] = useState<DropshipPurchase | null>(null);
@@ -66,16 +69,23 @@ export default function DropshipImport() {
       channel,
       store,
       date,
+      month,
+      year,
       page,
       page_size: pageSize,
     });
     setData(res.data.data);
     setTotal(res.data.total);
+    const sum = res.data.data.reduce(
+      (acc, cur) => acc + cur.total_transaksi,
+      0,
+    );
+    setPageTotal(sum);
   };
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, date, page]);
+  }, [channel, store, date, month, year, page]);
 
   const handleSubmit = async () => {
     try {
@@ -140,6 +150,34 @@ export default function DropshipImport() {
           size="small"
           InputLabelProps={{ shrink: true }}
         />
+        <TextField
+          label="Month"
+          type="number"
+          value={month}
+          onChange={(e) => {
+            setMonth(e.target.value);
+            setPage(1);
+          }}
+          size="small"
+          sx={{ width: 100 }}
+        />
+        <TextField
+          label="Year"
+          type="number"
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value);
+            setPage(1);
+          }}
+          size="small"
+          sx={{ width: 100 }}
+        />
+      </div>
+      <div style={{ marginBottom: "0.5rem" }}>
+        <strong>Page Total:</strong>{" "}
+        {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {" | "}
+        <strong>Total Rows:</strong> {total}
       </div>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
