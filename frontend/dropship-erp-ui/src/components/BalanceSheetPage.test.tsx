@@ -1,6 +1,7 @@
 // File: src/components/BalanceSheetPage.test.tsx
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api";
 import BalanceSheetPage from "./BalanceSheetPage";
 
