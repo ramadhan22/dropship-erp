@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // fake service
@@ -23,6 +24,10 @@ func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Re
 		return 0, errors.New("fail import")
 	}
 	return 1, nil
+}
+
+func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error) {
+	return nil, 0, nil
 }
 
 func TestShopeeHandleImport_Success(t *testing.T) {

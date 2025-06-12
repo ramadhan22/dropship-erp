@@ -33,3 +33,10 @@ export interface Store {
   jenis_channel_id: number;
   nama_toko: string;
 }
+
+export interface ShopeeSettled {
+  nama_toko: string;
+  no_pesanan: string;
+  tanggal_dana_dilepaskan: string;
+  total_penerimaan: number;
+}

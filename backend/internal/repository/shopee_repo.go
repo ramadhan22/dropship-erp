@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -87,4 +89,60 @@ func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*m
 		return nil, err
 	}
 	return &o, nil
+}
+
+// ListShopeeSettled returns shopee_settled rows filtered by optional parameters.
+// Pagination is controlled via limit and offset and the total count is returned
+// alongside the slice of rows.
+func (r *ShopeeRepo) ListShopeeSettled(
+	ctx context.Context,
+	channel, store, date, month, year string,
+	limit, offset int,
+) ([]models.ShopeeSettled, int, error) {
+	base := `SELECT s.* FROM shopee_settled s
+        LEFT JOIN stores st ON s.nama_toko = st.nama_toko
+        LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
+	args := []interface{}{}
+	conds := []string{}
+	arg := 1
+	if channel != "" {
+		conds = append(conds, fmt.Sprintf("jc.jenis_channel = $%d", arg))
+		args = append(args, channel)
+		arg++
+	}
+	if store != "" {
+		conds = append(conds, fmt.Sprintf("s.nama_toko = $%d", arg))
+		args = append(args, store)
+		arg++
+	}
+	if date != "" {
+		conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d", arg))
+		args = append(args, date)
+		arg++
+	}
+	if month != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d", arg))
+		args = append(args, month)
+		arg++
+	}
+	if year != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d", arg))
+		args = append(args, year)
+		arg++
+	}
+	query := base
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
+	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
+	var count int
+	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
+		return nil, 0, err
+	}
+	query += fmt.Sprintf(" ORDER BY s.waktu_pesanan_dibuat DESC LIMIT %d OFFSET %d", limit, offset)
+	var list []models.ShopeeSettled
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+		return nil, 0, err
+	}
+	return list, count, nil
 }
