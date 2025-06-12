@@ -125,6 +125,9 @@ func (r *JournalRepo) GetJournalEntry(ctx context.Context, id int64) (*models.Jo
 func (r *JournalRepo) ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error) {
 	var list []models.JournalEntry
 	err := r.db.SelectContext(ctx, &list, `SELECT * FROM journal_entries ORDER BY entry_date DESC`)
+	if list == nil {
+		list = []models.JournalEntry{}
+	}
 	return list, err
 }
 

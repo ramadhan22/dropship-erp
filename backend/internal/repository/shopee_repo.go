@@ -115,21 +115,21 @@ func (r *ShopeeRepo) ListShopeeSettled(
 		args = append(args, store)
 		arg++
 	}
-        if date != "" {
-                conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d::date", arg))
-                args = append(args, date)
-                arg++
-        }
-        if month != "" {
-                conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-                args = append(args, month)
-                arg++
-        }
-        if year != "" {
-                conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-                args = append(args, year)
-                arg++
-        }
+	if date != "" {
+		conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d::date", arg))
+		args = append(args, date)
+		arg++
+	}
+	if month != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
+		args = append(args, month)
+		arg++
+	}
+	if year != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
+		args = append(args, year)
+		arg++
+	}
 	query := base
 	if len(conds) > 0 {
 		query += " WHERE " + strings.Join(conds, " AND ")
@@ -143,6 +143,9 @@ func (r *ShopeeRepo) ListShopeeSettled(
 	var list []models.ShopeeSettled
 	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
 		return nil, 0, err
+	}
+	if list == nil {
+		list = []models.ShopeeSettled{}
 	}
 	return list, count, nil
 }
