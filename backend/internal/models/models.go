@@ -150,3 +150,16 @@ type CachedMetric struct {
 	EndingCashBalance float64   `db:"ending_cash_balance"`
 	UpdatedAt         time.Time `db:"updated_at"`
 }
+
+// JenisChannel represents e-commerce channel types such as Shopee or Tokopedia.
+type JenisChannel struct {
+	JenisChannelID int64  `db:"jenis_channel_id"`
+	JenisChannel   string `db:"jenis_channel"`
+}
+
+// Store represents a store/shop under a jenis channel.
+type Store struct {
+	StoreID        int64  `db:"store_id"`
+	JenisChannelID int64  `db:"jenis_channel_id"`
+	NamaToko       string `db:"nama_toko"`
+}

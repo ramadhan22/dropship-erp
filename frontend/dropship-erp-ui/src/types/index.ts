@@ -22,3 +22,14 @@ export interface BalanceCategory {
   accounts: Account[];    // list of accounts in this category
   total: number;          // aggregated total
 }
+
+export interface JenisChannel {
+  jenis_channel_id: number;
+  jenis_channel: string;
+}
+
+export interface Store {
+  store_id: number;
+  jenis_channel_id: number;
+  nama_toko: string;
+}

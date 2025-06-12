@@ -47,6 +47,7 @@ func main() {
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
 	)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
+	channelSvc := service.NewChannelService(repo.ChannelRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -66,6 +67,10 @@ func main() {
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)
 		apiGroup.GET("/metrics", handlers.NewMetricHandler(metricSvc).HandleGetMetrics)
 		apiGroup.GET("/balancesheet", handlers.NewBalanceHandler(balanceSvc).HandleGetBalanceSheet)
+		apiGroup.POST("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleCreateJenisChannel)
+		apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
+		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
+		apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
 	}
 
 	// 5) Start the HTTP server
