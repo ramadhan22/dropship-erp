@@ -5,6 +5,8 @@ import DropshipImport from "./components/DropshipImport";
 import MetricsPage from "./components/MetricsPage";
 import ReconcileForm from "./components/ReconcileForm";
 import ShopeeSalesPage from "./components/ShopeeSalesPage";
+import ShopeeImport from "./components/ShopeeImport";
+import AccountPage from "./components/AccountPage";
 
 export default function App() {
   return (
@@ -15,7 +17,8 @@ export default function App() {
         <Link to="/reconcile">Reconcile</Link> |{" "}
         <Link to="/metrics">Metrics</Link> |{" "}
         <Link to="/balance">Balance Sheet</Link> |{" "}
-        <Link to="/channels">Channels</Link>
+        <Link to="/channels">Channels</Link> |{" "}
+        <Link to="/accounts">Accounts</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
         <Routes>
@@ -25,6 +28,7 @@ export default function App() {
           <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/balance" element={<BalanceSheetPage />} />
           <Route path="/channels" element={<ChannelPage />} />
+          <Route path="/accounts" element={<AccountPage />} />
         </Routes>
       </div>
     </BrowserRouter>

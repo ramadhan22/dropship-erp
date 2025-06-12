@@ -48,6 +48,7 @@ func main() {
 	)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
+	accountSvc := service.NewAccountService(repo.AccountRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -62,6 +63,7 @@ func main() {
 	apiGroup := router.Group("/api")
 	{
 		apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
+		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
 		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
@@ -72,6 +74,13 @@ func main() {
 		apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
 		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
 		apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
+
+		accHandler := handlers.NewAccountHandler(accountSvc)
+		apiGroup.POST("/accounts", accHandler.HandleCreateAccount)
+		apiGroup.GET("/accounts", accHandler.HandleListAccounts)
+		apiGroup.GET("/accounts/:id", accHandler.HandleGetAccount)
+		apiGroup.PUT("/accounts/:id", accHandler.HandleUpdateAccount)
+		apiGroup.DELETE("/accounts/:id", accHandler.HandleDeleteAccount)
 	}
 
 	// 5) Start the HTTP server

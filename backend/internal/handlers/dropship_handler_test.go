@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // fakeDropshipService implements the DropshipServiceInterface for testing.
@@ -25,6 +26,10 @@ func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (i
 		return 0, errors.New("fail import")
 	}
 	return 1, nil
+}
+
+func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+	return nil, 0, nil
 }
 
 func TestHandleImport_Success(t *testing.T) {

@@ -37,6 +37,10 @@ func (f *fakeDropshipRepo) ExistsDropshipPurchase(ctx context.Context, kode stri
 	return f.existing[kode], nil
 }
 
+func (f *fakeDropshipRepo) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+	return nil, 0, nil
+}
+
 func TestImportFromCSV_Success(t *testing.T) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)

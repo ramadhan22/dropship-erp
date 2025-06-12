@@ -1,5 +1,14 @@
 import axios from "axios";
 import type { BalanceCategory, Metric, JenisChannel, Store, ShopeeSettled } from "../types";
+import type {
+  BalanceCategory,
+  Metric,
+  JenisChannel,
+  Store,
+  DropshipPurchase,
+  Account,
+} from "../types";
+
 
 export interface ImportResponse {
   inserted: number;
@@ -92,7 +101,15 @@ export function listStores(channelId: number) {
   return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
 }
 
+
 export function listShopeeSettled(params: {
+
+export interface DropshipPurchaseList {
+  data: DropshipPurchase[];
+  total: number;
+}
+
+export function listDropshipPurchases(params: {
   channel?: string;
   store?: string;
   date?: string;
@@ -101,6 +118,7 @@ export function listShopeeSettled(params: {
   page?: number;
   page_size?: number;
 }) {
+
   const sp = new URLSearchParams();
   if (params.channel) sp.append("channel", params.channel);
   if (params.store) sp.append("store", params.store);
@@ -112,4 +130,36 @@ export function listShopeeSettled(params: {
   return api.get<{ data: ShopeeSettled[]; total: number }>(
     `/shopee/settled?${sp.toString()}`,
   );
+
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  const qs = q.toString();
+  const url = qs ? `/dropship/purchases?${qs}` : "/dropship/purchases";
+  return api.get<DropshipPurchaseList>(url);
+}
+// === Accounts CRUD ===
+export function createAccount(acc: Partial<Account>) {
+  return api.post("/accounts", acc);
+}
+
+export function listAccounts() {
+  return api.get<Account[]>("/accounts");
+}
+
+export function getAccount(id: number) {
+  return api.get<Account>(`/accounts/${id}`);
+}
+
+export function updateAccount(id: number, acc: Partial<Account>) {
+  return api.put(`/accounts/${id}`, acc);
+}
+
+export function deleteAccount(id: number) {
+  return api.delete(`/accounts/${id}`);
 }
