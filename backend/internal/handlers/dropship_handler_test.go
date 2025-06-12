@@ -20,11 +20,11 @@ type fakeDropshipService struct {
 	fail bool
 }
 
-func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) error {
+func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, error) {
 	if f.fail {
-		return errors.New("fail import")
+		return 0, errors.New("fail import")
 	}
-	return nil
+	return 1, nil
 }
 
 func TestHandleImport_Success(t *testing.T) {
