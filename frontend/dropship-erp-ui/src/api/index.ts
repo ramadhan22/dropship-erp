@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { BalanceCategory, Metric } from "../types";
+import type { BalanceCategory, Metric, JenisChannel, Store } from "../types";
 
 export interface ImportResponse {
   inserted: number;
@@ -70,4 +70,24 @@ export function fetchBalanceSheet(shop: string, period: string) {
   return api.get<BalanceCategory[]>(
     `/balancesheet?shop=${shop}&period=${period}`,
   );
+}
+
+// === JenisChannel & Store Master Data ===
+export function createJenisChannel(jenisChannel: string) {
+  return api.post("/jenis-channels", { jenis_channel: jenisChannel });
+}
+
+export function createStore(jenisChannelId: number, namaToko: string) {
+  return api.post("/stores", {
+    jenis_channel_id: jenisChannelId,
+    nama_toko: namaToko,
+  });
+}
+
+export function listJenisChannels() {
+  return api.get<JenisChannel[]>("/jenis-channels");
+}
+
+export function listStores(channelId: number) {
+  return api.get<Store[]>(`/jenis-channels/${channelId}/stores`);
 }

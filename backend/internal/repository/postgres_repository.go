@@ -1,5 +1,3 @@
-// File: backend/internal/repository/postgres_repository.go
-
 package repository
 
 import (
@@ -16,6 +14,7 @@ type Repository struct {
 	ReconcileRepo *ReconcileRepo
 	JournalRepo   *JournalRepo
 	MetricRepo    *MetricRepo
+	ChannelRepo   *ChannelRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -33,6 +32,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	reconcileRepo := NewReconcileRepo(db)
 	journalRepo := NewJournalRepo(db)
 	metricRepo := NewMetricRepo(db)
+	channelRepo := NewChannelRepo(db)
 
 	return &Repository{
 		DB:            db,
@@ -41,6 +41,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		ReconcileRepo: reconcileRepo,
 		JournalRepo:   journalRepo,
 		MetricRepo:    metricRepo,
+		ChannelRepo:   channelRepo,
 	}, nil
 }
 
