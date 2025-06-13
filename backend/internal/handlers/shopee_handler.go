@@ -14,6 +14,7 @@ import (
 type ShopeeServiceInterface interface {
 	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error)
 	ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
+	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error)
 }
 
 type ShopeeHandler struct {
@@ -70,4 +71,20 @@ func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+}
+
+// HandleSumSettled returns the total penerimaan for all filtered rows.
+func (h *ShopeeHandler) HandleSumSettled(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	date := c.Query("date")
+	month := c.Query("month")
+	year := c.Query("year")
+	ctx := c.Request.Context()
+	sum, err := h.svc.SumShopeeSettled(ctx, channel, store, date, month, year)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"total": sum})
 }

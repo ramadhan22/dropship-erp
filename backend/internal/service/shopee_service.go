@@ -61,6 +61,7 @@ var expectedHeaders = []string{
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
 	ListShopeeSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
+	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -280,4 +281,11 @@ func (s *ShopeeService) ListSettled(
 	limit, offset int,
 ) ([]models.ShopeeSettled, int, error) {
 	return s.repo.ListShopeeSettled(ctx, channel, store, date, month, year, limit, offset)
+}
+
+func (s *ShopeeService) SumShopeeSettled(
+	ctx context.Context,
+	channel, store, date, month, year string,
+) (float64, error) {
+	return s.repo.SumShopeeSettled(ctx, channel, store, date, month, year)
 }

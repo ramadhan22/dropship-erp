@@ -12,6 +12,7 @@ jest.mock("../api", () => ({
   listDropshipPurchases: jest
     .fn()
     .mockResolvedValue({ data: { data: [], total: 0 } }),
+  sumDropshipPurchases: jest.fn().mockResolvedValue({ data: { total: 0 } }),
   listJenisChannels: jest.fn().mockResolvedValue({ data: [] }),
   listStores: jest.fn().mockResolvedValue({ data: [] }),
 }));
