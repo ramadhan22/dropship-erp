@@ -37,8 +37,41 @@ export interface Store {
 export interface ShopeeSettled {
   nama_toko: string;
   no_pesanan: string;
+  no_pengajuan: string;
+  username_pembeli: string;
+  waktu_pesanan_dibuat: string;
+  metode_pembayaran_pembeli: string;
   tanggal_dana_dilepaskan: string;
+  harga_asli_produk: number;
+  total_diskon_produk: number;
+  jumlah_pengembalian_dana_ke_pembeli: number;
+  komisi_shopee: number;
+  biaya_admin_shopee: number;
+  biaya_layanan: number;
+  biaya_layanan_ekstra: number;
+  biaya_penyedia_pembayaran: number;
+  asuransi: number;
+  total_biaya_transaksi: number;
+  biaya_pengiriman: number;
+  total_diskon_pengiriman: number;
+  promo_gratis_ongkir_shopee: number;
+  promo_gratis_ongkir_penjual: number;
+  promo_diskon_shopee: number;
+  promo_diskon_penjual: number;
+  cashback_shopee: number;
+  cashback_penjual: number;
+  koin_shopee: number;
+  potongan_lainnya: number;
   total_penerimaan: number;
+  kompensasi: number;
+  promo_gratis_ongkir_dari_penjual: number;
+  jasa_kirim: string;
+  nama_kurir: string;
+  pengembalian_dana_ke_pembeli: number;
+  pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang: number;
+  pro_rata_voucher_shopee_untuk_pengembalian_barang: number;
+  pro_rated_bank_payment_channel_promotion_for_returns: number;
+  pro_rated_shopee_payment_channel_promotion_for_returns: number;
 }
 export interface DropshipPurchase {
   kode_pesanan: string;

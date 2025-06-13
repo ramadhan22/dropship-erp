@@ -6,13 +6,9 @@ import {
   DialogContent,
   DialogTitle,
   Pagination,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
 } from "@mui/material";
+import SortableTable, { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
 import {
   importShopee,
@@ -37,6 +33,72 @@ export default function ShopeeSalesPage() {
   const [pageTotal, setPageTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0);
   const pageSize = 10;
+
+  const columns: Column<ShopeeSettled>[] = [
+    { label: "Nama Toko", key: "nama_toko" },
+    { label: "No Pesanan", key: "no_pesanan" },
+    { label: "No Pengajuan", key: "no_pengajuan" },
+    { label: "Username Pembeli", key: "username_pembeli" },
+    {
+      label: "Waktu Pesanan Dibuat",
+      key: "waktu_pesanan_dibuat",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    { label: "Metode Pembayaran", key: "metode_pembayaran_pembeli" },
+    {
+      label: "Tanggal Dana Dilepaskan",
+      key: "tanggal_dana_dilepaskan",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    { label: "Harga Asli Produk", key: "harga_asli_produk" },
+    { label: "Total Diskon Produk", key: "total_diskon_produk" },
+    {
+      label: "Jumlah Pengembalian Dana",
+      key: "jumlah_pengembalian_dana_ke_pembeli",
+    },
+    { label: "Komisi Shopee", key: "komisi_shopee" },
+    { label: "Biaya Admin Shopee", key: "biaya_admin_shopee" },
+    { label: "Biaya Layanan", key: "biaya_layanan" },
+    { label: "Biaya Layanan Ekstra", key: "biaya_layanan_ekstra" },
+    { label: "Biaya Penyedia Pembayaran", key: "biaya_penyedia_pembayaran" },
+    { label: "Asuransi", key: "asuransi" },
+    { label: "Total Biaya Transaksi", key: "total_biaya_transaksi" },
+    { label: "Biaya Pengiriman", key: "biaya_pengiriman" },
+    { label: "Total Diskon Pengiriman", key: "total_diskon_pengiriman" },
+    { label: "Promo Gratis Ongkir Shopee", key: "promo_gratis_ongkir_shopee" },
+    { label: "Promo Gratis Ongkir Penjual", key: "promo_gratis_ongkir_penjual" },
+    { label: "Promo Diskon Shopee", key: "promo_diskon_shopee" },
+    { label: "Promo Diskon Penjual", key: "promo_diskon_penjual" },
+    { label: "Cashback Shopee", key: "cashback_shopee" },
+    { label: "Cashback Penjual", key: "cashback_penjual" },
+    { label: "Koin Shopee", key: "koin_shopee" },
+    { label: "Potongan Lainnya", key: "potongan_lainnya" },
+    { label: "Total Penerimaan", key: "total_penerimaan" },
+    { label: "Kompensasi", key: "kompensasi" },
+    {
+      label: "Promo Gratis Ongkir Dari Penjual",
+      key: "promo_gratis_ongkir_dari_penjual",
+    },
+    { label: "Jasa Kirim", key: "jasa_kirim" },
+    { label: "Nama Kurir", key: "nama_kurir" },
+    { label: "Pengembalian Dana", key: "pengembalian_dana_ke_pembeli" },
+    {
+      label: "Pro-rata Koin Refund",
+      key: "pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang",
+    },
+    {
+      label: "Pro-rata Voucher Refund",
+      key: "pro_rata_voucher_shopee_untuk_pengembalian_barang",
+    },
+    {
+      label: "Promo Bank Returns",
+      key: "pro_rated_bank_payment_channel_promotion_for_returns",
+    },
+    {
+      label: "Promo Shopee Returns",
+      key: "pro_rated_shopee_payment_channel_promotion_for_returns",
+    },
+  ];
 
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -181,33 +243,9 @@ export default function ShopeeSalesPage() {
         <strong>All Total:</strong>{" "}
         {allTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
       </div>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>No Pesanan</TableCell>
-            <TableCell>Nama Toko</TableCell>
-            <TableCell>Tanggal Dana Dilepaskan</TableCell>
-            <TableCell>Total Penerimaan</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((d, i) => (
-            <TableRow key={i}>
-              <TableCell>{d.no_pesanan}</TableCell>
-              <TableCell>{d.nama_toko}</TableCell>
-              <TableCell>
-                {new Date(d.tanggal_dana_dilepaskan).toLocaleDateString("id-ID")}
-              </TableCell>
-              <TableCell>
-                {d.total_penerimaan.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div style={{ overflowX: "auto" }}>
+        <SortableTable columns={columns} data={data} />
+      </div>
       <Pagination
         sx={{ mt: 2 }}
         page={page}
