@@ -79,6 +79,14 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
 	return err
 }
 
+// ExistsShopeeSettled checks if a row with the given order number already exists.
+func (r *ShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error) {
+	var exists bool
+	err := r.db.GetContext(ctx, &exists,
+		"SELECT EXISTS(SELECT 1 FROM shopee_settled WHERE no_pesanan=$1)", noPesanan)
+	return exists, err
+}
+
 // GetShopeeOrderByID retrieves one settled order by its unique order_id.
 // This is used when reconciling with dropship purchases or calculating revenue.
 func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*models.ShopeeSettledOrder, error) {

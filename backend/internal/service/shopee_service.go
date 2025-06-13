@@ -62,6 +62,7 @@ type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
 	ListShopeeSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -127,6 +128,13 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 
 		entry, err := parseShopeeRow(row, namaToko)
 		if err != nil {
+			continue
+		}
+		exists, err := s.repo.ExistsShopeeSettled(ctx, entry.NoPesanan)
+		if err != nil {
+			return inserted, fmt.Errorf("check existing row %d: %w", i+1, err)
+		}
+		if exists {
 			continue
 		}
 		if err := s.repo.InsertShopeeSettled(ctx, entry); err != nil {
