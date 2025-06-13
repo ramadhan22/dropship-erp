@@ -14,10 +14,10 @@ import (
 
 // fakeDropshipRepo captures calls to InsertDropshipPurchase.
 type fakeDropshipRepo struct {
-	insertedHeader []*models.DropshipPurchase
-	insertedDetail []*models.DropshipPurchaseDetail
-	errOn          string
-	existing       map[string]bool
+        insertedHeader []*models.DropshipPurchase
+        insertedDetail []*models.DropshipPurchaseDetail
+        errOn          string
+        existing       map[string]bool
 }
 
 func (f *fakeDropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
@@ -47,6 +47,10 @@ func (f *fakeDropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kode str
 
 func (f *fakeDropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kode string) ([]models.DropshipPurchaseDetail, error) {
         return nil, nil
+}
+
+func (f *fakeDropshipRepo) SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error) {
+        return 0, nil
 }
 
 func TestImportFromCSV_Success(t *testing.T) {

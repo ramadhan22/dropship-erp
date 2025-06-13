@@ -12,10 +12,11 @@ import (
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
-        ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
-        ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
-        GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
-        ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
+	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
+	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 }
 
 type DropshipHandler struct {
@@ -73,16 +74,32 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-        c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+}
+
+// HandleSum returns the sum of total_transaksi for all data matching filters.
+func (h *DropshipHandler) HandleSum(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	date := c.Query("date")
+	month := c.Query("month")
+	year := c.Query("year")
+	ctx := c.Request.Context()
+	sum, err := h.svc.SumDropshipPurchases(ctx, channel, store, date, month, year)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"total": sum})
 }
 
 // HandleListDetails returns detail rows for a given kode_pesanan.
 func (h *DropshipHandler) HandleListDetails(c *gin.Context) {
-        kode := c.Param("id")
-        details, err := h.svc.ListDropshipPurchaseDetails(context.Background(), kode)
-        if err != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }
-        c.JSON(http.StatusOK, details)
+	kode := c.Param("id")
+	details, err := h.svc.ListDropshipPurchaseDetails(context.Background(), kode)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, details)
 }

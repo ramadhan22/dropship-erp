@@ -19,6 +19,7 @@ import {
   listJenisChannels,
   listStoresByChannelName,
   listShopeeSettled,
+  sumShopeeSettled,
 } from "../api";
 import type { JenisChannel, Store, ShopeeSettled } from "../types";
 
@@ -34,6 +35,7 @@ export default function ShopeeSalesPage() {
   const [data, setData] = useState<ShopeeSettled[]>([]);
   const [total, setTotal] = useState(0);
   const [pageTotal, setPageTotal] = useState(0);
+  const [allTotal, setAllTotal] = useState(0);
   const pageSize = 10;
 
   const [importOpen, setImportOpen] = useState(false);
@@ -72,6 +74,14 @@ export default function ShopeeSalesPage() {
         0,
       );
       setPageTotal(sum);
+      const totalRes = await sumShopeeSettled({
+        channel: channel || undefined,
+        store,
+        date,
+        month,
+        year,
+      });
+      setAllTotal(totalRes.data.total);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -167,6 +177,9 @@ export default function ShopeeSalesPage() {
         {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
         {" | "}
         <strong>Total Rows:</strong> {total}
+        {" | "}
+        <strong>All Total:</strong>{" "}
+        {allTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
       </div>
       <Table size="small">
         <TableHead>

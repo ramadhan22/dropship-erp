@@ -138,6 +138,26 @@ func (r *DropshipRepo) ListDropshipPurchases(
 	return list, total, nil
 }
 
+// SumDropshipPurchases returns the total sum of total_transaksi for all rows
+// matching the provided filters.
+func (r *DropshipRepo) SumDropshipPurchases(
+	ctx context.Context,
+	channel, store, date, month, year string,
+) (float64, error) {
+	query := `SELECT COALESCE(SUM(total_transaksi),0) FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) = $3::date)
+                  AND ($4 = '' OR EXTRACT(MONTH FROM waktu_pesanan_terbuat) = $4::int)
+                  AND ($5 = '' OR EXTRACT(YEAR FROM waktu_pesanan_terbuat) = $5::int)`
+	var sum float64
+	if err := r.db.GetContext(ctx, &sum, query,
+		channel, store, date, month, year); err != nil {
+		return 0, err
+	}
+	return sum, nil
+}
+
 // ListDropshipPurchaseDetails returns detail rows for a given kode_pesanan.
 func (r *DropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error) {
 	var list []models.DropshipPurchaseDetail

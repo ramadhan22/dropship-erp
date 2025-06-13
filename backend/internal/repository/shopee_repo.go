@@ -149,3 +149,50 @@ func (r *ShopeeRepo) ListShopeeSettled(
 	}
 	return list, count, nil
 }
+
+// SumShopeeSettled returns the sum of total_penerimaan for rows matching the filters.
+func (r *ShopeeRepo) SumShopeeSettled(
+	ctx context.Context,
+	channel, store, date, month, year string,
+) (float64, error) {
+	base := `SELECT COALESCE(SUM(s.total_penerimaan),0) FROM shopee_settled s
+        LEFT JOIN stores st ON s.nama_toko = st.nama_toko
+        LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
+	args := []interface{}{}
+	conds := []string{}
+	arg := 1
+	if channel != "" {
+		conds = append(conds, fmt.Sprintf("jc.jenis_channel = $%d", arg))
+		args = append(args, channel)
+		arg++
+	}
+	if store != "" {
+		conds = append(conds, fmt.Sprintf("s.nama_toko = $%d", arg))
+		args = append(args, store)
+		arg++
+	}
+	if date != "" {
+		conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d::date", arg))
+		args = append(args, date)
+		arg++
+	}
+	if month != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
+		args = append(args, month)
+		arg++
+	}
+	if year != "" {
+		conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
+		args = append(args, year)
+		arg++
+	}
+	query := base
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
+	var sum float64
+	if err := r.db.GetContext(ctx, &sum, query, args...); err != nil {
+		return 0, err
+	}
+	return sum, nil
+}

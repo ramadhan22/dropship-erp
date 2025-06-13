@@ -40,6 +40,10 @@ func (f *fakeDropshipService) ListDropshipPurchaseDetails(ctx context.Context, k
         return nil, nil
 }
 
+func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error) {
+        return 0, nil
+}
+
 func TestHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{}

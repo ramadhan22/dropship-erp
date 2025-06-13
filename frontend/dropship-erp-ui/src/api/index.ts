@@ -130,6 +130,22 @@ export function listShopeeSettled(params: {
   );
 }
 
+export function sumShopeeSettled(params: {
+  channel?: string;
+  store?: string;
+  date?: string;
+  month?: string;
+  year?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  return api.get<{ total: number }>(`/shopee/settled/summary?${q.toString()}`);
+}
+
 export interface DropshipPurchaseList {
   data: DropshipPurchase[];
   total: number;
@@ -155,6 +171,22 @@ export function listDropshipPurchases(params: {
   const qs = q.toString();
   const url = qs ? `/dropship/purchases?${qs}` : "/dropship/purchases";
   return api.get<DropshipPurchaseList>(url);
+}
+
+export function sumDropshipPurchases(params: {
+  channel?: string;
+  store?: string;
+  date?: string;
+  month?: string;
+  year?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  return api.get<{ total: number }>(`/dropship/purchases/summary?${q.toString()}`);
 }
 // === Accounts CRUD ===
 export function createAccount(acc: Partial<Account>) {

@@ -16,12 +16,13 @@ import (
 // DropshipRepoInterface defines the subset of DropshipRepo methods that the service needs.
 // In production, you pass in *repository.DropshipRepo; in tests you pass a fake implementing this.
 type DropshipRepoInterface interface {
-        InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
-        InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
-        ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
-        ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
-        GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
-        ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
+	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
+	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
+	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
+	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
@@ -148,17 +149,24 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 
 // ListDropshipPurchases proxies to the repository to fetch filtered purchases.
 func (s *DropshipService) ListDropshipPurchases(
-        ctx context.Context,
-        channel, store, date, month, year string,
-        limit, offset int,
+	ctx context.Context,
+	channel, store, date, month, year string,
+	limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
-        return s.repo.ListDropshipPurchases(ctx, channel, store, date, month, year, limit, offset)
+	return s.repo.ListDropshipPurchases(ctx, channel, store, date, month, year, limit, offset)
+}
+
+func (s *DropshipService) SumDropshipPurchases(
+	ctx context.Context,
+	channel, store, date, month, year string,
+) (float64, error) {
+	return s.repo.SumDropshipPurchases(ctx, channel, store, date, month, year)
 }
 
 func (s *DropshipService) GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error) {
-        return s.repo.GetDropshipPurchaseByID(ctx, kodePesanan)
+	return s.repo.GetDropshipPurchaseByID(ctx, kodePesanan)
 }
 
 func (s *DropshipService) ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error) {
-        return s.repo.ListDropshipPurchaseDetails(ctx, kodePesanan)
+	return s.repo.ListDropshipPurchaseDetails(ctx, kodePesanan)
 }

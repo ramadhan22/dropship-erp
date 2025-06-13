@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import {
   importDropship,
   listDropshipPurchases,
+  sumDropshipPurchases,
   listJenisChannels,
   listStoresByChannelName,
   getDropshipPurchaseDetails,
@@ -48,6 +49,7 @@ export default function DropshipImport() {
   const [data, setData] = useState<DropshipPurchase[]>([]);
   const [total, setTotal] = useState(0);
   const [pageTotal, setPageTotal] = useState(0);
+  const [allTotal, setAllTotal] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
   const [details, setDetails] = useState<DropshipPurchaseDetail[]>([]);
   const [selected, setSelected] = useState<DropshipPurchase | null>(null);
@@ -81,6 +83,14 @@ export default function DropshipImport() {
       0,
     );
     setPageTotal(sum);
+    const totalRes = await sumDropshipPurchases({
+      channel,
+      store,
+      date,
+      month,
+      year,
+    });
+    setAllTotal(totalRes.data.total);
   };
 
   useEffect(() => {
@@ -182,6 +192,9 @@ export default function DropshipImport() {
         {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
         {" | "}
         <strong>Total Rows:</strong> {total}
+        {" | "}
+        <strong>All Total:</strong>{" "}
+        {allTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
       </div>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
