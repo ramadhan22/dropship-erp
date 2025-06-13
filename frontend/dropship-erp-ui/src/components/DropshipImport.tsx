@@ -12,6 +12,7 @@ import {
   TableRow,
   TextField,
 } from "@mui/material";
+import SortableTable, { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
 import {
   importDropship,
@@ -43,6 +44,51 @@ export default function DropshipImport() {
   const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  const columns: Column<DropshipPurchase>[] = [
+    { label: "Kode Pesanan", key: "kode_pesanan" },
+    { label: "Kode Transaksi", key: "kode_transaksi" },
+    {
+      label: "Waktu Pesanan Terbuat",
+      key: "waktu_pesanan_terbuat",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    { label: "Status Pesanan", key: "status_pesanan_terakhir" },
+    { label: "Biaya Lainnya", key: "biaya_lainnya" },
+    { label: "Biaya Mitra Jakmall", key: "biaya_mitra_jakmall" },
+    { label: "Total Transaksi", key: "total_transaksi" },
+    { label: "Dibuat Oleh", key: "dibuat_oleh" },
+    { label: "Channel", key: "jenis_channel" },
+    { label: "Nama Toko", key: "nama_toko" },
+    { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
+    { label: "Gudang Pengiriman", key: "gudang_pengiriman" },
+    { label: "Jenis Ekspedisi", key: "jenis_ekspedisi" },
+    { label: "Cashless", key: "cashless" },
+    { label: "Nomor Resi", key: "nomor_resi" },
+    {
+      label: "Waktu Pengiriman",
+      key: "waktu_pengiriman",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    { label: "Provinsi", key: "provinsi" },
+    { label: "Kota", key: "kota" },
+    {
+      label: "Action",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={async () => {
+            const res = await getDropshipPurchaseDetails(row.kode_pesanan);
+            setDetails(res.data);
+            setSelected(row);
+            setDetailOpen(true);
+          }}
+        >
+          Detail
+        </Button>
+      ),
+    },
+  ];
 
   const [channels, setChannels] = useState<JenisChannel[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -236,49 +282,9 @@ export default function DropshipImport() {
           <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Order Code</TableCell>
-            <TableCell>Store</TableCell>
-            <TableCell>Channel</TableCell>
-            <TableCell>Date</TableCell>
-          <TableCell>Total</TableCell>
-          <TableCell>Action</TableCell>
-        </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((d) => (
-            <TableRow key={d.kode_pesanan}>
-              <TableCell>{d.kode_pesanan}</TableCell>
-              <TableCell>{d.nama_toko}</TableCell>
-              <TableCell>{d.jenis_channel}</TableCell>
-              <TableCell>
-                {new Date(d.waktu_pesanan_terbuat).toLocaleDateString("id-ID")}
-              </TableCell>
-              <TableCell>
-                {d.total_transaksi.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </TableCell>
-              <TableCell>
-                <Button
-                  size="small"
-                  onClick={async () => {
-                    const res = await getDropshipPurchaseDetails(d.kode_pesanan);
-                    setDetails(res.data);
-                    setSelected(d);
-                    setDetailOpen(true);
-                  }}
-                >
-                  Detail
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div style={{ overflowX: "auto" }}>
+        <SortableTable columns={columns} data={data} />
+      </div>
       <div style={{ marginTop: "0.5rem" }}>
         <Button
           variant="outlined"
