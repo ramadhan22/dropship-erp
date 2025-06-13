@@ -11,8 +11,32 @@ jest.mock("../api/reconcile", () => ({
 
 test("load candidates", async () => {
   render(<ReconcileDashboard />);
-  screen.getByLabelText(/Shop/i).focus();
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+});
+
+test("filter status mismatch", async () => {
+  (api.listCandidates as jest.Mock).mockResolvedValueOnce({
+    data: [
+      {
+        kode_pesanan: "A",
+        nama_toko: "X",
+        status_pesanan_terakhir: "diproses",
+        no_pesanan: "1",
+      },
+      {
+        kode_pesanan: "B",
+        nama_toko: "X",
+        status_pesanan_terakhir: "diproses",
+        no_pesanan: null,
+      },
+    ],
+  });
+  render(<ReconcileDashboard />);
+  fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  await screen.findByText("A");
+  fireEvent.click(screen.getByLabelText(/Status mismatch only/i));
+  expect(screen.queryByText("B")).toBeNull();
 });
