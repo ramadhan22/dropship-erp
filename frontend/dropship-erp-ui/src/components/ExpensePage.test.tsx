@@ -13,6 +13,7 @@ jest.mock("../api/expenses", () => ({
 test("renders and creates expense", async () => {
   render(<ExpensePage />);
   await waitFor(() => expect(expApi.listExpenses).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole("button", { name: /Add Expense/i }));
   fireEvent.change(screen.getByLabelText(/Description/i), {
     target: { value: "x" },
   });
@@ -22,7 +23,7 @@ test("renders and creates expense", async () => {
   fireEvent.change(screen.getByLabelText(/Account/i), {
     target: { value: "1" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /Add/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Save/i }));
   await waitFor(() =>
     expect(expApi.createExpense).toHaveBeenCalledWith({
       description: "x",
