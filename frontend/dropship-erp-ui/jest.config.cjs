@@ -10,6 +10,7 @@ module.exports = {
     "ts-jest": {
       useESM: true,
       tsconfig: "./tsconfig.json",
+      diagnostics: false,
     },
   },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"]
