@@ -59,3 +59,32 @@ func TestInsertAndGetReconciledTransaction(t *testing.T) {
 		}
 	}
 }
+
+func TestListCandidates(t *testing.T) {
+	ctx := context.Background()
+	recRepo := NewReconcileRepo(testDB)
+	dropRepo := NewDropshipRepo(testDB)
+	shopRepo := NewShopeeRepo(testDB)
+
+	kode1 := "CAND-" + time.Now().Format("150405")
+	dp1 := &models.DropshipPurchase{KodePesanan: kode1, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
+	_ = dropRepo.InsertDropshipPurchase(ctx, dp1)
+	ss1 := &models.ShopeeSettled{NamaToko: "ShopA", NoPesanan: kode1, WaktuPesananDibuat: time.Now(), TanggalDanaDilepaskan: time.Now()}
+	_ = shopRepo.InsertShopeeSettled(ctx, ss1)
+
+	kode2 := "CAND-" + time.Now().Format("150405") + "b"
+	dp2 := &models.DropshipPurchase{KodePesanan: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
+	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
+
+	list, err := recRepo.ListCandidates(ctx, "ShopA")
+	if err != nil {
+		t.Fatalf("ListCandidates error: %v", err)
+	}
+	if len(list) < 2 {
+		t.Errorf("expected at least 2 candidates, got %d", len(list))
+	}
+
+	// cleanup
+	testDB.ExecContext(ctx, "DELETE FROM shopee_settled WHERE no_pesanan=$1", kode1)
+	testDB.ExecContext(ctx, "DELETE FROM dropship_purchases WHERE kode_pesanan IN ($1,$2)", kode1, kode2)
+}

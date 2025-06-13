@@ -135,6 +135,16 @@ func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]mo
 	return nil, fmt.Errorf("not implemented")
 }
 
+// ListCandidates proxies to the repo to fetch transactions that need attention.
+func (s *ReconcileService) ListCandidates(ctx context.Context, shop string) ([]models.ReconcileCandidate, error) {
+	if repo, ok := s.recRepo.(interface {
+		ListCandidates(context.Context, string) ([]models.ReconcileCandidate, error)
+	}); ok {
+		return repo.ListCandidates(ctx, shop)
+	}
+	return nil, fmt.Errorf("not implemented")
+}
+
 // BulkReconcile simply loops MatchAndJournal over pairs.
 func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error {
 	for _, p := range pairs {

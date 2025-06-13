@@ -10,6 +10,7 @@ import (
 
 type ReconcileExtraService interface {
 	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
+	ListCandidates(ctx context.Context, shop string) ([]models.ReconcileCandidate, error)
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 }
 
@@ -22,12 +23,23 @@ func NewReconcileExtraHandler(s ReconcileExtraService) *ReconcileExtraHandler {
 func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/reconcile")
 	grp.GET("/unmatched", h.list)
+	grp.GET("/candidates", h.candidates)
 	grp.POST("/bulk", h.bulk)
 }
 
 func (h *ReconcileExtraHandler) list(c *gin.Context) {
 	shop := c.Query("shop")
 	res, err := h.svc.ListUnmatched(context.Background(), shop)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
+	shop := c.Query("shop")
+	res, err := h.svc.ListCandidates(context.Background(), shop)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

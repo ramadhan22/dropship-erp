@@ -8,15 +8,15 @@ import {
   TableBody,
   TextField,
 } from "@mui/material";
-import { listUnmatched, bulkReconcile } from "../api/reconcile";
-import type { ReconciledTransaction } from "../types";
+import { listCandidates, bulkReconcile } from "../api/reconcile";
+import type { ReconcileCandidate } from "../types";
 
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
-  const [data, setData] = useState<ReconciledTransaction[]>([]);
+  const [data, setData] = useState<ReconcileCandidate[]>([]);
 
   const fetchData = () => {
-    if (shop) listUnmatched(shop).then((r) => setData(r.data));
+    if (shop) listCandidates(shop).then((r) => setData(r.data));
   };
 
   useEffect(() => {
@@ -24,10 +24,10 @@ export default function ReconcileDashboard() {
   }, [shop]);
 
   const handleBulk = async () => {
-    const pairs = data.map(
-      (d) => [d.dropship_id!, d.shopee_id!] as [string, string],
-    );
-    await bulkReconcile(pairs, shop);
+    const pairs = data
+      .filter((d) => d.no_pesanan)
+      .map((d) => [d.kode_pesanan, d.no_pesanan!] as [string, string]);
+    if (pairs.length) await bulkReconcile(pairs, shop);
   };
 
   return (
@@ -43,15 +43,17 @@ export default function ReconcileDashboard() {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>ID</TableCell>
+            <TableCell>Kode Pesanan</TableCell>
             <TableCell>Status</TableCell>
+            <TableCell>No Pesanan Shopee</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {data.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell>{r.id}</TableCell>
-              <TableCell>{r.status}</TableCell>
+            <TableRow key={r.kode_pesanan}>
+              <TableCell>{r.kode_pesanan}</TableCell>
+              <TableCell>{r.status_pesanan_terakhir}</TableCell>
+              <TableCell>{r.no_pesanan || "-"}</TableCell>
             </TableRow>
           ))}
         </TableBody>
