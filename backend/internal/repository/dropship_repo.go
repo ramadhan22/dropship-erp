@@ -77,6 +77,17 @@ func (r *DropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kodePesanan 
 	return &p, nil
 }
 
+// GetDropshipPurchaseByInvoice retrieves a purchase by kode_invoice_channel.
+func (r *DropshipRepo) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error) {
+	var p models.DropshipPurchase
+	err := r.db.GetContext(ctx, &p,
+		`SELECT * FROM dropship_purchases WHERE kode_invoice_channel = $1`, kodeInvoice)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 // ListDropshipPurchasesByShopAndDate returns all dropship purchases for a given shop_username
 // whose purchase_date falls between two string‐formatted dates (YYYY-MM-DD).
 // This lets you pull a slice of purchases to, for example, generate reports or feed reconciliation logic.

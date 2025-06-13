@@ -144,6 +144,7 @@ type ReconciledTransaction struct {
 // record in shopee_settled.
 type ReconcileCandidate struct {
 	KodePesanan           string  `db:"kode_pesanan" json:"kode_pesanan"`
+	KodeInvoiceChannel    string  `db:"kode_invoice_channel" json:"kode_invoice_channel"`
 	NamaToko              string  `db:"nama_toko" json:"nama_toko"`
 	StatusPesananTerakhir string  `db:"status_pesanan_terakhir" json:"status_pesanan_terakhir"`
 	NoPesanan             *string `db:"no_pesanan" json:"no_pesanan"`

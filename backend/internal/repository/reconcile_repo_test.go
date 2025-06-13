@@ -67,13 +67,13 @@ func TestListCandidates(t *testing.T) {
 	shopRepo := NewShopeeRepo(testDB)
 
 	kode1 := "CAND-" + time.Now().Format("150405")
-	dp1 := &models.DropshipPurchase{KodePesanan: kode1, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
+	dp1 := &models.DropshipPurchase{KodePesanan: kode1, KodeInvoiceChannel: kode1, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp1)
 	ss1 := &models.ShopeeSettled{NamaToko: "ShopA", NoPesanan: kode1, WaktuPesananDibuat: time.Now(), TanggalDanaDilepaskan: time.Now()}
 	_ = shopRepo.InsertShopeeSettled(ctx, ss1)
 
 	kode2 := "CAND-" + time.Now().Format("150405") + "b"
-	dp2 := &models.DropshipPurchase{KodePesanan: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
+	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
 
 	list, err := recRepo.ListCandidates(ctx, "ShopA")

@@ -29,13 +29,11 @@ export default function ReconcileDashboard() {
   const handleBulk = async () => {
     const pairs = data
       .filter((d) => d.no_pesanan)
-      .map((d) => [d.kode_pesanan, d.no_pesanan!] as [string, string]);
+      .map((d) => [d.kode_invoice_channel, d.no_pesanan!] as [string, string]);
     if (pairs.length) await bulkReconcile(pairs, shop);
   };
 
-  const displayData = diffOnly
-    ? data.filter((d) => d.no_pesanan)
-    : data;
+  const displayData = diffOnly ? data.filter((d) => d.no_pesanan) : data;
 
   return (
     <div>
@@ -60,6 +58,7 @@ export default function ReconcileDashboard() {
         <TableHead>
           <TableRow>
             <TableCell>Kode Pesanan</TableCell>
+            <TableCell>Kode Invoice Channel</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>No Pesanan Shopee</TableCell>
           </TableRow>
@@ -68,6 +67,7 @@ export default function ReconcileDashboard() {
           {displayData.map((r) => (
             <TableRow key={r.kode_pesanan}>
               <TableCell>{r.kode_pesanan}</TableCell>
+              <TableCell>{r.kode_invoice_channel}</TableCell>
               <TableCell>{r.status_pesanan_terakhir}</TableCell>
               <TableCell>{r.no_pesanan || "-"}</TableCell>
             </TableRow>

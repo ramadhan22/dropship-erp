@@ -12,7 +12,7 @@ import (
 
 // ReconcileRepoInterface defines just the methods needed from each repo.
 type ReconcileServiceDropshipRepo interface {
-	GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error)
+	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
 }
 type ReconcileServiceShopeeRepo interface {
 	// We only need to fetch the settled order.
@@ -59,7 +59,7 @@ func (s *ReconcileService) MatchAndJournal(
 	purchaseID, orderID, shop string,
 ) error {
 	// 1. Fetch DropshipPurchase
-	dp, err := s.dropRepo.GetDropshipPurchaseByID(ctx, purchaseID)
+	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, purchaseID)
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch DropshipPurchase %s: %w", purchaseID, err)
 	}
