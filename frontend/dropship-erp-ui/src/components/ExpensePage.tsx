@@ -7,6 +7,10 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
@@ -17,6 +21,7 @@ export default function ExpensePage() {
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [account, setAccount] = useState("");
+  const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -39,6 +44,7 @@ export default function ExpensePage() {
       setDesc("");
       setAmount("");
       setAccount("");
+      setOpen(false);
       fetchData();
       setMsg({ type: "success", text: "saved" });
     } catch (e: any) {
@@ -49,32 +55,16 @@ export default function ExpensePage() {
   return (
     <div>
       <h2>Expenses</h2>
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        <TextField
-          label="Description"
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-        />
-        <TextField
-          label="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        <TextField
-          label="Account"
-          value={account}
-          onChange={(e) => setAccount(e.target.value)}
-        />
-        <Button variant="contained" onClick={handleCreate}>
-          Add
-        </Button>
-      </div>
+      <Button variant="contained" onClick={() => setOpen(true)} sx={{ mb: 2 }}>
+        Add Expense
+      </Button>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
       <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell>Description</TableCell>
             <TableCell>Amount</TableCell>
+            <TableCell>Account</TableCell>
             <TableCell></TableCell>
           </TableRow>
         </TableHead>
@@ -83,6 +73,7 @@ export default function ExpensePage() {
             <TableRow key={e.id}>
               <TableCell>{e.description}</TableCell>
               <TableCell>{e.amount}</TableCell>
+              <TableCell>{e.account_id}</TableCell>
               <TableCell>
                 <Button
                   size="small"
@@ -97,6 +88,33 @@ export default function ExpensePage() {
           ))}
         </TableBody>
       </Table>
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Add Expense</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <TextField
+            label="Description"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            autoFocus
+          />
+          <TextField
+            label="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <TextField
+            label="Account"
+            value={account}
+            onChange={(e) => setAccount(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleCreate}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
