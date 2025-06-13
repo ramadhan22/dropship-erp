@@ -139,6 +139,16 @@ type ReconciledTransaction struct {
 	MatchedAt    time.Time `db:"matched_at" json:"matched_at"`
 }
 
+// ReconcileCandidate is used by the dashboard to display purchases that
+// require attention. If NoPesanan is empty, the purchase has no matching
+// record in shopee_settled.
+type ReconcileCandidate struct {
+	KodePesanan           string  `db:"kode_pesanan" json:"kode_pesanan"`
+	NamaToko              string  `db:"nama_toko" json:"nama_toko"`
+	StatusPesananTerakhir string  `db:"status_pesanan_terakhir" json:"status_pesanan_terakhir"`
+	NoPesanan             *string `db:"no_pesanan" json:"no_pesanan"`
+}
+
 // CachedMetric represents the D5 table: cached_metrics
 type CachedMetric struct {
 	ID                int64     `db:"id" json:"id"`

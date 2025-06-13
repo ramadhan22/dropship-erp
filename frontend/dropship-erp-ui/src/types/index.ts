@@ -101,3 +101,10 @@ export interface ReconciledTransaction {
   status: string;
   matched_at: string;
 }
+
+export interface ReconcileCandidate {
+  kode_pesanan: string;
+  nama_toko: string;
+  status_pesanan_terakhir: string;
+  no_pesanan: string | null;
+}

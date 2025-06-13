@@ -5,14 +5,14 @@ import * as api from "../api/reconcile";
 import ReconcileDashboard from "./ReconcileDashboard";
 
 jest.mock("../api/reconcile", () => ({
-  listUnmatched: jest.fn().mockResolvedValue({ data: [] }),
+  listCandidates: jest.fn().mockResolvedValue({ data: [] }),
   bulkReconcile: jest.fn(),
 }));
 
-test("load unmatched", async () => {
+test("load candidates", async () => {
   render(<ReconcileDashboard />);
   screen.getByLabelText(/Shop/i).focus();
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
-  await waitFor(() => expect(api.listUnmatched).toHaveBeenCalled());
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
 });
