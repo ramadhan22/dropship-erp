@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
@@ -15,6 +16,7 @@ func NewJournalHandler(s *service.JournalService) *JournalHandler { return &Jour
 
 func (h *JournalHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/journal")
+	grp.POST("/", h.create)
 	grp.GET("/", h.list)
 	grp.GET("/:id", h.get)
 	grp.DELETE("/:id", h.del)
@@ -46,4 +48,23 @@ func (h *JournalHandler) del(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+type journalCreateReq struct {
+	Entry models.JournalEntry  `json:"entry"`
+	Lines []models.JournalLine `json:"lines"`
+}
+
+func (h *JournalHandler) create(c *gin.Context) {
+	var req journalCreateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	id, err := h.svc.Create(context.Background(), &req.Entry, req.Lines)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"journal_id": id})
 }

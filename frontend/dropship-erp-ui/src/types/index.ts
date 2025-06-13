@@ -126,6 +126,15 @@ export interface JournalEntry {
   created_at: string;
 }
 
+export interface JournalLine {
+  line_id: number;
+  journal_id: number;
+  account_id: number;
+  is_debit: boolean;
+  amount: number;
+  memo: string | null;
+}
+
 export interface ReconciledTransaction {
   id: number;
   shop_username: string;
