@@ -146,6 +146,7 @@ export interface ReconciledTransaction {
 
 export interface ReconcileCandidate {
   kode_pesanan: string;
+  kode_invoice_channel: string;
   nama_toko: string;
   status_pesanan_terakhir: string;
   no_pesanan: string | null;

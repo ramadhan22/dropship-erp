@@ -66,10 +66,10 @@ func (r *ReconcileRepo) ListUnmatched(ctx context.Context, shop string) ([]model
 // shopee_settled or have a matching row but the purchase status is not
 // "pesanan selesai". Optional shop filter matches nama_toko.
 func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop string) ([]models.ReconcileCandidate, error) {
-	query := `SELECT dp.kode_pesanan, dp.nama_toko, dp.status_pesanan_terakhir,
+	query := `SELECT dp.kode_pesanan, dp.kode_invoice_channel, dp.nama_toko, dp.status_pesanan_terakhir,
                 ss.no_pesanan
                 FROM dropship_purchases dp
-                LEFT JOIN shopee_settled ss ON dp.kode_pesanan = ss.no_pesanan
+                LEFT JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
                 WHERE ($1 = '' OR dp.nama_toko = $1)
                   AND (ss.no_pesanan IS NULL OR dp.status_pesanan_terakhir <> 'pesanan selesai')
                 ORDER BY dp.waktu_pesanan_terbuat DESC`

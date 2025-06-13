@@ -17,8 +17,8 @@ type fakeDropRepoRec struct {
 	data map[string]*models.DropshipPurchase
 }
 
-func (f *fakeDropRepoRec) GetDropshipPurchaseByID(ctx context.Context, purchaseID string) (*models.DropshipPurchase, error) {
-	if dp, ok := f.data[purchaseID]; ok {
+func (f *fakeDropRepoRec) GetDropshipPurchaseByInvoice(ctx context.Context, invoice string) (*models.DropshipPurchase, error) {
+	if dp, ok := f.data[invoice]; ok {
 		return dp, nil
 	}
 	return nil, errors.New("not found")
