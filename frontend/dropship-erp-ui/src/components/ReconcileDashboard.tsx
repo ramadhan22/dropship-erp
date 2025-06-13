@@ -7,6 +7,8 @@ import {
   TableCell,
   TableBody,
   TextField,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { listCandidates, bulkReconcile } from "../api/reconcile";
 import type { ReconcileCandidate } from "../types";
@@ -14,6 +16,7 @@ import type { ReconcileCandidate } from "../types";
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [data, setData] = useState<ReconcileCandidate[]>([]);
+  const [diffOnly, setDiffOnly] = useState(false);
 
   const fetchData = () => {
     if (shop) listCandidates(shop).then((r) => setData(r.data));
@@ -30,6 +33,10 @@ export default function ReconcileDashboard() {
     if (pairs.length) await bulkReconcile(pairs, shop);
   };
 
+  const displayData = diffOnly
+    ? data.filter((d) => d.no_pesanan)
+    : data;
+
   return (
     <div>
       <h2>Reconcile Dashboard</h2>
@@ -40,6 +47,15 @@ export default function ReconcileDashboard() {
       />
       <Button onClick={fetchData}>Refresh</Button>
       <Button onClick={handleBulk}>Bulk</Button>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={diffOnly}
+            onChange={(e) => setDiffOnly(e.target.checked)}
+          />
+        }
+        label="Status mismatch only"
+      />
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -49,7 +65,7 @@ export default function ReconcileDashboard() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.map((r) => (
+          {displayData.map((r) => (
             <TableRow key={r.kode_pesanan}>
               <TableCell>{r.kode_pesanan}</TableCell>
               <TableCell>{r.status_pesanan_terakhir}</TableCell>
