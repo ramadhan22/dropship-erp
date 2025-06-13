@@ -77,6 +77,7 @@ func (s *ReconcileService) MatchAndJournal(
 		SourceType:   "reconcile",
 		SourceID:     orderID,
 		ShopUsername: shop,
+		Store:        shop,
 		CreatedAt:    time.Now(),
 	}
 	journalID, err := s.journalRepo.CreateJournalEntry(ctx, je)

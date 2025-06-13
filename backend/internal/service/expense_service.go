@@ -34,6 +34,7 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 		SourceType:   "expense",
 		SourceID:     e.ID,
 		ShopUsername: "", // optional shop not tracked
+		Store:        "",
 		CreatedAt:    time.Now(),
 	}
 	jid, err := s.journalRepo.CreateJournalEntry(ctx, je)

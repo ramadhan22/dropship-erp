@@ -9,6 +9,13 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
+const insertJournalSQL = `
+INSERT INTO journal_entries (
+  entry_date, description, source_type, source_id, shop_username, store, created_at
+) VALUES (
+  :entry_date, :description, :source_type, :source_id, :shop_username, :store, :created_at
+) RETURNING journal_id`
+
 // JournalRepo manages the journal_entries and journal_lines tables,
 // which are at the heart of double-entry bookkeeping.
 type JournalRepo struct {
@@ -23,18 +30,19 @@ func NewJournalRepo(db *sqlx.DB) *JournalRepo {
 // CreateJournalEntry inserts a row into journal_entries and returns the new journal_id.
 // We need this so we can capture the returned primary key for inserting lines.
 func (r *JournalRepo) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
-	var newID int64
-	err := r.db.QueryRowxContext(ctx,
-		`INSERT INTO journal_entries
-          (entry_date, description, source_type, source_id, shop_username)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING journal_id`,
-		e.EntryDate, e.Description, e.SourceType, e.SourceID, e.ShopUsername,
-	).Scan(&newID)
+	rows, err := r.db.NamedQueryContext(ctx, insertJournalSQL, e)
 	if err != nil {
 		return 0, err
 	}
-	return newID, nil
+	defer rows.Close()
+	if rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return 0, err
+		}
+		return id, nil
+	}
+	return 0, fmt.Errorf("no id returned")
 }
 
 // InsertJournalLine inserts a single debit or credit row into journal_lines.

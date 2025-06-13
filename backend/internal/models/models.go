@@ -116,6 +116,7 @@ type JournalEntry struct {
 	SourceType   string    `db:"source_type" json:"source_type"`
 	SourceID     string    `db:"source_id" json:"source_id"`
 	ShopUsername string    `db:"shop_username" json:"shop_username"`
+	Store        string    `db:"store" json:"store"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }
 

@@ -1,0 +1,2 @@
+ALTER TABLE journal_entries
+  ADD COLUMN store TEXT NOT NULL DEFAULT '';
