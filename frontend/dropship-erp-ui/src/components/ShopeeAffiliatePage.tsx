@@ -93,7 +93,7 @@ export default function ShopeeAffiliatePage() {
       align: "right",
       render: (v) =>
         Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
-
+    },
     { label: "MCN", key: "mcn_terhubung" },
     { label: "ID Komisi Pesanan", key: "id_komisi_pesanan" },
     { label: "Partner Promo", key: "partner_promo" },
