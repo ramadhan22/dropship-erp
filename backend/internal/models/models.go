@@ -183,6 +183,7 @@ type ProductSales struct {
 	TotalQty   int     `db:"total_qty" json:"total_qty"`
 	TotalValue float64 `db:"total_value" json:"total_value"`
 }
+
 // ShopeeSummary aggregates numeric columns from shopee_settled for summary views.
 type ShopeeSummary struct {
 	HargaAsliProduk                float64 `db:"harga_asli_produk" json:"harga_asli_produk"`
@@ -192,4 +193,47 @@ type ShopeeSummary struct {
 	BiayaAdministrasi              float64 `db:"biaya_administrasi" json:"biaya_administrasi"`
 	BiayaLayanan                   float64 `db:"biaya_layanan_termasuk_ppn_11" json:"biaya_layanan_termasuk_ppn_11"`
 	TotalPenghasilan               float64 `db:"total_penghasilan" json:"total_penghasilan"`
+}
+
+// ShopeeAffiliateSale represents rows from shopee_affiliate_sales table.
+type ShopeeAffiliateSale struct {
+	KodePesanan                        string    `db:"kode_pesanan" json:"kode_pesanan"`
+	StatusPesanan                      string    `db:"status_pesanan" json:"status_pesanan"`
+	StatusTerverifikasi                string    `db:"status_terverifikasi" json:"status_terverifikasi"`
+	WaktuPesanan                       time.Time `db:"waktu_pesanan" json:"waktu_pesanan"`
+	WaktuPesananSelesai                time.Time `db:"waktu_pesanan_selesai" json:"waktu_pesanan_selesai"`
+	WaktuPesananTerverifikasi          time.Time `db:"waktu_pesanan_terverifikasi" json:"waktu_pesanan_terverifikasi"`
+	KodeProduk                         string    `db:"kode_produk" json:"kode_produk"`
+	NamaProduk                         string    `db:"nama_produk" json:"nama_produk"`
+	IDModel                            string    `db:"id_model" json:"id_model"`
+	L1KategoriGlobal                   string    `db:"l1_kategori_global" json:"l1_kategori_global"`
+	L2KategoriGlobal                   string    `db:"l2_kategori_global" json:"l2_kategori_global"`
+	L3KategoriGlobal                   string    `db:"l3_kategori_global" json:"l3_kategori_global"`
+	KodePromo                          string    `db:"kode_promo" json:"kode_promo"`
+	Harga                              float64   `db:"harga" json:"harga"`
+	Jumlah                             int       `db:"jumlah" json:"jumlah"`
+	NamaAffiliate                      string    `db:"nama_affiliate" json:"nama_affiliate"`
+	UsernameAffiliate                  string    `db:"username_affiliate" json:"username_affiliate"`
+	MCNTerhubung                       string    `db:"mcn_terhubung" json:"mcn_terhubung"`
+	IDKomisiPesanan                    string    `db:"id_komisi_pesanan" json:"id_komisi_pesanan"`
+	PartnerPromo                       string    `db:"partner_promo" json:"partner_promo"`
+	JenisPromo                         string    `db:"jenis_promo" json:"jenis_promo"`
+	NilaiPembelian                     float64   `db:"nilai_pembelian" json:"nilai_pembelian"`
+	JumlahPengembalian                 float64   `db:"jumlah_pengembalian" json:"jumlah_pengembalian"`
+	TipePesanan                        string    `db:"tipe_pesanan" json:"tipe_pesanan"`
+	EstimasiKomisiPerProduk            float64   `db:"estimasi_komisi_per_produk" json:"estimasi_komisi_per_produk"`
+	EstimasiKomisiAffiliatePerProduk   float64   `db:"estimasi_komisi_affiliate_per_produk" json:"estimasi_komisi_affiliate_per_produk"`
+	PersentaseKomisiAffiliatePerProduk float64   `db:"persentase_komisi_affiliate_per_produk" json:"persentase_komisi_affiliate_per_produk"`
+	EstimasiKomisiMCNPerProduk         float64   `db:"estimasi_komisi_mcn_per_produk" json:"estimasi_komisi_mcn_per_produk"`
+	PersentaseKomisiMCNPerProduk       float64   `db:"persentase_komisi_mcn_per_produk" json:"persentase_komisi_mcn_per_produk"`
+	EstimasiKomisiPerPesanan           float64   `db:"estimasi_komisi_per_pesanan" json:"estimasi_komisi_per_pesanan"`
+	EstimasiKomisiAffiliatePerPesanan  float64   `db:"estimasi_komisi_affiliate_per_pesanan" json:"estimasi_komisi_affiliate_per_pesanan"`
+	EstimasiKomisiMCNPerPesanan        float64   `db:"estimasi_komisi_mcn_per_pesanan" json:"estimasi_komisi_mcn_per_pesanan"`
+	CatatanProduk                      string    `db:"catatan_produk" json:"catatan_produk"`
+	Platform                           string    `db:"platform" json:"platform"`
+	TingkatKomisi                      float64   `db:"tingkat_komisi" json:"tingkat_komisi"`
+	Pengeluaran                        float64   `db:"pengeluaran" json:"pengeluaran"`
+	StatusPemotongan                   string    `db:"status_pemotongan" json:"status_pemotongan"`
+	MetodePemotongan                   string    `db:"metode_pemotongan" json:"metode_pemotongan"`
+	WaktuPemotongan                    time.Time `db:"waktu_pemotongan" json:"waktu_pemotongan"`
 }
