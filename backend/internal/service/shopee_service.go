@@ -66,6 +66,7 @@ type ShopeeRepoInterface interface {
 	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
+	ListShopeeAffiliateSales(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -443,4 +444,13 @@ func (s *ShopeeService) SumShopeeSettled(
 	channel, store, date, month, year string,
 ) (*models.ShopeeSummary, error) {
 	return s.repo.SumShopeeSettled(ctx, channel, store, date, month, year)
+}
+
+// ListAffiliate proxies to the repository for fetching affiliate sales with filters.
+func (s *ShopeeService) ListAffiliate(
+	ctx context.Context,
+	date, month, year string,
+	limit, offset int,
+) ([]models.ShopeeAffiliateSale, int, error) {
+	return s.repo.ListShopeeAffiliateSales(ctx, date, month, year, limit, offset)
 }

@@ -6,7 +6,7 @@ import MetricsPage from "./components/MetricsPage";
 import ReconcileForm from "./components/ReconcileForm";
 import ReconcileDashboard from "./components/ReconcileDashboard";
 import ShopeeSalesPage from "./components/ShopeeSalesPage";
-import ShopeeAffiliateImport from "./components/ShopeeAffiliateImport";
+import ShopeeAffiliatePage from "./components/ShopeeAffiliatePage";
 import ShopeeImport from "./components/ShopeeImport";
 import AccountPage from "./components/AccountPage";
 import ExpensePage from "./components/ExpensePage";
@@ -21,7 +21,7 @@ export default function App() {
       <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
         <Link to="/">Home</Link> | <Link to="/dropship">Dropship Import</Link> |{" "}
         <Link to="/shopee">Shopee Sales</Link> |{" "}
-        <Link to="/shopee/affiliate">Affiliate Import</Link> |{" "}
+        <Link to="/shopee/affiliate">Affiliate Sales</Link> |{" "}
         <Link to="/reconcile">Reconcile</Link> |{" "}
         <Link to="/metrics">Metrics</Link> | <Link to="/pl">P&L</Link> |{" "}
         <Link to="/balance">Balance Sheet</Link> | <Link to="/gl">GL</Link> |{" "}
@@ -36,7 +36,7 @@ export default function App() {
           <Route path="/" element={<SalesSummaryPage />} />
           <Route path="/dropship" element={<DropshipImport />} />
           <Route path="/shopee" element={<ShopeeSalesPage />} />
-          <Route path="/shopee/affiliate" element={<ShopeeAffiliateImport />} />
+          <Route path="/shopee/affiliate" element={<ShopeeAffiliatePage />} />
           <Route path="/reconcile" element={<ReconcileForm />} />
           <Route path="/reconcile/dashboard" element={<ReconcileDashboard />} />
           <Route path="/metrics" element={<MetricsPage />} />

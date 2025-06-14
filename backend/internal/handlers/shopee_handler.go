@@ -16,6 +16,7 @@ type ShopeeServiceInterface interface {
 	ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error)
 	ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
+	ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 }
 
 type ShopeeHandler struct {
@@ -110,4 +111,27 @@ func (h *ShopeeHandler) HandleSumSettled(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, sum)
+}
+
+// HandleListAffiliate returns paginated affiliate sales data with optional filters.
+func (h *ShopeeHandler) HandleListAffiliate(c *gin.Context) {
+	date := c.Query("date")
+	month := c.Query("month")
+	year := c.Query("year")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 10
+	}
+	offset := (page - 1) * size
+	ctx := c.Request.Context()
+	list, total, err := h.svc.ListAffiliate(ctx, date, month, year, size, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
 }

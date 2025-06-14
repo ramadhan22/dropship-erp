@@ -41,6 +41,10 @@ func (f *fakeShopeeService) SumShopeeSettled(ctx context.Context, channel, store
 	return &models.ShopeeSummary{}, nil
 }
 
+func (f *fakeShopeeService) ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error) {
+	return nil, 0, nil
+}
+
 func TestShopeeHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeShopeeService{}

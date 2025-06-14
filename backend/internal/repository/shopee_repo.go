@@ -129,6 +129,37 @@ func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, pro
 	return exists, err
 }
 
+// ListShopeeAffiliateSales returns affiliate sales filtered by optional date/month/year with pagination.
+func (r *ShopeeRepo) ListShopeeAffiliateSales(
+	ctx context.Context,
+	date, month, year string,
+	limit, offset int,
+) ([]models.ShopeeAffiliateSale, int, error) {
+	countQuery := `SELECT COUNT(*) FROM shopee_affiliate_sales
+                WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
+                  AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
+                  AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)`
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery, date, month, year); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT * FROM shopee_affiliate_sales
+                WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
+                  AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
+                  AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)
+                ORDER BY waktu_pesanan DESC
+                LIMIT $4 OFFSET $5`
+	var list []models.ShopeeAffiliateSale
+	if err := r.db.SelectContext(ctx, &list, query, date, month, year, limit, offset); err != nil {
+		return nil, 0, err
+	}
+	if list == nil {
+		list = []models.ShopeeAffiliateSale{}
+	}
+	return list, total, nil
+}
+
 // GetShopeeOrderByID retrieves one settled order by its unique order_id.
 // This is used when reconciling with dropship purchases or calculating revenue.
 func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*models.ShopeeSettledOrder, error) {
