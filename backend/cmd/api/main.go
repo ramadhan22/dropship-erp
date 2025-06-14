@@ -39,7 +39,7 @@ func main() {
 
 	// 3) Initialize services with the appropriate repo interfaces
 	dropshipSvc := service.NewDropshipService(repo.DB, repo.DropshipRepo, repo.JournalRepo)
-	shopeeSvc := service.NewShopeeService(repo.ShopeeRepo)
+       shopeeSvc := service.NewShopeeService(repo.ShopeeRepo, repo.DropshipRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
@@ -75,6 +75,7 @@ func main() {
 		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
 		apiGroup.POST("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleImportAffiliate)
 		apiGroup.GET("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleListAffiliate)
+		apiGroup.GET("/shopee/affiliate/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumAffiliate)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)

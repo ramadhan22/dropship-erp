@@ -17,6 +17,7 @@ type ShopeeServiceInterface interface {
 	ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
 	ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
+	SumAffiliate(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
 }
 
 type ShopeeHandler struct {
@@ -134,4 +135,18 @@ func (h *ShopeeHandler) HandleListAffiliate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+}
+
+// HandleSumAffiliate returns total values for filtered affiliate rows.
+func (h *ShopeeHandler) HandleSumAffiliate(c *gin.Context) {
+	date := c.Query("date")
+	month := c.Query("month")
+	year := c.Query("year")
+	ctx := c.Request.Context()
+	sum, err := h.svc.SumAffiliate(ctx, date, month, year)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, sum)
 }

@@ -67,16 +67,23 @@ type ShopeeRepoInterface interface {
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
 	ListShopeeAffiliateSales(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
+	SumShopeeAffiliateSales(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
+}
+
+type ShopeeDropshipRepo interface {
+	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
+	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
 type ShopeeService struct {
-	repo ShopeeRepoInterface
+	repo         ShopeeRepoInterface
+	dropshipRepo ShopeeDropshipRepo
 }
 
 // NewShopeeService constructs a ShopeeService.
-func NewShopeeService(r ShopeeRepoInterface) *ShopeeService {
-	return &ShopeeService{repo: r}
+func NewShopeeService(r ShopeeRepoInterface, dr ShopeeDropshipRepo) *ShopeeService {
+	return &ShopeeService{repo: r, dropshipRepo: dr}
 }
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
@@ -178,6 +185,13 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		entry, err := parseAffiliateRow(row)
 		if err != nil {
 			continue
+		}
+		if s.dropshipRepo != nil {
+			if dp, _ := s.dropshipRepo.GetDropshipPurchaseByInvoice(ctx, entry.KodePesanan); dp != nil {
+				entry.NamaToko = dp.NamaToko
+			} else if dp, _ := s.dropshipRepo.GetDropshipPurchaseByID(ctx, entry.KodePesanan); dp != nil {
+				entry.NamaToko = dp.NamaToko
+			}
 		}
 		exists, err := s.repo.ExistsShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk)
 		if err != nil {
@@ -453,4 +467,11 @@ func (s *ShopeeService) ListAffiliate(
 	limit, offset int,
 ) ([]models.ShopeeAffiliateSale, int, error) {
 	return s.repo.ListShopeeAffiliateSales(ctx, date, month, year, limit, offset)
+}
+
+func (s *ShopeeService) SumAffiliate(
+	ctx context.Context,
+	date, month, year string,
+) (*models.ShopeeAffiliateSummary, error) {
+	return s.repo.SumShopeeAffiliateSales(ctx, date, month, year)
 }

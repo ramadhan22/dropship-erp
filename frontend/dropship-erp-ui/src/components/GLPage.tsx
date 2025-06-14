@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Button,
   Table,
@@ -13,7 +13,22 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { fetchGeneralLedger } from "../api/gl";
 import { listAllStores } from "../api";
 import type { Account, Store } from "../types";
-import usePagination from "../usePagination";
+
+interface AccountGroup {
+  type: string;
+  accounts: Account[];
+}
+
+function groupByType(data: Account[]): AccountGroup[] {
+  const groups: Record<string, Account[]> = {};
+  data.forEach((a) => {
+    if (!groups[a.account_type]) {
+      groups[a.account_type] = [];
+    }
+    groups[a.account_type].push(a);
+  });
+  return Object.keys(groups).map((t) => ({ type: t, accounts: groups[t] }));
+}
 
 export default function GLPage() {
   const [shop, setShop] = useState("");
@@ -28,7 +43,6 @@ export default function GLPage() {
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [data, setData] = useState<Account[]>([]);
-  const { paginated, controls } = usePagination(data);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -91,6 +105,7 @@ export default function GLPage() {
           </TableRow>
         </TableHead>
         <TableBody>
+
           {paginated.map((a) => (
             <TableRow key={a.account_id}>
               <TableCell>{a.account_code}</TableCell>
@@ -112,10 +127,27 @@ export default function GLPage() {
                   : ""}
               </TableCell>
             </TableRow>
+
+          {groupByType(data).map((grp) => (
+            <Fragment key={grp.type}>
+              <TableRow>
+                <TableCell colSpan={4} style={{ fontWeight: "bold" }}>
+                  {grp.type}
+                </TableCell>
+              </TableRow>
+              {grp.accounts.map((a) => (
+                <TableRow key={a.account_id}>
+                  <TableCell>{a.account_code}</TableCell>
+                  <TableCell>{a.account_name}</TableCell>
+                  <TableCell>{a.balance > 0 ? a.balance : ""}</TableCell>
+                  <TableCell>{a.balance < 0 ? -a.balance : ""}</TableCell>
+                </TableRow>
+              ))}
+            </Fragment>
+
           ))}
         </TableBody>
       </Table>
-      {controls}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import type {
   ShopeeSettled,
   ShopeeSettledSummary,
   ShopeeAffiliateSale,
+  ShopeeAffiliateSummary,
 } from "../types";
 
 export interface ImportResponse {
@@ -201,6 +202,20 @@ export function listShopeeAffiliate(params: {
   if (params.page_size) q.append("page_size", String(params.page_size));
   return api.get<{ data: ShopeeAffiliateSale[]; total: number }>(
     `/shopee/affiliate?${q.toString()}`,
+  );
+}
+
+export function sumShopeeAffiliate(params: {
+  date?: string;
+  month?: string;
+  year?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.date) q.append("date", params.date);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  return api.get<ShopeeAffiliateSummary>(
+    `/shopee/affiliate/summary?${q.toString()}`,
   );
 }
 
