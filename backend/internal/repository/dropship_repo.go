@@ -180,3 +180,31 @@ func (r *DropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kodePesa
 	}
 	return list, nil
 }
+
+// TopProducts aggregates sales by product name filtered by optional parameters.
+func (r *DropshipRepo) TopProducts(
+	ctx context.Context,
+	channel, store, month, year string,
+	limit int,
+) ([]models.ProductSales, error) {
+	query := `SELECT d.nama_produk,
+                COALESCE(SUM(d.qty),0) AS total_qty,
+                COALESCE(SUM(d.total_harga_produk_channel),0) AS total_value
+                FROM dropship_purchase_details d
+                JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                WHERE ($1 = '' OR p.jenis_channel = $1)
+                  AND ($2 = '' OR p.nama_toko = $2)
+                  AND ($3 = '' OR EXTRACT(MONTH FROM p.waktu_pesanan_terbuat) = $3::int)
+                  AND ($4 = '' OR EXTRACT(YEAR FROM p.waktu_pesanan_terbuat) = $4::int)
+                GROUP BY d.nama_produk
+                ORDER BY total_value DESC
+                LIMIT $5`
+	var list []models.ProductSales
+	if err := r.db.SelectContext(ctx, &list, query, channel, store, month, year, limit); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.ProductSales{}
+	}
+	return list, nil
+}

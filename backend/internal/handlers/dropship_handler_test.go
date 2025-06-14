@@ -18,7 +18,7 @@ import (
 
 // fakeDropshipService implements the DropshipServiceInterface for testing.
 type fakeDropshipService struct {
-        fail bool
+	fail bool
 }
 
 func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, error) {
@@ -29,19 +29,23 @@ func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (i
 }
 
 func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
-        return nil, 0, nil
+	return nil, 0, nil
 }
 
 func (f *fakeDropshipService) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (f *fakeDropshipService) ListDropshipPurchaseDetails(ctx context.Context, kode string) ([]models.DropshipPurchaseDetail, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error) {
-        return 0, nil
+	return 0, nil
+}
+
+func (f *fakeDropshipService) TopProducts(ctx context.Context, channel, store, month, year string, limit int) ([]models.ProductSales, error) {
+	return nil, nil
 }
 
 func TestHandleImport_Success(t *testing.T) {

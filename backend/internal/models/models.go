@@ -176,3 +176,10 @@ type Store struct {
 	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`
 	NamaToko       string `db:"nama_toko" json:"nama_toko"`
 }
+
+// ProductSales represents aggregated sales for a product.
+type ProductSales struct {
+	NamaProduk string  `db:"nama_produk" json:"nama_produk"`
+	TotalQty   int     `db:"total_qty" json:"total_qty"`
+	TotalValue float64 `db:"total_value" json:"total_value"`
+}

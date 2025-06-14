@@ -17,6 +17,7 @@ type DropshipServiceInterface interface {
 	SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
+	TopProducts(ctx context.Context, channel, store, month, year string, limit int) ([]models.ProductSales, error)
 }
 
 type DropshipHandler struct {
@@ -102,4 +103,23 @@ func (h *DropshipHandler) HandleListDetails(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, details)
+}
+
+// HandleTopProducts returns aggregated sales by product.
+func (h *DropshipHandler) HandleTopProducts(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	month := c.Query("month")
+	year := c.Query("year")
+	limitStr := c.DefaultQuery("limit", "5")
+	limit, _ := strconv.Atoi(limitStr)
+	if limit <= 0 {
+		limit = 5
+	}
+	res, err := h.svc.TopProducts(context.Background(), channel, store, month, year, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
