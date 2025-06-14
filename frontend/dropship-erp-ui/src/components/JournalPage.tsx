@@ -32,6 +32,7 @@ export default function JournalPage() {
   } | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLines, setDetailLines] = useState<JournalLineDetail[]>([]);
+  const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
   const fetchData = () => listJournal().then((r) => setList(r.data));
   useEffect(() => {
     fetchData();
@@ -65,6 +66,7 @@ export default function JournalPage() {
                 <Button
                   size="small"
                   onClick={() => {
+                    setDetailEntry(j);
                     getJournalLines(j.journal_id).then((r) => {
                       setDetailLines(r.data);
                       setDetailOpen(true);
@@ -202,6 +204,15 @@ export default function JournalPage() {
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
         <DialogTitle>Journal Lines</DialogTitle>
         <DialogContent>
+          {detailEntry && (
+            <div style={{ marginBottom: "0.5rem" }}>
+              <div>ID: {detailEntry.journal_id}</div>
+              <div>
+                Date: {new Date(detailEntry.entry_date).toLocaleDateString()}
+              </div>
+              <div>Description: {detailEntry.description}</div>
+            </div>
+          )}
           <Table size="small">
             <TableHead>
               <TableRow>
