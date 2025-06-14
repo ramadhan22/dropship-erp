@@ -197,6 +197,7 @@ type ShopeeSummary struct {
 
 // ShopeeAffiliateSale represents rows from shopee_affiliate_sales table.
 type ShopeeAffiliateSale struct {
+	NamaToko                           string    `db:"nama_toko" json:"nama_toko"`
 	KodePesanan                        string    `db:"kode_pesanan" json:"kode_pesanan"`
 	StatusPesanan                      string    `db:"status_pesanan" json:"status_pesanan"`
 	StatusTerverifikasi                string    `db:"status_terverifikasi" json:"status_terverifikasi"`
@@ -236,4 +237,10 @@ type ShopeeAffiliateSale struct {
 	StatusPemotongan                   string    `db:"status_pemotongan" json:"status_pemotongan"`
 	MetodePemotongan                   string    `db:"metode_pemotongan" json:"metode_pemotongan"`
 	WaktuPemotongan                    time.Time `db:"waktu_pemotongan" json:"waktu_pemotongan"`
+}
+
+// ShopeeAffiliateSummary aggregates purchase and commission values.
+type ShopeeAffiliateSummary struct {
+	TotalNilaiPembelian  float64 `db:"total_nilai_pembelian" json:"total_nilai_pembelian"`
+	TotalKomisiAffiliate float64 `db:"total_komisi_affiliate" json:"total_komisi_affiliate"`
 }
