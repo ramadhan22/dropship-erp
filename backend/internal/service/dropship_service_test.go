@@ -14,10 +14,10 @@ import (
 
 // fakeDropshipRepo captures calls to InsertDropshipPurchase.
 type fakeDropshipRepo struct {
-        insertedHeader []*models.DropshipPurchase
-        insertedDetail []*models.DropshipPurchaseDetail
-        errOn          string
-        existing       map[string]bool
+	insertedHeader []*models.DropshipPurchase
+	insertedDetail []*models.DropshipPurchaseDetail
+	errOn          string
+	existing       map[string]bool
 }
 
 func (f *fakeDropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
@@ -38,19 +38,37 @@ func (f *fakeDropshipRepo) ExistsDropshipPurchase(ctx context.Context, kode stri
 }
 
 func (f *fakeDropshipRepo) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
-        return nil, 0, nil
+	return nil, 0, nil
 }
 
 func (f *fakeDropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (f *fakeDropshipRepo) ListDropshipPurchaseDetails(ctx context.Context, kode string) ([]models.DropshipPurchaseDetail, error) {
-        return nil, nil
+	return nil, nil
 }
 
 func (f *fakeDropshipRepo) SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error) {
-        return 0, nil
+	return 0, nil
+}
+
+type fakeJournalRepoDrop struct {
+	entries []*models.JournalEntry
+	lines   []*models.JournalLine
+	nextID  int64
+}
+
+func (f *fakeJournalRepoDrop) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
+	f.nextID++
+	e.JournalID = f.nextID
+	f.entries = append(f.entries, e)
+	return f.nextID, nil
+}
+
+func (f *fakeJournalRepoDrop) InsertJournalLine(ctx context.Context, l *models.JournalLine) error {
+	f.lines = append(f.lines, l)
+	return nil
 }
 
 func TestImportFromCSV_Success(t *testing.T) {
@@ -62,9 +80,10 @@ func TestImportFromCSV_Success(t *testing.T) {
 	w.Write(row)
 	w.Flush()
 
-	// Use fake repo
+	// Use fake repos
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(fake)
+	jfake := &fakeJournalRepoDrop{}
+	svc := NewDropshipService(fake, jfake)
 
 	ctx := context.Background()
 	count, err := svc.ImportFromCSV(ctx, &buf)
@@ -86,6 +105,10 @@ func TestImportFromCSV_Success(t *testing.T) {
 	if d.SKU != "SKU1" || d.Qty != 2 {
 		t.Errorf("unexpected SKU/Qty: %s/%d", d.SKU, d.Qty)
 	}
+
+	if len(jfake.entries) != 1 || len(jfake.lines) != 2 {
+		t.Fatalf("expected 1 journal entry and 2 lines, got %d/%d", len(jfake.entries), len(jfake.lines))
+	}
 }
 
 func TestImportFromCSV_ParseError(t *testing.T) {
@@ -96,7 +119,7 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(fake)
+	svc := NewDropshipService(fake, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf)
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
@@ -120,7 +143,7 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
-	svc := NewDropshipService(fake)
+	svc := NewDropshipService(fake, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
