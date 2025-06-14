@@ -40,14 +40,9 @@ export default function DropshipImport() {
 
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
-  const [date, setDate] = useState(
+  const [period, setPeriod] = useState(
     () => new Date().toISOString().split("T")[0],
   );
-  const now = new Date();
-  const [month, setMonth] = useState(
-    String(now.getMonth() + 1).padStart(2, "0"),
-  );
-  const [year, setYear] = useState(String(now.getFullYear()));
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -119,12 +114,24 @@ export default function DropshipImport() {
   }, [channel]);
 
   const fetchData = async () => {
+    let dateParam = "";
+    let monthParam = "";
+    let yearParam = "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+      dateParam = period;
+    } else if (/^\d{4}-\d{2}$/.test(period)) {
+      const [y, m] = period.split("-");
+      monthParam = m;
+      yearParam = y;
+    } else if (/^\d{4}$/.test(period)) {
+      yearParam = period;
+    }
     const res = await listDropshipPurchases({
       channel,
       store,
-      date,
-      month,
-      year,
+      date: dateParam || undefined,
+      month: monthParam || undefined,
+      year: yearParam || undefined,
       page,
       page_size: pageSize,
     });
@@ -138,16 +145,16 @@ export default function DropshipImport() {
     const totalRes = await sumDropshipPurchases({
       channel,
       store,
-      date,
-      month,
-      year,
+      date: dateParam || undefined,
+      month: monthParam || undefined,
+      year: yearParam || undefined,
     });
     setAllTotal(totalRes.data.total);
   };
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, date, month, year, page]);
+  }, [channel, store, period, page]);
 
   const handleSubmit = async () => {
     try {
@@ -206,37 +213,16 @@ export default function DropshipImport() {
           ))}
         </select>
         <TextField
-          label="Date"
-          type="date"
-          value={date}
+          label="Period"
+          placeholder="YYYY or YYYY-MM or YYYY-MM-DD"
+          value={period}
           onChange={(e) => {
-            setDate(e.target.value);
+            setPeriod(e.target.value);
             setPage(1);
           }}
           size="small"
+          sx={{ width: 220 }}
           InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label="Month"
-          type="number"
-          value={month}
-          onChange={(e) => {
-            setMonth(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
-        />
-        <TextField
-          label="Year"
-          type="number"
-          value={year}
-          onChange={(e) => {
-            setYear(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
         />
       </div>
       <div style={{ marginBottom: "0.5rem" }}>
