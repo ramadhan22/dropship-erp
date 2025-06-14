@@ -8,11 +8,11 @@ import (
 
 // ChannelRepoInterface defines repo methods used by the service.
 type ChannelRepoInterface interface {
-        CreateJenisChannel(ctx context.Context, c *models.JenisChannel) (int64, error)
-        CreateStore(ctx context.Context, s *models.Store) (int64, error)
-        ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
-        ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
-        ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
+	CreateJenisChannel(ctx context.Context, c *models.JenisChannel) (int64, error)
+	CreateStore(ctx context.Context, s *models.Store) (int64, error)
+	ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
+	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
+	ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
 }
 
 // ChannelService provides master data operations for jenis_channels and stores.
@@ -36,13 +36,13 @@ func (s *ChannelService) CreateStore(ctx context.Context, channelID int64, namaT
 }
 
 func (s *ChannelService) ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error) {
-        return s.repo.ListJenisChannels(ctx)
+	return s.repo.ListJenisChannels(ctx)
 }
 
 func (s *ChannelService) ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error) {
-        return s.repo.ListStoresByChannel(ctx, channelID)
+	return s.repo.ListStoresByChannel(ctx, channelID)
 }
 
 func (s *ChannelService) ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error) {
-        return s.repo.ListStoresByChannelName(ctx, channelName)
+	return s.repo.ListStoresByChannelName(ctx, channelName)
 }
