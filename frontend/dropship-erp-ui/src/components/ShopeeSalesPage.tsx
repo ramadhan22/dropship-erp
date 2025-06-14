@@ -22,7 +22,12 @@ import {
   listShopeeSettled,
   sumShopeeSettled,
 } from "../api";
-import type { JenisChannel, Store, ShopeeSettled, ShopeeSettledSummary } from "../types";
+import type {
+  JenisChannel,
+  Store,
+  ShopeeSettled,
+  ShopeeSettledSummary,
+} from "../types";
 
 export default function ShopeeSalesPage() {
   const [channels, setChannels] = useState<JenisChannel[]>([]);
@@ -32,15 +37,22 @@ export default function ShopeeSalesPage() {
   const [date, setDate] = useState(
     () => new Date().toISOString().split("T")[0],
   );
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
+  const now = new Date();
+  const [month, setMonth] = useState(
+    String(now.getMonth() + 1).padStart(2, "0"),
+  );
+  const [year, setYear] = useState(String(now.getFullYear()));
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ShopeeSettled[]>([]);
   const [total, setTotal] = useState(0);
   const [pageTotal, setPageTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0);
-  const [pageSummary, setPageSummary] = useState<ShopeeSettledSummary | null>(null);
-  const [allSummary, setAllSummary] = useState<ShopeeSettledSummary | null>(null);
+  const [pageSummary, setPageSummary] = useState<ShopeeSettledSummary | null>(
+    null,
+  );
+  const [allSummary, setAllSummary] = useState<ShopeeSettledSummary | null>(
+    null,
+  );
   const pageSize = 10;
 
   const columns: Column<ShopeeSettled>[] = [
@@ -170,9 +182,11 @@ export default function ShopeeSalesPage() {
       res.data.data.forEach((cur) => {
         pageSum.harga_asli_produk += cur.harga_asli_produk;
         pageSum.total_diskon_produk += cur.total_diskon_produk;
-        pageSum.diskon_voucher_ditanggung_penjual += cur.diskon_voucher_ditanggung_penjual;
+        pageSum.diskon_voucher_ditanggung_penjual +=
+          cur.diskon_voucher_ditanggung_penjual;
         pageSum.biaya_administrasi += cur.biaya_administrasi;
-        pageSum.biaya_layanan_termasuk_ppn_11 += cur.biaya_layanan_termasuk_ppn_11;
+        pageSum.biaya_layanan_termasuk_ppn_11 +=
+          cur.biaya_layanan_termasuk_ppn_11;
       });
       pageSum.gmv = pageSum.harga_asli_produk - pageSum.total_diskon_produk;
       setPageSummary(pageSum);
@@ -300,7 +314,9 @@ export default function ShopeeSalesPage() {
       </div>
       {pageSummary && (
         <Table size="small" sx={{ mb: 1, maxWidth: 600 }}>
-          <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}>
+          <caption
+            style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}
+          >
             Page Summary
           </caption>
           <TableBody>
@@ -334,10 +350,13 @@ export default function ShopeeSalesPage() {
             <TableRow>
               <TableCell>Diskon Voucher Penjual</TableCell>
               <TableCell align="right">
-                {pageSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
+                {pageSummary.diskon_voucher_ditanggung_penjual.toLocaleString(
+                  "id-ID",
+                  {
+                    style: "currency",
+                    currency: "IDR",
+                  },
+                )}
               </TableCell>
             </TableRow>
             <TableRow>
@@ -352,10 +371,13 @@ export default function ShopeeSalesPage() {
             <TableRow>
               <TableCell>Biaya Layanan (+PPN)</TableCell>
               <TableCell align="right">
-                {pageSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
+                {pageSummary.biaya_layanan_termasuk_ppn_11.toLocaleString(
+                  "id-ID",
+                  {
+                    style: "currency",
+                    currency: "IDR",
+                  },
+                )}
               </TableCell>
             </TableRow>
             <TableRow>
@@ -372,7 +394,9 @@ export default function ShopeeSalesPage() {
       )}
       {allSummary && (
         <Table size="small" sx={{ mb: 1, maxWidth: 600 }}>
-          <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}>
+          <caption
+            style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}
+          >
             All Summary
           </caption>
           <TableBody>
@@ -406,10 +430,13 @@ export default function ShopeeSalesPage() {
             <TableRow>
               <TableCell>Diskon Voucher Penjual</TableCell>
               <TableCell align="right">
-                {allSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
+                {allSummary.diskon_voucher_ditanggung_penjual.toLocaleString(
+                  "id-ID",
+                  {
+                    style: "currency",
+                    currency: "IDR",
+                  },
+                )}
               </TableCell>
             </TableRow>
             <TableRow>
@@ -424,10 +451,13 @@ export default function ShopeeSalesPage() {
             <TableRow>
               <TableCell>Biaya Layanan (+PPN)</TableCell>
               <TableCell align="right">
-                {allSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
+                {allSummary.biaya_layanan_termasuk_ppn_11.toLocaleString(
+                  "id-ID",
+                  {
+                    style: "currency",
+                    currency: "IDR",
+                  },
+                )}
               </TableCell>
             </TableRow>
             <TableRow>

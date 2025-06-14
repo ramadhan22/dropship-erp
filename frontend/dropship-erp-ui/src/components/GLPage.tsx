@@ -16,8 +16,15 @@ import usePagination from "../usePagination";
 export default function GLPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
   const [data, setData] = useState<Account[]>([]);
   const { paginated, controls } = usePagination(data);
 

@@ -16,7 +16,7 @@ import usePagination from "../usePagination";
 export default function PLPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [period, setPeriod] = useState("");
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<Metric | null>(null);
   const { paginated, controls } = usePagination(
     data ? Object.entries(data) : [],
@@ -71,8 +71,8 @@ export default function PLPage() {
             ))}
           </TableBody>
         </Table>
-      )}{controls}
-    
+      )}
+      {controls}
     </div>
   );
 }

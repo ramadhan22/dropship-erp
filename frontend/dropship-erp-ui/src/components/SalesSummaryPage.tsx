@@ -26,8 +26,11 @@ export default function SalesSummaryPage() {
   const [date, setDate] = useState(
     () => new Date().toISOString().split("T")[0],
   );
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
+  const now = new Date();
+  const [month, setMonth] = useState(
+    String(now.getMonth() + 1).padStart(2, "0"),
+  );
+  const [year, setYear] = useState(String(now.getFullYear()));
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
   const [countData, setCountData] = useState<{ date: string; count: number }[]>(
     [],
