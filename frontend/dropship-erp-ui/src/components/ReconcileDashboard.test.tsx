@@ -13,12 +13,23 @@ jest.mock("../api/reconcile", () => ({
   bulkReconcile: jest.fn(),
 }));
 
-test("load candidates", async () => {
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+test("load all data on mount", async () => {
   render(<ReconcileDashboard />);
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith(""));
+});
+
+test("load candidates with filter", async () => {
+  render(<ReconcileDashboard />);
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  jest.clearAllMocks();
   await screen.findByText("S");
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
-  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith("S"));
 });
 
 test("filter status mismatch", async () => {
