@@ -1,4 +1,5 @@
 import axios from "axios";
+import { loadingEmitter } from "../loadingEmitter";
 import type {
   BalanceCategory,
   Metric,
@@ -37,6 +38,23 @@ try {
 export const api = axios.create({
   baseURL: BASE_URL,
 });
+
+// Global loading indicator hooks into axios requests
+api.interceptors.request.use((config) => {
+  loadingEmitter.start();
+  return config;
+});
+
+api.interceptors.response.use(
+  (res) => {
+    loadingEmitter.end();
+    return res;
+  },
+  (err) => {
+    loadingEmitter.end();
+    return Promise.reject(err);
+  },
+);
 
 // Dropship import
 export function importDropship(file: File) {
