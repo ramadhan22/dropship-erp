@@ -144,7 +144,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 				if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
 					return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
 				}
-				if err := s.createPendingSalesJournal(ctx, jrTx, header); err != nil {
+				if err := s.createPendingSalesJournal(ctx, jrTx, header, totalHargaProduk, totalHargaChannel); err != nil {
 					return count, fmt.Errorf("journal %s: %w", header.KodePesanan, err)
 				}
 				inserted[header.KodePesanan] = true
@@ -203,13 +203,13 @@ func (s *DropshipService) ListDropshipPurchaseDetails(ctx context.Context, kodeP
 	return s.repo.ListDropshipPurchaseDetails(ctx, kodePesanan)
 }
 
-func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr DropshipJournalRepo, p *models.DropshipPurchase) error {
+func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr DropshipJournalRepo, p *models.DropshipPurchase, totalProduk, totalProdukChannel float64) error {
 	if jr == nil {
 		return nil
 	}
 	je := &models.JournalEntry{
 		EntryDate:    p.WaktuPesananTerbuat,
-		Description:  ptrString("Pending sales " + p.KodePesanan),
+		Description:  ptrString("Pending sales " + p.KodeInvoiceChannel),
 		SourceType:   "pending_sales",
 		SourceID:     p.KodeInvoiceChannel,
 		ShopUsername: p.NamaToko,
@@ -223,20 +223,46 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr Drop
 
 	debit := pendingAccountID(p.NamaToko)
 	credit := int64(4001)
+	jakmall := int64(11009)
+	cogs := int64(5001)
+	mitra := int64(52007)
+
+	saldoJakmall := totalProduk + p.BiayaMitraJakmall
 	lines := []models.JournalLine{
+		{
+			JournalID: id,
+			AccountID: jakmall,
+			IsDebit:   false,
+			Amount:    saldoJakmall,
+			Memo:      ptrString("Saldo Jakmall " + p.KodeInvoiceChannel),
+		},
+		{
+			JournalID: id,
+			AccountID: cogs,
+			IsDebit:   true,
+			Amount:    totalProduk,
+			Memo:      ptrString("HPP " + p.KodeInvoiceChannel),
+		},
+		{
+			JournalID: id,
+			AccountID: mitra,
+			IsDebit:   true,
+			Amount:    p.BiayaMitraJakmall,
+			Memo:      ptrString("Biaya Mitra Jakmall " + p.KodeInvoiceChannel),
+		},
 		{
 			JournalID: id,
 			AccountID: debit,
 			IsDebit:   true,
-			Amount:    p.TotalTransaksi,
-			Memo:      ptrString("Pending receivable " + p.KodePesanan),
+			Amount:    totalProdukChannel,
+			Memo:      ptrString("Pending receivable " + p.KodeInvoiceChannel),
 		},
 		{
 			JournalID: id,
 			AccountID: credit,
 			IsDebit:   false,
-			Amount:    p.TotalTransaksi,
-			Memo:      ptrString("Sales " + p.KodePesanan),
+			Amount:    totalProdukChannel,
+			Memo:      ptrString("Sales " + p.KodeInvoiceChannel),
 		},
 	}
 	for i := range lines {

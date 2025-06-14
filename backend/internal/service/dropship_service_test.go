@@ -106,8 +106,8 @@ func TestImportFromCSV_Success(t *testing.T) {
 		t.Errorf("unexpected SKU/Qty: %s/%d", d.SKU, d.Qty)
 	}
 
-	if len(jfake.entries) != 1 || len(jfake.lines) != 2 {
-		t.Fatalf("expected 1 journal entry and 2 lines, got %d/%d", len(jfake.entries), len(jfake.lines))
+	if len(jfake.entries) != 1 || len(jfake.lines) != 5 {
+		t.Fatalf("expected 1 journal entry and 5 lines, got %d/%d", len(jfake.entries), len(jfake.lines))
 	}
 }
 
