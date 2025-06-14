@@ -264,6 +264,20 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr Drop
 			Amount:    totalProdukChannel,
 			Memo:      ptrString("Sales " + p.KodeInvoiceChannel),
 		},
+		{
+			JournalID: id,
+			AccountID: cogs,
+			IsDebit:   true,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("HPP " + p.KodePesanan),
+		},
+		{
+			JournalID: id,
+			AccountID: jakmall,
+			IsDebit:   false,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("Saldo Jakmall " + p.KodePesanan),
+		},
 	}
 	for i := range lines {
 		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {

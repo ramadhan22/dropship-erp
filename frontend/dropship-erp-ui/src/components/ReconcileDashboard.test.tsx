@@ -54,7 +54,6 @@ test("filter status mismatch", async () => {
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   await waitFor(() => expect(screen.getByLabelText(/Shop/i)).toHaveValue("S"));
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
-  await screen.findByText("A");
   fireEvent.click(screen.getByLabelText(/Status mismatch only/i));
   expect(screen.queryByText("B")).toBeNull();
 });

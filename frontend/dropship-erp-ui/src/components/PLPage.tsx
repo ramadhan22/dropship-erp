@@ -11,12 +11,16 @@ import {
 import { fetchPL } from "../api/pl";
 import { listAllStores } from "../api";
 import type { Metric, Store } from "../types";
+import usePagination from "../usePagination";
 
 export default function PLPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [period, setPeriod] = useState("");
   const [data, setData] = useState<Metric | null>(null);
+  const { paginated, controls } = usePagination(
+    data ? Object.entries(data) : [],
+  );
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -59,7 +63,7 @@ export default function PLPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.entries(data).map(([k, v]) => (
+            {paginated.map(([k, v]) => (
               <TableRow key={k}>
                 <TableCell>{k}</TableCell>
                 <TableCell>{v as any}</TableCell>
@@ -67,6 +71,7 @@ export default function PLPage() {
             ))}
           </TableBody>
         </Table>
+        {controls}
       )}
     </div>
   );

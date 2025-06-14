@@ -14,7 +14,35 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
-import type { BalanceCategory, Store } from "../types";
+import type { BalanceCategory, Store, Account } from "../types";
+import usePagination from "../usePagination";
+
+function AccountTable({ accounts }: { accounts: Account[] }) {
+  const { paginated, controls } = usePagination(accounts);
+  return (
+    <>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Code</TableCell>
+            <TableCell>Name</TableCell>
+            <TableCell>Balance</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {paginated.map((a) => (
+            <TableRow key={a.account_id}>
+              <TableCell>{a.account_code}</TableCell>
+              <TableCell>{a.account_name}</TableCell>
+              <TableCell>{a.balance}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {controls}
+    </>
+  );
+}
 
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
@@ -64,24 +92,7 @@ export default function BalanceSheetPage() {
               <Typography variant="h6">
                 {cat.category} (Total: {cat.total})
               </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Code</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Balance</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {cat.accounts.map((a) => (
-                    <TableRow key={a.account_id}>
-                      <TableCell>{a.account_code}</TableCell>
-                      <TableCell>{a.account_name}</TableCell>
-                      <TableCell>{a.balance}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <AccountTable accounts={cat.accounts} />
             </CardContent>
           </Card>
         ))}

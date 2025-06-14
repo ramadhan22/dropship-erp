@@ -15,9 +15,11 @@ import {
 import { useEffect, useState } from "react";
 import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
 import type { Expense } from "../types";
+import usePagination from "../usePagination";
 
 export default function ExpensePage() {
   const [list, setList] = useState<Expense[]>([]);
+  const { paginated, controls } = usePagination(list);
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [account, setAccount] = useState("");
@@ -69,7 +71,7 @@ export default function ExpensePage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {list.map((e) => (
+          {paginated.map((e) => (
             <TableRow key={e.id}>
               <TableCell>{e.description}</TableCell>
               <TableCell>{e.amount}</TableCell>
@@ -88,6 +90,7 @@ export default function ExpensePage() {
           ))}
         </TableBody>
       </Table>
+      {controls}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add Expense</DialogTitle>
         <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
