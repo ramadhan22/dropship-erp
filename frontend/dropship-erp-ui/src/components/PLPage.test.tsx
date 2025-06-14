@@ -15,8 +15,8 @@ jest.mock("../api/pl", () => ({
 test("fetch pl", async () => {
   render(<PLPage />);
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
-  fireEvent.change(screen.getByLabelText(/Period/i), {
-    target: { value: "2025" },
+  fireEvent.change(screen.getByLabelText(/Period/i, { selector: "input" }), {
+    target: { value: "2025-05" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));
   await waitFor(() => expect(api.fetchPL).toHaveBeenCalled());

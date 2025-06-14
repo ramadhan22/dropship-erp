@@ -65,7 +65,7 @@ export default function ExpensePage() {
         <TableHead>
           <TableRow>
             <TableCell>Description</TableCell>
-            <TableCell>Amount</TableCell>
+            <TableCell align="right">Amount</TableCell>
             <TableCell>Account</TableCell>
             <TableCell></TableCell>
           </TableRow>
@@ -74,7 +74,12 @@ export default function ExpensePage() {
           {paginated.map((e) => (
             <TableRow key={e.id}>
               <TableCell>{e.description}</TableCell>
-              <TableCell>{e.amount}</TableCell>
+              <TableCell align="right">
+                {e.amount.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
               <TableCell>{e.account_id}</TableCell>
               <TableCell>
                 <Button

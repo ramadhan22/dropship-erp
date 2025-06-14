@@ -1,4 +1,7 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Pagination, TextField } from "@mui/material";
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Pagination } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
 import { importShopeeAffiliate, listShopeeAffiliate } from "../api";
 import SortableTable from "./SortableTable";
@@ -20,9 +23,25 @@ export default function ShopeeAffiliatePage() {
     { label: "Status", key: "status_pesanan" },
     { label: "Nama Affiliate", key: "nama_affiliate" },
     { label: "Username", key: "username_affiliate" },
-    { label: "Waktu Pesanan", key: "waktu_pesanan", render: v => new Date(v).toLocaleDateString("id-ID") },
-    { label: "Nilai Pembelian", key: "nilai_pembelian" },
-    { label: "Komisi Affiliate", key: "estimasi_komisi_affiliate_per_pesanan" },
+    {
+      label: "Waktu Pesanan",
+      key: "waktu_pesanan",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    {
+      label: "Nilai Pembelian",
+      key: "nilai_pembelian",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Komisi Affiliate",
+      key: "estimasi_komisi_affiliate_per_pesanan",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
   ];
 
   const fetchData = async () => {
@@ -61,15 +80,21 @@ export default function ShopeeAffiliatePage() {
       <Button variant="contained" onClick={() => setImportOpen(true)} sx={{ mb: 2 }}>
         Import
       </Button>
-      <TextField
-        label="Period"
-        type="month"
-        value={period}
-        onChange={e => { setPeriod(e.target.value); setPage(1); }}
-        size="small"
-        sx={{ mb: 2, ml: 1 }}
-        InputLabelProps={{ shrink: true }}
-      />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Period"
+          views={["year", "month"]}
+          openTo="month"
+          format="yyyy-MM"
+          value={new Date(period)}
+          onChange={date => {
+            if (!date) return;
+            setPeriod(date.toISOString().slice(0, 7));
+            setPage(1);
+          }}
+          slotProps={{ textField: { size: "small", sx: { mb: 2, ml: 1 }, InputLabelProps: { shrink: true } } }}
+        />
+      </LocalizationProvider>
       {msg && <Alert severity={msg.type} sx={{ mb: 2 }}>{msg.text}</Alert>}
       <div style={{ overflowX: "auto" }}>
         <SortableTable columns={columns} data={data} />

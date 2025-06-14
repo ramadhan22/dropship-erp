@@ -9,9 +9,11 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
 import type { BalanceCategory, Store, Account } from "../types";
@@ -26,7 +28,7 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
           <TableRow>
             <TableCell>Code</TableCell>
             <TableCell>Name</TableCell>
-            <TableCell>Balance</TableCell>
+            <TableCell align="right">Balance</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -34,7 +36,12 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
             <TableRow key={a.account_id}>
               <TableCell>{a.account_code}</TableCell>
               <TableCell>{a.account_name}</TableCell>
-              <TableCell>{a.balance}</TableCell>
+              <TableCell align="right">
+                {a.balance.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -75,12 +82,20 @@ export default function BalanceSheetPage() {
           </option>
         ))}
       </select>
-      <TextField
-        label="Period (YYYY-MM)"
-        value={period}
-        onChange={(e) => setPeriod(e.target.value)}
-        sx={{ mr: 2 }}
-      />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Period (YYYY-MM)"
+          views={["year", "month"]}
+          openTo="month"
+          format="yyyy-MM"
+          value={period ? new Date(period) : null}
+          onChange={(date) => {
+            if (!date) return;
+            setPeriod(date.toISOString().slice(0, 7));
+          }}
+          slotProps={{ textField: { size: "small", sx: { mr: 2 }, InputLabelProps: { shrink: true } } }}
+        />
+      </LocalizationProvider>
       <Button variant="contained" onClick={handleFetch}>
         Fetch
       </Button>
@@ -90,7 +105,10 @@ export default function BalanceSheetPage() {
           <Card key={cat.category} sx={{ mb: 2 }}>
             <CardContent>
               <Typography variant="h6">
-                {cat.category} (Total: {cat.total})
+                {cat.category} (Total: {cat.total.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })})
               </Typography>
               <AccountTable accounts={cat.accounts} />
             </CardContent>

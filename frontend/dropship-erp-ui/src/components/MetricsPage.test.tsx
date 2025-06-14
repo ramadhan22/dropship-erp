@@ -28,7 +28,7 @@ describe("MetricsPage Component", () => {
     fireEvent.change(screen.getByLabelText(/Shop/i), {
       target: { value: "ShopX" },
     });
-    fireEvent.change(screen.getByLabelText(/Period/i), {
+    fireEvent.change(screen.getByLabelText(/Period/i, { selector: "input" }), {
       target: { value: "2025-05" },
     });
 

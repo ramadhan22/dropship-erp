@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import {
   Button,
-  TextField,
   Table,
   TableHead,
   TableRow,
   TableCell,
   TableBody,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { fetchPL } from "../api/pl";
 import { listAllStores } from "../api";
 import type { Metric, Store } from "../types";
@@ -47,11 +49,20 @@ export default function PLPage() {
             </option>
           ))}
         </select>
-        <TextField
-          label="Period"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Period"
+            views={["year", "month"]}
+            openTo="month"
+            format="yyyy-MM"
+            value={new Date(period)}
+            onChange={(date) => {
+              if (!date) return;
+              setPeriod(date.toISOString().slice(0, 7));
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
         <Button onClick={handleFetch}>Fetch</Button>
       </div>
       {data && (
@@ -59,14 +70,21 @@ export default function PLPage() {
           <TableHead>
             <TableRow>
               <TableCell>Metric</TableCell>
-              <TableCell>Value</TableCell>
+              <TableCell align="right">Value</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {paginated.map(([k, v]) => (
               <TableRow key={k}>
                 <TableCell>{k}</TableCell>
-                <TableCell>{v as any}</TableCell>
+                <TableCell align="right">
+                  {typeof v === "number"
+                    ? v.toLocaleString("id-ID", {
+                        style: "currency",
+                        currency: "IDR",
+                      })
+                    : (v as any)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

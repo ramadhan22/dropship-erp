@@ -1,4 +1,7 @@
-import { Alert, TextField } from "@mui/material";
+import { Alert } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
 import {
   listJenisChannels,
@@ -134,30 +137,35 @@ export default function SalesSummaryPage() {
             </option>
           ))}
         </select>
-        <TextField
-          label="Date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          size="small"
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label="Month"
-          type="number"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          size="small"
-          sx={{ width: 100 }}
-        />
-        <TextField
-          label="Year"
-          type="number"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          size="small"
-          sx={{ width: 100 }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Date"
+            format="yyyy-MM-dd"
+            value={new Date(date)}
+            onChange={(d) => {
+              if (!d) return;
+              setDate(d.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Month"
+            views={["year", "month"]}
+            openTo="month"
+            format="yyyy-MM"
+            value={new Date(`${year}-${month}-01`)}
+            onChange={(d) => {
+              if (!d) return;
+              const iso = d.toISOString().slice(0, 7);
+              const [y, m] = iso.split("-");
+              setYear(y);
+              setMonth(m);
+            }}
+            slotProps={{ textField: { size: "small", sx: { width: 160 } } }}
+          />
+        </LocalizationProvider>
       </div>
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>
@@ -165,7 +173,11 @@ export default function SalesSummaryPage() {
         </Alert>
       )}
       <div style={{ marginBottom: "1rem" }}>
-        <strong>Total Revenue:</strong> {totalRevenue} |{" "}
+        <strong>Total Revenue:</strong>{" "}
+        {totalRevenue.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}{" "}|{" "}
         <strong>Total Orders:</strong> {totalOrders}
       </div>
       <LineChart

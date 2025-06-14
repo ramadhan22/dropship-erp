@@ -223,16 +223,30 @@ export default function JournalPage() {
             <TableHead>
               <TableRow>
                 <TableCell>Account</TableCell>
-                <TableCell>Debit</TableCell>
-                <TableCell>Credit</TableCell>
+                <TableCell align="right">Debit</TableCell>
+                <TableCell align="right">Credit</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {linesPage.map((l) => (
                 <TableRow key={l.line_id}>
                   <TableCell>{l.account_name}</TableCell>
-                  <TableCell>{l.is_debit ? l.amount : ""}</TableCell>
-                  <TableCell>{!l.is_debit ? l.amount : ""}</TableCell>
+                  <TableCell align="right">
+                    {l.is_debit
+                      ? l.amount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </TableCell>
+                  <TableCell align="right">
+                    {!l.is_debit
+                      ? l.amount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
