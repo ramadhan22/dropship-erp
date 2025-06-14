@@ -40,7 +40,9 @@ export default function DropshipImport() {
 
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
