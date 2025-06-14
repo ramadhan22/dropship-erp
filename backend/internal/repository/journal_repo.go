@@ -19,18 +19,18 @@ INSERT INTO journal_entries (
 // JournalRepo manages the journal_entries and journal_lines tables,
 // which are at the heart of double-entry bookkeeping.
 type JournalRepo struct {
-	db *sqlx.DB
+	db DBTX
 }
 
 // NewJournalRepo constructs a new JournalRepo.
-func NewJournalRepo(db *sqlx.DB) *JournalRepo {
+func NewJournalRepo(db DBTX) *JournalRepo {
 	return &JournalRepo{db: db}
 }
 
 // CreateJournalEntry inserts a row into journal_entries and returns the new journal_id.
 // We need this so we can capture the returned primary key for inserting lines.
 func (r *JournalRepo) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
-	rows, err := r.db.NamedQueryContext(ctx, insertJournalSQL, e)
+	rows, err := sqlx.NamedQueryContext(ctx, r.db, insertJournalSQL, e)
 	if err != nil {
 		return 0, err
 	}

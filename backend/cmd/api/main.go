@@ -38,9 +38,10 @@ func main() {
 	}
 
 	// 3) Initialize services with the appropriate repo interfaces
-	dropshipSvc := service.NewDropshipService(repo.DropshipRepo, repo.JournalRepo)
+	dropshipSvc := service.NewDropshipService(repo.DB, repo.DropshipRepo, repo.JournalRepo)
 	shopeeSvc := service.NewShopeeService(repo.ShopeeRepo)
 	reconSvc := service.NewReconcileService(
+		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
 	)
 	metricSvc := service.NewMetricService(
@@ -50,7 +51,7 @@ func main() {
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
-	journalSvc := service.NewJournalService(repo.JournalRepo)
+	journalSvc := service.NewJournalService(repo.DB, repo.JournalRepo)
 	plSvc := service.NewPLService(repo.MetricRepo)
 	glSvc := service.NewGLService(repo.JournalRepo)
 

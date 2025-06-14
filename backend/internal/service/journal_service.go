@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 type JournalRepoInterface interface {
@@ -16,10 +18,13 @@ type JournalRepoInterface interface {
 }
 
 type JournalService struct {
+	db   *sqlx.DB
 	repo JournalRepoInterface
 }
 
-func NewJournalService(r JournalRepoInterface) *JournalService { return &JournalService{repo: r} }
+func NewJournalService(db *sqlx.DB, r JournalRepoInterface) *JournalService {
+	return &JournalService{db: db, repo: r}
+}
 
 func (s *JournalService) List(ctx context.Context) ([]models.JournalEntry, error) {
 	return s.repo.ListJournalEntries(ctx)
@@ -51,15 +56,38 @@ func (s *JournalService) Create(
 	if debit != credit {
 		return 0, fmt.Errorf("debits %.2f do not equal credits %.2f", debit, credit)
 	}
-	id, err := s.repo.CreateJournalEntry(ctx, e)
+	if s.db == nil {
+		id, err := s.repo.CreateJournalEntry(ctx, e)
+		if err != nil {
+			return 0, err
+		}
+		for i := range lines {
+			lines[i].JournalID = id
+			if err := s.repo.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return 0, err
+			}
+		}
+		return id, nil
+	}
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	repoTx := repository.NewJournalRepo(tx)
+	id, err := repoTx.CreateJournalEntry(ctx, e)
 	if err != nil {
 		return 0, err
 	}
 	for i := range lines {
 		lines[i].JournalID = id
-		if err := s.repo.InsertJournalLine(ctx, &lines[i]); err != nil {
+		if err := repoTx.InsertJournalLine(ctx, &lines[i]); err != nil {
 			return 0, err
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
 	}
 	return id, nil
 }

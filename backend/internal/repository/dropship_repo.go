@@ -3,17 +3,16 @@ package repository
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // DropshipRepo handles all database operations related to the dropship_purchases table.
 type DropshipRepo struct {
-	db *sqlx.DB
+	db DBTX
 }
 
 // NewDropshipRepo constructs a DropshipRepo given an *sqlx.DB connection.
-func NewDropshipRepo(db *sqlx.DB) *DropshipRepo {
+func NewDropshipRepo(db DBTX) *DropshipRepo {
 	return &DropshipRepo{db: db}
 }
 

@@ -40,7 +40,7 @@ func (f *fakeJournalRepo) DeleteJournalEntry(ctx context.Context, id int64) erro
 
 func TestJournalServiceCreate_Balance(t *testing.T) {
 	repo := &fakeJournalRepo{}
-	svc := NewJournalService(repo)
+	svc := NewJournalService(nil, repo)
 
 	entry := &models.JournalEntry{SourceType: "manual", SourceID: "1"}
 	lines := []models.JournalLine{
@@ -58,7 +58,7 @@ func TestJournalServiceCreate_Balance(t *testing.T) {
 
 func TestJournalServiceCreate_Unbalanced(t *testing.T) {
 	repo := &fakeJournalRepo{}
-	svc := NewJournalService(repo)
+	svc := NewJournalService(nil, repo)
 
 	entry := &models.JournalEntry{SourceType: "manual", SourceID: "1"}
 	lines := []models.JournalLine{

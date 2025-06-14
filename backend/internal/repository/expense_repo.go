@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
-	"github.com/jmoiron/sqlx"
+
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
-type ExpenseRepo struct{ db *sqlx.DB }
+type ExpenseRepo struct{ db DBTX }
 
-func NewExpenseRepo(db *sqlx.DB) *ExpenseRepo { return &ExpenseRepo{db: db} }
+func NewExpenseRepo(db DBTX) *ExpenseRepo { return &ExpenseRepo{db: db} }
 
 func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
 	_, err := r.db.NamedExecContext(ctx,

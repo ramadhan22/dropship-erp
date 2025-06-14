@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // DropshipRepoInterface defines the subset of DropshipRepo methods that the service needs.
@@ -33,13 +35,14 @@ type DropshipJournalRepo interface {
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
 type DropshipService struct {
+	db          *sqlx.DB
 	repo        DropshipRepoInterface
 	journalRepo DropshipJournalRepo
 }
 
 // NewDropshipService constructs a DropshipService with the given repository.
-func NewDropshipService(repo DropshipRepoInterface, jr DropshipJournalRepo) *DropshipService {
-	return &DropshipService{repo: repo, journalRepo: jr}
+func NewDropshipService(db *sqlx.DB, repo DropshipRepoInterface, jr DropshipJournalRepo) *DropshipService {
+	return &DropshipService{db: db, repo: repo, journalRepo: jr}
 }
 
 // ImportFromCSV reads a Dumpsihp CSV file (with a header row) and inserts each purchase row.
@@ -62,6 +65,20 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
 		return 0, fmt.Errorf("read header: %w", err)
+	}
+
+	var tx *sqlx.Tx
+	repoTx := s.repo
+	jrTx := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return 0, err
+		}
+		defer tx.Rollback()
+		repoTx = repository.NewDropshipRepo(tx)
+		jrTx = repository.NewJournalRepo(tx)
 	}
 
 	inserted := make(map[string]bool)
@@ -117,17 +134,17 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 		}
 
 		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {
-			exists, err := s.repo.ExistsDropshipPurchase(ctx, header.KodePesanan)
+			exists, err := repoTx.ExistsDropshipPurchase(ctx, header.KodePesanan)
 			if err != nil {
 				return count, fmt.Errorf("check exists %s: %w", header.KodePesanan, err)
 			}
 			if exists {
 				skipped[header.KodePesanan] = true
 			} else {
-				if err := s.repo.InsertDropshipPurchase(ctx, header); err != nil {
+				if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
 					return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
 				}
-				if err := s.createPendingSalesJournal(ctx, header); err != nil {
+				if err := s.createPendingSalesJournal(ctx, jrTx, header); err != nil {
 					return count, fmt.Errorf("journal %s: %w", header.KodePesanan, err)
 				}
 				inserted[header.KodePesanan] = true
@@ -149,10 +166,15 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 			TotalHargaProdukChannel: totalHargaChannel,
 			PotensiKeuntungan:       potensi,
 		}
-		if err := s.repo.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
+		if err := repoTx.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
 			return count, fmt.Errorf("insert detail %s: %w", header.KodePesanan, err)
 		}
 		count++
+	}
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return count, err
+		}
 	}
 	return count, nil
 }
@@ -181,20 +203,20 @@ func (s *DropshipService) ListDropshipPurchaseDetails(ctx context.Context, kodeP
 	return s.repo.ListDropshipPurchaseDetails(ctx, kodePesanan)
 }
 
-func (s *DropshipService) createPendingSalesJournal(ctx context.Context, p *models.DropshipPurchase) error {
-	if s.journalRepo == nil {
+func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr DropshipJournalRepo, p *models.DropshipPurchase) error {
+	if jr == nil {
 		return nil
 	}
 	je := &models.JournalEntry{
 		EntryDate:    p.WaktuPesananTerbuat,
 		Description:  ptrString("Pending sales " + p.KodePesanan),
 		SourceType:   "pending_sales",
-		SourceID:     p.KodePesanan,
+		SourceID:     p.KodeInvoiceChannel,
 		ShopUsername: p.NamaToko,
 		Store:        p.NamaToko,
 		CreatedAt:    time.Now(),
 	}
-	id, err := s.journalRepo.CreateJournalEntry(ctx, je)
+	id, err := jr.CreateJournalEntry(ctx, je)
 	if err != nil {
 		return err
 	}
@@ -218,7 +240,7 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, p *mode
 		},
 	}
 	for i := range lines {
-		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
 			return err
 		}
 	}
