@@ -4,6 +4,10 @@ import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api/pl";
 import PLPage from "./PLPage";
 
+jest.mock("../api", () => ({
+  listAllStores: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock("../api/pl", () => ({
   fetchPL: jest.fn().mockResolvedValue({ data: { net_profit: 1 } }),
 }));

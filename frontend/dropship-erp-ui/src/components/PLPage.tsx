@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   TextField,
@@ -9,12 +9,18 @@ import {
   TableBody,
 } from "@mui/material";
 import { fetchPL } from "../api/pl";
-import type { Metric } from "../types";
+import { listAllStores } from "../api";
+import type { Metric, Store } from "../types";
 
 export default function PLPage() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [period, setPeriod] = useState("");
   const [data, setData] = useState<Metric | null>(null);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const handleFetch = async () => {
     const res = await fetchPL(shop, period);
@@ -25,11 +31,18 @@ export default function PLPage() {
     <div>
       <h2>Profit & Loss</h2>
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <TextField
-          label="Shop"
+        <select
+          aria-label="Shop"
           value={shop}
           onChange={(e) => setShop(e.target.value)}
-        />
+        >
+          <option value="">Select Store</option>
+          {stores.map((s) => (
+            <option key={s.store_id} value={s.nama_toko}>
+              {s.nama_toko}
+            </option>
+          ))}
+        </select>
         <TextField
           label="Period"
           value={period}

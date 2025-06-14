@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   TextField,
@@ -9,13 +9,19 @@ import {
   TableBody,
 } from "@mui/material";
 import { fetchGeneralLedger } from "../api/gl";
-import type { Account } from "../types";
+import { listAllStores } from "../api";
+import type { Account, Store } from "../types";
 
 export default function GLPage() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState<Account[]>([]);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const handleFetch = async () => {
     const res = await fetchGeneralLedger(shop, from, to);
@@ -26,11 +32,18 @@ export default function GLPage() {
     <div>
       <h2>General Ledger</h2>
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <TextField
-          label="Shop"
+        <select
+          aria-label="Shop"
           value={shop}
           onChange={(e) => setShop(e.target.value)}
-        />
+        >
+          <option value="">Select Store</option>
+          {stores.map((s) => (
+            <option key={s.store_id} value={s.nama_toko}>
+              {s.nama_toko}
+            </option>
+          ))}
+        </select>
         <TextField
           label="From"
           value={from}

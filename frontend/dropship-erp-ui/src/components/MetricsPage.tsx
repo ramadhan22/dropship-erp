@@ -10,18 +10,24 @@ import {
   TableRow,
   TextField,
 } from "@mui/material";
-import { useState } from "react";
-import { computeMetrics, fetchMetrics } from "../api";
+import { useEffect, useState } from "react";
+import { computeMetrics, fetchMetrics, listAllStores } from "../api";
+import type { Store } from "../types";
 import type { Metric } from "../types";
 
 export default function MetricsPage() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [period, setPeriod] = useState("");
   const [metric, setMetric] = useState<Metric | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const handleCompute = async () => {
     try {
@@ -47,11 +53,18 @@ export default function MetricsPage() {
       <h2>Metrics (P&L &amp; Cash)</h2>
 
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <TextField
-          label="Shop"
+        <select
+          aria-label="Shop"
           value={shop}
           onChange={(e) => setShop(e.target.value)}
-        />
+        >
+          <option value="">Select Store</option>
+          {stores.map((s) => (
+            <option key={s.store_id} value={s.nama_toko}>
+              {s.nama_toko}
+            </option>
+          ))}
+        </select>
         <TextField
           label="Period (YYYY-MM)"
           value={period}

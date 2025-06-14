@@ -10,6 +10,7 @@ import MetricsPage from "./MetricsPage";
 jest.mock("../api", () => ({
   computeMetrics: jest.fn(),
   fetchMetrics: jest.fn(),
+  listAllStores: jest.fn().mockResolvedValue([]),
 }));
 
 describe("MetricsPage Component", () => {
