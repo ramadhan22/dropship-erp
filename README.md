@@ -1,6 +1,8 @@
 # Dropship ERP
 
-Dropship ERP is a small ERP-style web application for managing dropshipping transactions. It consists of a Go backend and a React/TypeScript frontend.
+Dropship ERP is a full featured web application for managing dropshipping and
+online marketplace transactions.  The project consists of a Go backend and a
+React/TypeScript frontend.
 
 ## Backend
 
@@ -10,11 +12,16 @@ Main features:
 
 - Import dropship purchases from CSV files.
 - Import settled Shopee orders from XLSX files.
-- Reconcile purchases with orders which creates journal entries and lines.
-- Calculate revenue/COGS/fees/net profit metrics and cache them.
-- Retrieve balance sheet data grouped by Assets, Liabilities and Equity.
+- Import Shopee affiliate conversions from CSV.
+- Reconcile purchases with marketplace orders which creates journal entries and
+  lines.
+- Automatically compute revenue, COGS, fees and net profit metrics.
+- View general ledger, balance sheet and profit and loss pages.
+- Manage channels, accounts and expenses.
 
-Configuration is read from `backend/config.yaml` (values can be overridden with environment variables). On startup the application runs database migrations automatically.
+Configuration is read from `backend/config.yaml` and values can be overridden
+with environment variables. On startup the application runs database migrations
+automatically.
 
 To start the backend:
 
@@ -31,7 +38,11 @@ go test ./...
 
 ## Frontend
 
-The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is a Vite powered React + TypeScript project using Material UI, React Query and Recharts for graphing. The home page now shows a sales summary chart that can be filtered by channel, store and date.
+The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is
+a Vite powered React + TypeScript project using Material UI, React Query and
+Recharts for graphing. The application provides dashboards for sales summaries,
+profit & loss, balance sheet and general ledger as well as pages for
+reconciliation and data imports.
 
 To develop the frontend:
 
@@ -39,6 +50,7 @@ To develop the frontend:
 cd frontend/dropship-erp-ui
 npm install
 npm run dev
+npm test
 ```
 
 ## Repository Layout
