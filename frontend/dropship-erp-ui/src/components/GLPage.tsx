@@ -105,29 +105,6 @@ export default function GLPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-
-          {paginated.map((a) => (
-            <TableRow key={a.account_id}>
-              <TableCell>{a.account_code}</TableCell>
-              <TableCell>{a.account_name}</TableCell>
-              <TableCell align="right">
-                {a.balance > 0
-                  ? a.balance.toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                    })
-                  : ""}
-              </TableCell>
-              <TableCell align="right">
-                {a.balance < 0
-                  ? (-a.balance).toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                    })
-                  : ""}
-              </TableCell>
-            </TableRow>
-
           {groupByType(data).map((grp) => (
             <Fragment key={grp.type}>
               <TableRow>
@@ -139,12 +116,25 @@ export default function GLPage() {
                 <TableRow key={a.account_id}>
                   <TableCell>{a.account_code}</TableCell>
                   <TableCell>{a.account_name}</TableCell>
-                  <TableCell>{a.balance > 0 ? a.balance : ""}</TableCell>
-                  <TableCell>{a.balance < 0 ? -a.balance : ""}</TableCell>
+                  <TableCell align="right">
+                    {a.balance > 0
+                      ? a.balance.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </TableCell>
+                  <TableCell align="right">
+                    {a.balance < 0
+                      ? (-a.balance).toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </TableCell>
                 </TableRow>
               ))}
             </Fragment>
-
           ))}
         </TableBody>
       </Table>

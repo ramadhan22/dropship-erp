@@ -39,7 +39,7 @@ func main() {
 
 	// 3) Initialize services with the appropriate repo interfaces
 	dropshipSvc := service.NewDropshipService(repo.DB, repo.DropshipRepo, repo.JournalRepo)
-       shopeeSvc := service.NewShopeeService(repo.ShopeeRepo, repo.DropshipRepo)
+	shopeeSvc := service.NewShopeeService(repo.ShopeeRepo, repo.DropshipRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
