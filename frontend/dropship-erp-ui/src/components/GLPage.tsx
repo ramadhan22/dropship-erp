@@ -48,28 +48,36 @@ export default function GLPage() {
         </select>
         <TextField
           label="From"
+          type="date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
+          InputLabelProps={{ shrink: true }}
         />
         <TextField
           label="To"
+          type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
+          InputLabelProps={{ shrink: true }}
         />
         <Button onClick={handleFetch}>Fetch</Button>
       </div>
       <Table size="small">
         <TableHead>
           <TableRow>
+            <TableCell>Code</TableCell>
             <TableCell>Account</TableCell>
-            <TableCell>Balance</TableCell>
+            <TableCell>Debit</TableCell>
+            <TableCell>Credit</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {paginated.map((a) => (
             <TableRow key={a.account_id}>
+              <TableCell>{a.account_code}</TableCell>
               <TableCell>{a.account_name}</TableCell>
-              <TableCell>{a.balance}</TableCell>
+              <TableCell>{a.balance > 0 ? a.balance : ""}</TableCell>
+              <TableCell>{a.balance < 0 ? -a.balance : ""}</TableCell>
             </TableRow>
           ))}
         </TableBody>
