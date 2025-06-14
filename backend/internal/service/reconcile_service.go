@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // ReconcileRepoInterface defines just the methods needed from each repo.
@@ -28,6 +30,7 @@ type ReconcileServiceRecRepo interface {
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
+	db          *sqlx.DB
 	dropRepo    ReconcileServiceDropshipRepo
 	shopeeRepo  ReconcileServiceShopeeRepo
 	journalRepo ReconcileServiceJournalRepo
@@ -36,12 +39,14 @@ type ReconcileService struct {
 
 // NewReconcileService constructs a ReconcileService.
 func NewReconcileService(
+	db *sqlx.DB,
 	dr ReconcileServiceDropshipRepo,
 	sr ReconcileServiceShopeeRepo,
 	jr ReconcileServiceJournalRepo,
 	rr ReconcileServiceRecRepo,
 ) *ReconcileService {
 	return &ReconcileService{
+		db:          db,
 		dropRepo:    dr,
 		shopeeRepo:  sr,
 		journalRepo: jr,
@@ -58,8 +63,24 @@ func (s *ReconcileService) MatchAndJournal(
 	ctx context.Context,
 	purchaseID, orderID, shop string,
 ) error {
+	var tx *sqlx.Tx
+	dropRepo := s.dropRepo
+	jrRepo := s.journalRepo
+	recRepo := s.recRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		dropRepo = repository.NewDropshipRepo(tx)
+		jrRepo = repository.NewJournalRepo(tx)
+		recRepo = repository.NewReconcileRepo(tx)
+	}
+
 	// 1. Fetch DropshipPurchase
-	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, purchaseID)
+	dp, err := dropRepo.GetDropshipPurchaseByInvoice(ctx, purchaseID)
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch DropshipPurchase %s: %w", purchaseID, err)
 	}
@@ -80,7 +101,7 @@ func (s *ReconcileService) MatchAndJournal(
 		Store:        shop,
 		CreatedAt:    time.Now(),
 	}
-	journalID, err := s.journalRepo.CreateJournalEntry(ctx, je)
+	journalID, err := jrRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
 		return fmt.Errorf("create JournalEntry: %w", err)
 	}
@@ -94,7 +115,7 @@ func (s *ReconcileService) MatchAndJournal(
 		Amount:    dp.TotalTransaksi,
 		Memo:      ptrString("COGS for " + purchaseID),
 	}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl1); err != nil {
+	if err := jrRepo.InsertJournalLine(ctx, jl1); err != nil {
 		return fmt.Errorf("insert JournalLine 1: %w", err)
 	}
 	jl2 := &models.JournalLine{
@@ -104,7 +125,7 @@ func (s *ReconcileService) MatchAndJournal(
 		Amount:    so.NetIncome,
 		Memo:      ptrString("Cash for " + orderID),
 	}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl2); err != nil {
+	if err := jrRepo.InsertJournalLine(ctx, jl2); err != nil {
 		return fmt.Errorf("insert JournalLine 2: %w", err)
 	}
 
@@ -116,10 +137,14 @@ func (s *ReconcileService) MatchAndJournal(
 		Status:       "matched",
 		MatchedAt:    time.Now(),
 	}
-	if err := s.recRepo.InsertReconciledTransaction(ctx, rt); err != nil {
+	if err := recRepo.InsertReconciledTransaction(ctx, rt); err != nil {
 		return fmt.Errorf("insert ReconciledTransaction: %w", err)
 	}
-
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

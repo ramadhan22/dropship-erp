@@ -83,7 +83,7 @@ func TestImportFromCSV_Success(t *testing.T) {
 	// Use fake repos
 	fake := &fakeDropshipRepo{}
 	jfake := &fakeJournalRepoDrop{}
-	svc := NewDropshipService(fake, jfake)
+	svc := NewDropshipService(nil, fake, jfake)
 
 	ctx := context.Background()
 	count, err := svc.ImportFromCSV(ctx, &buf)
@@ -119,7 +119,7 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(fake, nil)
+	svc := NewDropshipService(nil, fake, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf)
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
@@ -143,7 +143,7 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
-	svc := NewDropshipService(fake, nil)
+	svc := NewDropshipService(nil, fake, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)

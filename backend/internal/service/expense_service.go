@@ -20,12 +20,20 @@ func NewExpenseService(db *sqlx.DB, er *repository.ExpenseRepo, jr *repository.J
 }
 
 func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
+	var tx *sqlx.Tx
+	expRepo := s.expenseRepo
+	jRepo := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		expRepo = repository.NewExpenseRepo(tx)
+		jRepo = repository.NewJournalRepo(tx)
 	}
-	defer tx.Rollback()
-	if err := s.expenseRepo.Create(ctx, e); err != nil {
+	if err := expRepo.Create(ctx, e); err != nil {
 		return err
 	}
 	je := &models.JournalEntry{
@@ -37,19 +45,22 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 		Store:        "",
 		CreatedAt:    time.Now(),
 	}
-	jid, err := s.journalRepo.CreateJournalEntry(ctx, je)
+	jid, err := jRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
 		return err
 	}
 	jl1 := &models.JournalLine{JournalID: jid, AccountID: e.AccountID, IsDebit: true, Amount: e.Amount, Memo: &e.Description}
 	jl2 := &models.JournalLine{JournalID: jid, AccountID: 1001, IsDebit: false, Amount: e.Amount, Memo: &e.Description}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl1); err != nil {
+	if err := jRepo.InsertJournalLine(ctx, jl1); err != nil {
 		return err
 	}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl2); err != nil {
+	if err := jRepo.InsertJournalLine(ctx, jl2); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if tx != nil {
+		return tx.Commit()
+	}
+	return nil
 }
 
 func (s *ExpenseService) ListExpenses(ctx context.Context) ([]models.Expense, error) {

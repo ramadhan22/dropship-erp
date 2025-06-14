@@ -3,17 +3,16 @@ package repository
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 // ReconcileRepo handles database operations for reconciled_transactions.
 type ReconcileRepo struct {
-	db *sqlx.DB
+	db DBTX
 }
 
 // NewReconcileRepo constructs a ReconcileRepo.
-func NewReconcileRepo(db *sqlx.DB) *ReconcileRepo {
+func NewReconcileRepo(db DBTX) *ReconcileRepo {
 	return &ReconcileRepo{db: db}
 }
 
