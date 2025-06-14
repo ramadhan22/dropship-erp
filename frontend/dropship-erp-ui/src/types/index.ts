@@ -165,3 +165,9 @@ export interface ReconcileCandidate {
   status_pesanan_terakhir: string;
   no_pesanan: string | null;
 }
+
+export interface ProductSales {
+  nama_produk: string;
+  total_qty: number;
+  total_value: number;
+}

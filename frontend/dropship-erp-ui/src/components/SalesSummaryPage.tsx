@@ -4,8 +4,9 @@ import {
   listJenisChannels,
   listStoresByChannelName,
   listShopeeSettled,
+  fetchTopProducts,
 } from "../api";
-import type { JenisChannel, Store } from "../types";
+import type { JenisChannel, Store, ProductSales } from "../types";
 import {
   LineChart,
   Line,
@@ -31,6 +32,7 @@ export default function SalesSummaryPage() {
   );
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -80,6 +82,14 @@ export default function SalesSummaryPage() {
       setCountData(arrCount.map(([date, count]) => ({ date, count })));
       setTotalRevenue(totalAmt);
       setTotalOrders(res.data.data.length);
+      const topRes = await fetchTopProducts({
+        channel: channel || undefined,
+        store,
+        month,
+        year,
+        limit: 5,
+      });
+      setTopProducts(topRes.data);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -172,6 +182,34 @@ export default function SalesSummaryPage() {
         <Tooltip />
         <Bar dataKey="count" fill="#82ca9d" />
       </BarChart>
+      {topProducts.length > 0 && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3>Top Products</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left" }}>Product</th>
+                <th style={{ textAlign: "right" }}>Qty</th>
+                <th style={{ textAlign: "right" }}>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topProducts.map((p) => (
+                <tr key={p.nama_produk}>
+                  <td>{p.nama_produk}</td>
+                  <td style={{ textAlign: "right" }}>{p.total_qty}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {p.total_value.toLocaleString("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

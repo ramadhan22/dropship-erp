@@ -53,6 +53,10 @@ func (f *fakeDropshipRepo) SumDropshipPurchases(ctx context.Context, channel, st
 	return 0, nil
 }
 
+func (f *fakeDropshipRepo) TopProducts(ctx context.Context, channel, store, month, year string, limit int) ([]models.ProductSales, error) {
+	return nil, nil
+}
+
 type fakeJournalRepoDrop struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine

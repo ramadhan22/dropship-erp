@@ -71,6 +71,7 @@ func main() {
 		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
 		apiGroup.GET("/dropship/purchases/summary", handlers.NewDropshipHandler(dropshipSvc).HandleSum)
 		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
+		apiGroup.GET("/dropship/top-products", handlers.NewDropshipHandler(dropshipSvc).HandleTopProducts)
 		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)

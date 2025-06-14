@@ -182,6 +182,12 @@ export interface DropshipPurchaseList {
   total: number;
 }
 
+export interface ProductSales {
+  nama_produk: string;
+  total_qty: number;
+  total_value: number;
+}
+
 export function listDropshipPurchases(params: {
   channel?: string;
   store?: string;
@@ -218,6 +224,22 @@ export function sumDropshipPurchases(params: {
   if (params.month) q.append("month", params.month);
   if (params.year) q.append("year", params.year);
   return api.get<{ total: number }>(`/dropship/purchases/summary?${q.toString()}`);
+}
+
+export function fetchTopProducts(params: {
+  channel?: string;
+  store?: string;
+  month?: string;
+  year?: string;
+  limit?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.month) q.append("month", params.month);
+  if (params.year) q.append("year", params.year);
+  if (params.limit) q.append("limit", String(params.limit));
+  return api.get<ProductSales[]>(`/dropship/top-products?${q.toString()}`);
 }
 // === Accounts CRUD ===
 export function createAccount(acc: Partial<Account>) {
