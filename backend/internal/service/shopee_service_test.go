@@ -37,8 +37,8 @@ func (f *fakeShopeeRepo) ListShopeeSettled(ctx context.Context, channel, store, 
 	return nil, 0, nil
 }
 
-func (f *fakeShopeeRepo) SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error) {
-	return 0, nil
+func (f *fakeShopeeRepo) SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error) {
+	return &models.ShopeeSummary{}, nil
 }
 
 func TestImportSettledOrdersXLSX(t *testing.T) {

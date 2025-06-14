@@ -61,7 +61,7 @@ var expectedHeaders = []string{
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
 	ListShopeeSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
-	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 }
 
@@ -294,6 +294,6 @@ func (s *ShopeeService) ListSettled(
 func (s *ShopeeService) SumShopeeSettled(
 	ctx context.Context,
 	channel, store, date, month, year string,
-) (float64, error) {
+) (*models.ShopeeSummary, error) {
 	return s.repo.SumShopeeSettled(ctx, channel, store, date, month, year)
 }

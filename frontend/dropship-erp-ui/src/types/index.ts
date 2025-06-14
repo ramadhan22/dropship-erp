@@ -73,6 +73,16 @@ export interface ShopeeSettled {
   pro_rated_bank_payment_channel_promotion_for_returns: number;
   pro_rated_shopee_payment_channel_promotion_for_returns: number;
 }
+
+export interface ShopeeSettledSummary {
+  harga_asli_produk: number;
+  total_diskon_produk: number;
+  gmv: number;
+  diskon_voucher_ditanggung_penjual: number;
+  biaya_administrasi: number;
+  biaya_layanan_termasuk_ppn_11: number;
+  total_penghasilan: number;
+}
 export interface DropshipPurchase {
   kode_pesanan: string;
   kode_transaksi: string;

@@ -16,7 +16,7 @@ import (
 
 // fake service
 type fakeShopeeService struct {
-        err bool
+	err bool
 }
 
 func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error) {
@@ -27,11 +27,11 @@ func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Re
 }
 
 func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error) {
-        return nil, 0, nil
+	return nil, 0, nil
 }
 
-func (f *fakeShopeeService) SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (float64, error) {
-        return 0, nil
+func (f *fakeShopeeService) SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error) {
+	return &models.ShopeeSummary{}, nil
 }
 
 func TestShopeeHandleImport_Success(t *testing.T) {
