@@ -16,9 +16,11 @@ import {
 import { listJournal, deleteJournal, createJournal, getJournalLines } from "../api/journal";
 import { listAccounts } from "../api";
 import type { JournalEntry, Account, JournalLineDetail } from "../types";
+import usePagination from "../usePagination";
 
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
+  const { paginated, controls } = usePagination(list);
   const [open, setOpen] = useState(false);
   const [entryDate, setEntryDate] = useState("");
   const [description, setDescription] = useState("");
@@ -32,6 +34,7 @@ export default function JournalPage() {
   } | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLines, setDetailLines] = useState<JournalLineDetail[]>([]);
+  const { paginated: linesPage, controls: lineControls } = usePagination(detailLines);
   const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
   const fetchData = () => listJournal().then((r) => setList(r.data));
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function JournalPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {list.map((j) => (
+          {paginated.map((j) => (
             <TableRow key={j.journal_id}>
               <TableCell>{j.journal_id}</TableCell>
               <TableCell>
@@ -88,6 +91,7 @@ export default function JournalPage() {
           ))}
         </TableBody>
       </Table>
+      {controls}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add Journal</DialogTitle>
         <DialogContent
@@ -222,7 +226,7 @@ export default function JournalPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {detailLines.map((l) => (
+              {linesPage.map((l) => (
                 <TableRow key={l.line_id}>
                   <TableCell>{l.account_name}</TableCell>
                   <TableCell>{l.is_debit ? l.amount : ""}</TableCell>
@@ -231,6 +235,7 @@ export default function JournalPage() {
               ))}
             </TableBody>
           </Table>
+          {lineControls}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailOpen(false)}>Close</Button>

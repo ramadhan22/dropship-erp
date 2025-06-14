@@ -11,6 +11,7 @@ import {
 import { fetchGeneralLedger } from "../api/gl";
 import { listAllStores } from "../api";
 import type { Account, Store } from "../types";
+import usePagination from "../usePagination";
 
 export default function GLPage() {
   const [shop, setShop] = useState("");
@@ -18,6 +19,7 @@ export default function GLPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [data, setData] = useState<Account[]>([]);
+  const { paginated, controls } = usePagination(data);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -64,7 +66,7 @@ export default function GLPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.map((a) => (
+          {paginated.map((a) => (
             <TableRow key={a.account_id}>
               <TableCell>{a.account_name}</TableCell>
               <TableCell>{a.balance}</TableCell>
@@ -72,6 +74,7 @@ export default function GLPage() {
           ))}
         </TableBody>
       </Table>
+      {controls}
     </div>
   );
 }
