@@ -223,6 +223,8 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr Drop
 
 	debit := pendingAccountID(p.NamaToko)
 	credit := int64(4001)
+	jakmall := int64(11009)
+	cogs := int64(5001)
 	lines := []models.JournalLine{
 		{
 			JournalID: id,
@@ -237,6 +239,20 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr Drop
 			IsDebit:   false,
 			Amount:    p.TotalTransaksi,
 			Memo:      ptrString("Sales " + p.KodePesanan),
+		},
+		{
+			JournalID: id,
+			AccountID: cogs,
+			IsDebit:   true,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("HPP " + p.KodePesanan),
+		},
+		{
+			JournalID: id,
+			AccountID: jakmall,
+			IsDebit:   false,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("Saldo Jakmall " + p.KodePesanan),
 		},
 	}
 	for i := range lines {
