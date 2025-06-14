@@ -14,12 +14,16 @@ import { useEffect, useState } from "react";
 import { computeMetrics, fetchMetrics, listAllStores } from "../api";
 import type { Store } from "../types";
 import type { Metric } from "../types";
+import usePagination from "../usePagination";
 
 export default function MetricsPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [period, setPeriod] = useState("");
   const [metric, setMetric] = useState<Metric | null>(null);
+  const { paginated, controls } = usePagination(
+    metric ? Object.entries(metric) : [],
+  );
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -93,7 +97,7 @@ export default function MetricsPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.entries(metric).map(([key, val]) => (
+            {paginated.map(([key, val]) => (
               <TableRow key={key}>
                 <TableCell>{key}</TableCell>
                 <TableCell>{val}</TableCell>
@@ -101,6 +105,7 @@ export default function MetricsPage() {
             ))}
           </TableBody>
         </Table>
+        {controls}
       )}
     </div>
   );

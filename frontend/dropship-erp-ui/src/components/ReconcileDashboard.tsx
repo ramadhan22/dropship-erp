@@ -12,12 +12,16 @@ import {
 import { listCandidates, bulkReconcile } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";
+import usePagination from "../usePagination";
 
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<ReconcileCandidate[]>([]);
   const [diffOnly, setDiffOnly] = useState(false);
+  const { paginated, controls } = usePagination(
+    diffOnly ? data.filter((d) => d.no_pesanan) : data,
+  );
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -38,7 +42,6 @@ export default function ReconcileDashboard() {
     if (pairs.length) await bulkReconcile(pairs, shop);
   };
 
-  const displayData = diffOnly ? data.filter((d) => d.no_pesanan) : data;
 
   return (
     <div>
@@ -77,7 +80,7 @@ export default function ReconcileDashboard() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {displayData.map((r) => (
+          {paginated.map((r) => (
             <TableRow key={r.kode_pesanan}>
               <TableCell>{r.kode_pesanan}</TableCell>
               <TableCell>{r.kode_invoice_channel}</TableCell>
@@ -87,6 +90,7 @@ export default function ReconcileDashboard() {
           ))}
         </TableBody>
       </Table>
+      {controls}
     </div>
   );
 }
