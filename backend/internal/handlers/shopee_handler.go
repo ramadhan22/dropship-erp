@@ -14,8 +14,8 @@ import (
 type ShopeeServiceInterface interface {
 	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error)
 	ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error)
-	ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
-	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
+	ListSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error)
+	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumAffiliate(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
 }
@@ -77,9 +77,8 @@ func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
 func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 	channel := c.Query("channel")
 	store := c.Query("store")
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	from := c.Query("from")
+	to := c.Query("to")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	if page < 1 {
@@ -90,7 +89,7 @@ func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 	}
 	offset := (page - 1) * size
 	ctx := c.Request.Context()
-	list, total, err := h.svc.ListSettled(ctx, channel, store, date, month, year, size, offset)
+	list, total, err := h.svc.ListSettled(ctx, channel, store, from, to, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -102,11 +101,10 @@ func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 func (h *ShopeeHandler) HandleSumSettled(c *gin.Context) {
 	channel := c.Query("channel")
 	store := c.Query("store")
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	from := c.Query("from")
+	to := c.Query("to")
 	ctx := c.Request.Context()
-	sum, err := h.svc.SumShopeeSettled(ctx, channel, store, date, month, year)
+	sum, err := h.svc.SumShopeeSettled(ctx, channel, store, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
