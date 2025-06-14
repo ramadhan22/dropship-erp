@@ -9,6 +9,7 @@ import type {
   DropshipPurchaseDetail,
   Account,
   ShopeeSettled,
+  ShopeeSettledSummary,
 } from "../types";
 
 
@@ -173,7 +174,7 @@ export function sumShopeeSettled(params: {
   if (params.date) q.append("date", params.date);
   if (params.month) q.append("month", params.month);
   if (params.year) q.append("year", params.year);
-  return api.get<{ total: number }>(`/shopee/settled/summary?${q.toString()}`);
+  return api.get<ShopeeSettledSummary>(`/shopee/settled/summary?${q.toString()}`);
 }
 
 export interface DropshipPurchaseList {

@@ -176,3 +176,14 @@ type Store struct {
 	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`
 	NamaToko       string `db:"nama_toko" json:"nama_toko"`
 }
+
+// ShopeeSummary aggregates numeric columns from shopee_settled for summary views.
+type ShopeeSummary struct {
+	HargaAsliProduk                float64 `db:"harga_asli_produk" json:"harga_asli_produk"`
+	TotalDiskonProduk              float64 `db:"total_diskon_produk" json:"total_diskon_produk"`
+	GMV                            float64 `db:"-" json:"gmv"`
+	DiskonVoucherDitanggungPenjual float64 `db:"diskon_voucher_ditanggung_penjual" json:"diskon_voucher_ditanggung_penjual"`
+	BiayaAdministrasi              float64 `db:"biaya_administrasi" json:"biaya_administrasi"`
+	BiayaLayanan                   float64 `db:"biaya_layanan_termasuk_ppn_11" json:"biaya_layanan_termasuk_ppn_11"`
+	TotalPenghasilan               float64 `db:"total_penghasilan" json:"total_penghasilan"`
+}

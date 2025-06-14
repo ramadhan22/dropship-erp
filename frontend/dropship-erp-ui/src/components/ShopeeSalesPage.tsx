@@ -18,7 +18,7 @@ import {
   listShopeeSettled,
   sumShopeeSettled,
 } from "../api";
-import type { JenisChannel, Store, ShopeeSettled } from "../types";
+import type { JenisChannel, Store, ShopeeSettled, ShopeeSettledSummary } from "../types";
 
 export default function ShopeeSalesPage() {
   const [channels, setChannels] = useState<JenisChannel[]>([]);
@@ -33,6 +33,8 @@ export default function ShopeeSalesPage() {
   const [total, setTotal] = useState(0);
   const [pageTotal, setPageTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0);
+  const [pageSummary, setPageSummary] = useState<ShopeeSettledSummary | null>(null);
+  const [allSummary, setAllSummary] = useState<ShopeeSettledSummary | null>(null);
   const pageSize = 10;
 
   const columns: Column<ShopeeSettled>[] = [
@@ -150,6 +152,24 @@ export default function ShopeeSalesPage() {
         0,
       );
       setPageTotal(sum);
+      const pageSum: ShopeeSettledSummary = {
+        harga_asli_produk: 0,
+        total_diskon_produk: 0,
+        gmv: 0,
+        diskon_voucher_ditanggung_penjual: 0,
+        biaya_administrasi: 0,
+        biaya_layanan_termasuk_ppn_11: 0,
+        total_penghasilan: sum,
+      };
+      res.data.data.forEach((cur) => {
+        pageSum.harga_asli_produk += cur.harga_asli_produk;
+        pageSum.total_diskon_produk += cur.total_diskon_produk;
+        pageSum.diskon_voucher_ditanggung_penjual += cur.diskon_voucher_ditanggung_penjual;
+        pageSum.biaya_administrasi += cur.biaya_administrasi;
+        pageSum.biaya_layanan_termasuk_ppn_11 += cur.biaya_layanan_termasuk_ppn_11;
+      });
+      pageSum.gmv = pageSum.harga_asli_produk - pageSum.total_diskon_produk;
+      setPageSummary(pageSum);
       const totalRes = await sumShopeeSettled({
         channel: channel || undefined,
         store,
@@ -157,7 +177,8 @@ export default function ShopeeSalesPage() {
         month,
         year,
       });
-      setAllTotal(totalRes.data.total);
+      setAllTotal(totalRes.data.total_penghasilan);
+      setAllSummary(totalRes.data);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -271,6 +292,38 @@ export default function ShopeeSalesPage() {
           currency: "IDR",
         })}
       </div>
+      {pageSummary && (
+        <div style={{ marginBottom: "0.5rem" }}>
+          <strong>Page Summary:</strong>{" "}
+          Harga Asli Produk: {pageSummary.harga_asli_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Total Diskon Produk: {pageSummary.total_diskon_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          GMV: {pageSummary.gmv.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Diskon Voucher Penjual: {pageSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Biaya Administrasi: {pageSummary.biaya_administrasi.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Biaya Layanan (+PPN): {pageSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        </div>
+      )}
+      {allSummary && (
+        <div style={{ marginBottom: "0.5rem" }}>
+          <strong>All Summary:</strong>{" "}
+          Harga Asli Produk: {allSummary.harga_asli_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Total Diskon Produk: {allSummary.total_diskon_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          GMV: {allSummary.gmv.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Diskon Voucher Penjual: {allSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Biaya Administrasi: {allSummary.biaya_administrasi.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+          {" | "}
+          Biaya Layanan (+PPN): {allSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <SortableTable columns={columns} data={data} />
       </div>
