@@ -105,8 +105,8 @@ export default function MetricsPage() {
             ))}
           </TableBody>
         </Table>
-        {controls}
-      )}
+      )}{controls}
+      
     </div>
   );
 }

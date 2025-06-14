@@ -71,8 +71,8 @@ export default function PLPage() {
             ))}
           </TableBody>
         </Table>
-        {controls}
-      )}
+      )}{controls}
+    
     </div>
   );
 }
