@@ -14,9 +14,15 @@ test("displays totals after fetching data", async () => {
   (api.listShopeeSettled as jest.Mock).mockResolvedValue({
     data: {
       data: [
-        { waktu_pesanan_dibuat: "2025-05-01T00:00:00Z", total_penerimaan: 100 },
-        { waktu_pesanan_dibuat: "2025-05-01T01:00:00Z", total_penerimaan: 50 },
-        { waktu_pesanan_dibuat: "2025-05-02T00:00:00Z", total_penerimaan: 200 },
+        {
+          waktu_pesanan_dibuat: "2025-05-01T00:00:00Z",
+          total_penghasilan: 100,
+        },
+        { waktu_pesanan_dibuat: "2025-05-01T01:00:00Z", total_penghasilan: 50 },
+        {
+          waktu_pesanan_dibuat: "2025-05-02T00:00:00Z",
+          total_penghasilan: 200,
+        },
       ],
       total: 3,
     },

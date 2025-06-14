@@ -57,24 +57,36 @@ export default function ShopeeSalesPage() {
       label: "Jumlah Pengembalian Dana",
       key: "jumlah_pengembalian_dana_ke_pembeli",
     },
-    { label: "Komisi Shopee", key: "komisi_shopee" },
-    { label: "Biaya Admin Shopee", key: "biaya_admin_shopee" },
-    { label: "Biaya Layanan", key: "biaya_layanan" },
-    { label: "Biaya Layanan Ekstra", key: "biaya_layanan_ekstra" },
-    { label: "Biaya Penyedia Pembayaran", key: "biaya_penyedia_pembayaran" },
-    { label: "Asuransi", key: "asuransi" },
-    { label: "Total Biaya Transaksi", key: "total_biaya_transaksi" },
-    { label: "Biaya Pengiriman", key: "biaya_pengiriman" },
-    { label: "Total Diskon Pengiriman", key: "total_diskon_pengiriman" },
-    { label: "Promo Gratis Ongkir Shopee", key: "promo_gratis_ongkir_shopee" },
-    { label: "Promo Gratis Ongkir Penjual", key: "promo_gratis_ongkir_penjual" },
-    { label: "Promo Diskon Shopee", key: "promo_diskon_shopee" },
-    { label: "Promo Diskon Penjual", key: "promo_diskon_penjual" },
-    { label: "Cashback Shopee", key: "cashback_shopee" },
-    { label: "Cashback Penjual", key: "cashback_penjual" },
-    { label: "Koin Shopee", key: "koin_shopee" },
-    { label: "Potongan Lainnya", key: "potongan_lainnya" },
-    { label: "Total Penerimaan", key: "total_penerimaan" },
+    { label: "Diskon Produk Shopee", key: "diskon_produk_dari_shopee" },
+    {
+      label: "Diskon Voucher Penjual",
+      key: "diskon_voucher_ditanggung_penjual",
+    },
+    { label: "Cashback Koin Penjual", key: "cashback_koin_ditanggung_penjual" },
+    { label: "Ongkir Dibayar Pembeli", key: "ongkir_dibayar_pembeli" },
+    {
+      label: "Diskon Ongkir Jasa Kirim",
+      key: "diskon_ongkir_ditanggung_jasa_kirim",
+    },
+    { label: "Gratis Ongkir Shopee", key: "gratis_ongkir_dari_shopee" },
+    {
+      label: "Ongkir Diteruskan Shopee",
+      key: "ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim",
+    },
+    {
+      label: "Ongkos Kirim Pengembalian",
+      key: "ongkos_kirim_pengembalian_barang",
+    },
+    { label: "Pengembalian Biaya Kirim", key: "pengembalian_biaya_kirim" },
+    { label: "Biaya Komisi AMS", key: "biaya_komisi_ams" },
+    { label: "Biaya Administrasi", key: "biaya_administrasi" },
+    { label: "Biaya Layanan (+PPN)", key: "biaya_layanan_termasuk_ppn_11" },
+    { label: "Premi", key: "premi" },
+    { label: "Biaya Program", key: "biaya_program" },
+    { label: "Biaya Kartu Kredit", key: "biaya_kartu_kredit" },
+    { label: "Biaya Kampanye", key: "biaya_kampanye" },
+    { label: "Bea Masuk/PPN/PPh", key: "bea_masuk_ppn_pph" },
+    { label: "Total Penghasilan", key: "total_penghasilan" },
     { label: "Kompensasi", key: "kompensasi" },
     {
       label: "Promo Gratis Ongkir Dari Penjual",
@@ -103,9 +115,10 @@ export default function ShopeeSalesPage() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(
-    null,
-  );
+  const [msg, setMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));
@@ -133,7 +146,7 @@ export default function ShopeeSalesPage() {
       setData(res.data.data);
       setTotal(res.data.total);
       const sum = res.data.data.reduce(
-        (acc, cur) => acc + cur.total_penerimaan,
+        (acc, cur) => acc + cur.total_penghasilan,
         0,
       );
       setPageTotal(sum);
@@ -175,7 +188,11 @@ export default function ShopeeSalesPage() {
   return (
     <div>
       <h2>Shopee Sales</h2>
-      <Button variant="contained" onClick={() => setImportOpen(true)} sx={{ mb: 2 }}>
+      <Button
+        variant="contained"
+        onClick={() => setImportOpen(true)}
+        sx={{ mb: 2 }}
+      >
         Import
       </Button>
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
@@ -191,7 +208,11 @@ export default function ShopeeSalesPage() {
             </option>
           ))}
         </select>
-        <select aria-label="Store" value={store} onChange={(e) => setStore(e.target.value)}>
+        <select
+          aria-label="Store"
+          value={store}
+          onChange={(e) => setStore(e.target.value)}
+        >
           <option value="">All Stores</option>
           {stores.map((s) => (
             <option key={s.store_id} value={s.nama_toko}>
@@ -237,12 +258,18 @@ export default function ShopeeSalesPage() {
       )}
       <div style={{ marginBottom: "0.5rem" }}>
         <strong>Page Total:</strong>{" "}
-        {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {pageTotal.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}
         {" | "}
         <strong>Total Rows:</strong> {total}
         {" | "}
         <strong>All Total:</strong>{" "}
-        {allTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {allTotal.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}
       </div>
       <div style={{ overflowX: "auto" }}>
         <SortableTable columns={columns} data={data} />

@@ -26,12 +26,15 @@ export default function SalesSummaryPage() {
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
-  const [countData, setCountData] = useState<{ date: string; count: number }[]>([]);
+  const [countData, setCountData] = useState<{ date: string; count: number }[]>(
+    [],
+  );
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(
-    null,
-  );
+  const [msg, setMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));
@@ -60,14 +63,19 @@ export default function SalesSummaryPage() {
       const countMap = new Map<string, number>();
       let totalAmt = 0;
       res.data.data.forEach((d) => {
-        const dateStr = (d as any).waktu_pesanan_dibuat ?? (d as any).tanggal_dana_dilepaskan;
+        const dateStr =
+          (d as any).waktu_pesanan_dibuat ?? (d as any).tanggal_dana_dilepaskan;
         const key = new Date(dateStr).toISOString().split("T")[0];
-        amountMap.set(key, (amountMap.get(key) || 0) + d.total_penerimaan);
+        amountMap.set(key, (amountMap.get(key) || 0) + d.total_penghasilan);
         countMap.set(key, (countMap.get(key) || 0) + 1);
-        totalAmt += d.total_penerimaan;
+        totalAmt += d.total_penghasilan;
       });
-      const arr = Array.from(amountMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-      const arrCount = Array.from(countMap.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+      const arr = Array.from(amountMap.entries()).sort((a, b) =>
+        a[0] < b[0] ? -1 : 1,
+      );
+      const arrCount = Array.from(countMap.entries()).sort((a, b) =>
+        a[0] < b[0] ? -1 : 1,
+      );
       setData(arr.map(([date, total]) => ({ date, total })));
       setCountData(arrCount.map(([date, count]) => ({ date, count })));
       setTotalRevenue(totalAmt);
@@ -87,7 +95,11 @@ export default function SalesSummaryPage() {
     <div>
       <h2>Sales Summary</h2>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        <select aria-label="Channel" value={channel} onChange={(e) => setChannel(e.target.value)}>
+        <select
+          aria-label="Channel"
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
+        >
           <option value="">All Channels</option>
           {channels.map((c) => (
             <option key={c.jenis_channel_id} value={c.jenis_channel}>
@@ -95,7 +107,11 @@ export default function SalesSummaryPage() {
             </option>
           ))}
         </select>
-        <select aria-label="Store" value={store} onChange={(e) => setStore(e.target.value)}>
+        <select
+          aria-label="Store"
+          value={store}
+          onChange={(e) => setStore(e.target.value)}
+        >
           <option value="">All Stores</option>
           {stores.map((s) => (
             <option key={s.store_id} value={s.nama_toko}>
@@ -134,9 +150,15 @@ export default function SalesSummaryPage() {
         </Alert>
       )}
       <div style={{ marginBottom: "1rem" }}>
-        <strong>Total Revenue:</strong> {totalRevenue} | <strong>Total Orders:</strong> {totalOrders}
+        <strong>Total Revenue:</strong> {totalRevenue} |{" "}
+        <strong>Total Orders:</strong> {totalOrders}
       </div>
-      <LineChart width={600} height={300} data={data} style={{ marginBottom: "1rem" }}>
+      <LineChart
+        width={600}
+        height={300}
+        data={data}
+        style={{ marginBottom: "1rem" }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
         <YAxis />
@@ -153,4 +175,3 @@ export default function SalesSummaryPage() {
     </div>
   );
 }
-
