@@ -86,6 +86,17 @@ type AccountBalance struct {
 	Balance     float64 `db:"balance" json:"balance"`
 }
 
+// JournalLineDetail represents a journal line joined with its account name.
+type JournalLineDetail struct {
+	LineID      int64   `db:"line_id" json:"line_id"`
+	JournalID   int64   `db:"journal_id" json:"journal_id"`
+	AccountID   int64   `db:"account_id" json:"account_id"`
+	AccountName string  `db:"account_name" json:"account_name"`
+	IsDebit     bool    `db:"is_debit" json:"is_debit"`
+	Amount      float64 `db:"amount" json:"amount"`
+	Memo        *string `db:"memo" json:"memo"`
+}
+
 // GetAccountBalancesAsOf returns each account’s cumulative balance up to and including asOfDate.
 // It sums debit amounts as positive and credit amounts as negative.
 func (r *JournalRepo) GetAccountBalancesAsOf(
@@ -118,6 +129,24 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
 		return nil, fmt.Errorf("GetAccountBalancesAsOf: %w", err)
 	}
 	return result, nil
+}
+
+// GetLinesByJournalID returns all journal lines for a given journal entry
+// joined with the account name.
+func (r *JournalRepo) GetLinesByJournalID(ctx context.Context, id int64) ([]JournalLineDetail, error) {
+	var list []JournalLineDetail
+	err := r.db.SelectContext(ctx, &list, `
+                SELECT jl.line_id, jl.journal_id, jl.account_id,
+                       a.account_name, jl.is_debit, jl.amount, jl.memo
+                  FROM journal_lines jl
+                  JOIN accounts a ON jl.account_id = a.account_id
+                 WHERE jl.journal_id = $1
+                 ORDER BY jl.line_id
+        `, id)
+	if list == nil {
+		list = []JournalLineDetail{}
+	}
+	return list, err
 }
 
 // GetJournalEntry fetches a journal entry by id.

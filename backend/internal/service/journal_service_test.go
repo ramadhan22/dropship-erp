@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 type fakeJournalRepo struct {
@@ -36,6 +37,10 @@ func (f *fakeJournalRepo) GetJournalEntry(ctx context.Context, id int64) (*model
 
 func (f *fakeJournalRepo) DeleteJournalEntry(ctx context.Context, id int64) error {
 	return nil
+}
+
+func (f *fakeJournalRepo) GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error) {
+	return nil, nil
 }
 
 func TestJournalServiceCreate_Balance(t *testing.T) {

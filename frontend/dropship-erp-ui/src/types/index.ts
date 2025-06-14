@@ -135,6 +135,10 @@ export interface JournalLine {
   memo: string | null;
 }
 
+export interface JournalLineDetail extends JournalLine {
+  account_name: string;
+}
+
 export interface ReconciledTransaction {
   id: number;
   shop_username: string;

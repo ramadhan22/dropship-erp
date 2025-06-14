@@ -19,6 +19,7 @@ func (h *JournalHandler) RegisterRoutes(r gin.IRouter) {
 	grp.POST("/", h.create)
 	grp.GET("/", h.list)
 	grp.GET("/:id", h.get)
+	grp.GET("/:id/lines", h.getLines)
 	grp.DELETE("/:id", h.del)
 }
 
@@ -48,6 +49,16 @@ func (h *JournalHandler) del(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *JournalHandler) getLines(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	lines, err := h.svc.Lines(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, lines)
 }
 
 type journalCreateReq struct {

@@ -13,9 +13,9 @@ import {
   TextField,
   Alert,
 } from "@mui/material";
-import { listJournal, deleteJournal, createJournal } from "../api/journal";
+import { listJournal, deleteJournal, createJournal, getJournalLines } from "../api/journal";
 import { listAccounts } from "../api";
-import type { JournalEntry, Account } from "../types";
+import type { JournalEntry, Account, JournalLineDetail } from "../types";
 
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
@@ -30,6 +30,8 @@ export default function JournalPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLines, setDetailLines] = useState<JournalLineDetail[]>([]);
   const fetchData = () => listJournal().then((r) => setList(r.data));
   useEffect(() => {
     fetchData();
@@ -60,6 +62,17 @@ export default function JournalPage() {
               </TableCell>
               <TableCell>{j.description}</TableCell>
               <TableCell>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    getJournalLines(j.journal_id).then((r) => {
+                      setDetailLines(r.data);
+                      setDetailOpen(true);
+                    });
+                  }}
+                >
+                  Detail
+                </Button>
                 <Button
                   size="small"
                   onClick={() => {
@@ -184,6 +197,32 @@ export default function JournalPage() {
           >
             Save
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+        <DialogTitle>Journal Lines</DialogTitle>
+        <DialogContent>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Account</TableCell>
+                <TableCell>Debit</TableCell>
+                <TableCell>Credit</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {detailLines.map((l) => (
+                <TableRow key={l.line_id}>
+                  <TableCell>{l.account_name}</TableCell>
+                  <TableCell>{l.is_debit ? l.amount : ""}</TableCell>
+                  <TableCell>{!l.is_debit ? l.amount : ""}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </div>
