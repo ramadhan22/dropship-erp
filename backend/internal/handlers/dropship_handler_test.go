@@ -44,7 +44,7 @@ func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel,
 	return 0, nil
 }
 
-func (f *fakeDropshipService) TopProducts(ctx context.Context, channel, store, month, year string, limit int) ([]models.ProductSales, error) {
+func (f *fakeDropshipService) TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error) {
 	return nil, nil
 }
 

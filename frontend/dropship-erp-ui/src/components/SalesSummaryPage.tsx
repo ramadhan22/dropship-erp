@@ -26,14 +26,15 @@ export default function SalesSummaryPage() {
   const [channel, setChannel] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState("");
-  const [date, setDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
   const now = new Date();
-  const [month, setMonth] = useState(
-    String(now.getMonth() + 1).padStart(2, "0"),
-  );
-  const [year, setYear] = useState(String(now.getFullYear()));
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
   const [countData, setCountData] = useState<{ date: string; count: number }[]>(
     [],
@@ -63,9 +64,8 @@ export default function SalesSummaryPage() {
       const res = await listShopeeSettled({
         channel: channel || undefined,
         store,
-        date,
-        month,
-        year,
+        from,
+        to,
         page: 1,
         page_size: 1000,
       });
@@ -93,8 +93,8 @@ export default function SalesSummaryPage() {
       const topRes = await fetchTopProducts({
         channel: channel || undefined,
         store,
-        month,
-        year,
+        from,
+        to,
         limit: 5,
       });
       setTopProducts(topRes.data);
@@ -107,7 +107,7 @@ export default function SalesSummaryPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, store, date, month, year]);
+  }, [channel, store, from, to]);
 
   return (
     <div>
@@ -139,31 +139,26 @@ export default function SalesSummaryPage() {
         </select>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
-            label="Date"
+            label="From"
             format="yyyy-MM-dd"
-            value={new Date(date)}
+            value={new Date(from)}
             onChange={(d) => {
               if (!d) return;
-              setDate(d.toISOString().split("T")[0]);
+              setFrom(d.toISOString().split("T")[0]);
             }}
             slotProps={{ textField: { size: "small" } }}
           />
         </LocalizationProvider>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
-            label="Month"
-            views={["year", "month"]}
-            openTo="month"
-            format="yyyy-MM"
-            value={new Date(`${year}-${month}-01`)}
+            label="To"
+            format="yyyy-MM-dd"
+            value={new Date(to)}
             onChange={(d) => {
               if (!d) return;
-              const iso = d.toISOString().slice(0, 7);
-              const [y, m] = iso.split("-");
-              setYear(y);
-              setMonth(m);
+              setTo(d.toISOString().split("T")[0]);
             }}
-            slotProps={{ textField: { size: "small", sx: { width: 160 } } }}
+            slotProps={{ textField: { size: "small" } }}
           />
         </LocalizationProvider>
       </div>

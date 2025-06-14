@@ -174,12 +174,12 @@ func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*m
 	return &o, nil
 }
 
-// ListShopeeSettled returns shopee_settled rows filtered by optional parameters.
-// Pagination is controlled via limit and offset and the total count is returned
-// alongside the slice of rows.
+// ListShopeeSettled returns shopee_settled rows filtered by optional channel,
+// store and date range parameters. Pagination is controlled via limit and offset
+// and the total count is returned alongside the slice of rows.
 func (r *ShopeeRepo) ListShopeeSettled(
 	ctx context.Context,
-	channel, store, date, month, year string,
+	channel, store, from, to string,
 	limit, offset int,
 ) ([]models.ShopeeSettled, int, error) {
 	base := `SELECT s.* FROM shopee_settled s
@@ -198,19 +198,14 @@ func (r *ShopeeRepo) ListShopeeSettled(
 		args = append(args, store)
 		arg++
 	}
-	if date != "" {
-		conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d::date", arg))
-		args = append(args, date)
+	if from != "" {
+		conds = append(conds, fmt.Sprintf("DATE(s.waktu_pesanan_dibuat) >= $%d::date", arg))
+		args = append(args, from)
 		arg++
 	}
-	if month != "" {
-		conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-		args = append(args, month)
-		arg++
-	}
-	if year != "" {
-		conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-		args = append(args, year)
+	if to != "" {
+		conds = append(conds, fmt.Sprintf("DATE(s.waktu_pesanan_dibuat) <= $%d::date", arg))
+		args = append(args, to)
 		arg++
 	}
 	query := base
@@ -233,10 +228,11 @@ func (r *ShopeeRepo) ListShopeeSettled(
 	return list, count, nil
 }
 
-// SumShopeeSettled returns the sum of total_penghasilan for rows matching the filters.
+// SumShopeeSettled returns the aggregated totals for rows matching the provided
+// channel, store and optional date range filters.
 func (r *ShopeeRepo) SumShopeeSettled(
 	ctx context.Context,
-	channel, store, date, month, year string,
+	channel, store, from, to string,
 ) (*models.ShopeeSummary, error) {
 	base := `SELECT
                 COALESCE(SUM(s.harga_asli_produk),0) AS harga_asli_produk,
@@ -261,19 +257,14 @@ func (r *ShopeeRepo) SumShopeeSettled(
 		args = append(args, store)
 		arg++
 	}
-	if date != "" {
-		conds = append(conds, fmt.Sprintf("s.waktu_pesanan_dibuat = $%d::date", arg))
-		args = append(args, date)
+	if from != "" {
+		conds = append(conds, fmt.Sprintf("DATE(s.waktu_pesanan_dibuat) >= $%d::date", arg))
+		args = append(args, from)
 		arg++
 	}
-	if month != "" {
-		conds = append(conds, fmt.Sprintf("EXTRACT(MONTH FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-		args = append(args, month)
-		arg++
-	}
-	if year != "" {
-		conds = append(conds, fmt.Sprintf("EXTRACT(YEAR FROM s.waktu_pesanan_dibuat) = $%d::int", arg))
-		args = append(args, year)
+	if to != "" {
+		conds = append(conds, fmt.Sprintf("DATE(s.waktu_pesanan_dibuat) <= $%d::date", arg))
+		args = append(args, to)
 		arg++
 	}
 	query := base
