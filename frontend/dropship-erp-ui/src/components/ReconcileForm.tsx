@@ -1,15 +1,21 @@
 import { Alert, Button, TextField } from "@mui/material";
-import { useState } from "react";
-import { reconcile } from "../api";
+import { useEffect, useState } from "react";
+import { reconcile, listAllStores } from "../api";
+import type { Store } from "../types";
 
 export default function ReconcileForm() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [purchaseId, setPurchaseId] = useState("");
   const [orderId, setOrderId] = useState("");
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -23,13 +29,19 @@ export default function ReconcileForm() {
   return (
     <div>
       <h2>Reconcile Purchase & Order</h2>
-      <TextField
-        label="Shop"
-        fullWidth
+      <select
+        aria-label="Shop"
         value={shop}
         onChange={(e) => setShop(e.target.value)}
-        sx={{ mb: 2 }}
-      />
+        style={{ display: "block", width: "100%", marginBottom: "0.5rem" }}
+      >
+        <option value="">Select Store</option>
+        {stores.map((s) => (
+          <option key={s.store_id} value={s.nama_toko}>
+            {s.nama_toko}
+          </option>
+        ))}
+      </select>
       <TextField
         label="Purchase ID"
         fullWidth

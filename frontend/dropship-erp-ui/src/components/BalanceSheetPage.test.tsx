@@ -5,6 +5,11 @@ import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api";
 import BalanceSheetPage from "./BalanceSheetPage";
 
+jest.mock("../api", () => ({
+  fetchBalanceSheet: jest.fn(),
+  listAllStores: jest.fn().mockResolvedValue([]),
+}));
+
 describe("BalanceSheetPage", () => {
   it("fetch & display", async () => {
     const mock = [{ category: "Assets", accounts: [], total: 100 }];

@@ -14,7 +14,8 @@ import {
   Alert,
 } from "@mui/material";
 import { listJournal, deleteJournal, createJournal } from "../api/journal";
-import type { JournalEntry } from "../types";
+import { listAccounts } from "../api";
+import type { JournalEntry, Account } from "../types";
 
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
@@ -24,6 +25,7 @@ export default function JournalPage() {
   const [lines, setLines] = useState<
     { account: string; debit: string; credit: string }[]
   >([{ account: "", debit: "", credit: "" }]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -31,6 +33,7 @@ export default function JournalPage() {
   const fetchData = () => listJournal().then((r) => setList(r.data));
   useEffect(() => {
     fetchData();
+    listAccounts().then((r) => setAccounts(r.data));
   }, []);
   return (
     <div>
@@ -89,16 +92,23 @@ export default function JournalPage() {
           />
           {lines.map((l, idx) => (
             <div key={idx} style={{ display: "flex", gap: "0.5rem" }}>
-              <TextField
-                label="Account"
+              <select
+                aria-label="Account"
                 value={l.account}
                 onChange={(e) => {
                   const arr = [...lines];
                   arr[idx].account = e.target.value;
                   setLines(arr);
                 }}
-                size="small"
-              />
+                style={{ fontSize: "0.875rem" }}
+              >
+                <option value="">Select Account</option>
+                {accounts.map((a) => (
+                  <option key={a.account_id} value={String(a.account_id)}>
+                    {a.account_code} - {a.account_name}
+                  </option>
+                ))}
+              </select>
               <TextField
                 label="Debit"
                 value={l.debit}

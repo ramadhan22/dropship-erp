@@ -2,12 +2,16 @@ import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
 import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api/journal";
+import * as baseApi from "../api";
 import JournalPage from "./JournalPage";
 
 jest.mock("../api/journal", () => ({
   listJournal: jest.fn().mockResolvedValue({ data: [] }),
   deleteJournal: jest.fn(),
   createJournal: jest.fn().mockResolvedValue({}),
+}));
+jest.mock("../api", () => ({
+  listAccounts: jest.fn().mockResolvedValue({ data: [] }),
 }));
 
 test("fetch list", async () => {
