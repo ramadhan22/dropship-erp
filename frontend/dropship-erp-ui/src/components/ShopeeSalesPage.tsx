@@ -6,12 +6,14 @@ import {
   DialogContent,
   DialogTitle,
   Pagination,
-  TextField,
   Table,
   TableBody,
   TableCell,
   TableRow,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
@@ -66,65 +68,203 @@ export default function ShopeeSalesPage() {
       key: "tanggal_dana_dilepaskan",
       render: (v) => new Date(v).toLocaleDateString("id-ID"),
     },
-    { label: "Harga Asli Produk", key: "harga_asli_produk" },
-    { label: "Total Diskon Produk", key: "total_diskon_produk" },
+    {
+      label: "Harga Asli Produk",
+      key: "harga_asli_produk",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Total Diskon Produk",
+      key: "total_diskon_produk",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Jumlah Pengembalian Dana",
       key: "jumlah_pengembalian_dana_ke_pembeli",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
-    { label: "Diskon Produk Shopee", key: "diskon_produk_dari_shopee" },
+    {
+      label: "Diskon Produk Shopee",
+      key: "diskon_produk_dari_shopee",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Diskon Voucher Penjual",
       key: "diskon_voucher_ditanggung_penjual",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
-    { label: "Cashback Koin Penjual", key: "cashback_koin_ditanggung_penjual" },
-    { label: "Ongkir Dibayar Pembeli", key: "ongkir_dibayar_pembeli" },
+    {
+      label: "Cashback Koin Penjual",
+      key: "cashback_koin_ditanggung_penjual",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Ongkir Dibayar Pembeli",
+      key: "ongkir_dibayar_pembeli",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Diskon Ongkir Jasa Kirim",
       key: "diskon_ongkir_ditanggung_jasa_kirim",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
-    { label: "Gratis Ongkir Shopee", key: "gratis_ongkir_dari_shopee" },
+    {
+      label: "Gratis Ongkir Shopee",
+      key: "gratis_ongkir_dari_shopee",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Ongkir Diteruskan Shopee",
       key: "ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
     {
       label: "Ongkos Kirim Pengembalian",
       key: "ongkos_kirim_pengembalian_barang",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
-    { label: "Pengembalian Biaya Kirim", key: "pengembalian_biaya_kirim" },
-    { label: "Biaya Komisi AMS", key: "biaya_komisi_ams" },
-    { label: "Biaya Administrasi", key: "biaya_administrasi" },
-    { label: "Biaya Layanan (+PPN)", key: "biaya_layanan_termasuk_ppn_11" },
-    { label: "Premi", key: "premi" },
-    { label: "Biaya Program", key: "biaya_program" },
-    { label: "Biaya Kartu Kredit", key: "biaya_kartu_kredit" },
-    { label: "Biaya Kampanye", key: "biaya_kampanye" },
-    { label: "Bea Masuk/PPN/PPh", key: "bea_masuk_ppn_pph" },
-    { label: "Total Penghasilan", key: "total_penghasilan" },
-    { label: "Kompensasi", key: "kompensasi" },
+    {
+      label: "Pengembalian Biaya Kirim",
+      key: "pengembalian_biaya_kirim",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Komisi AMS",
+      key: "biaya_komisi_ams",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Administrasi",
+      key: "biaya_administrasi",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Layanan (+PPN)",
+      key: "biaya_layanan_termasuk_ppn_11",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Premi",
+      key: "premi",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Program",
+      key: "biaya_program",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Kartu Kredit",
+      key: "biaya_kartu_kredit",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Kampanye",
+      key: "biaya_kampanye",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Bea Masuk/PPN/PPh",
+      key: "bea_masuk_ppn_pph",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Total Penghasilan",
+      key: "total_penghasilan",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Kompensasi",
+      key: "kompensasi",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Promo Gratis Ongkir Dari Penjual",
       key: "promo_gratis_ongkir_dari_penjual",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
     { label: "Jasa Kirim", key: "jasa_kirim" },
     { label: "Nama Kurir", key: "nama_kurir" },
-    { label: "Pengembalian Dana", key: "pengembalian_dana_ke_pembeli" },
+    {
+      label: "Pengembalian Dana",
+      key: "pengembalian_dana_ke_pembeli",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     {
       label: "Pro-rata Koin Refund",
       key: "pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
     {
       label: "Pro-rata Voucher Refund",
       key: "pro_rata_voucher_shopee_untuk_pengembalian_barang",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
     {
       label: "Promo Bank Returns",
       key: "pro_rated_bank_payment_channel_promotion_for_returns",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
     {
       label: "Promo Shopee Returns",
       key: "pro_rated_shopee_payment_channel_promotion_for_returns",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
     },
   ];
 
@@ -268,18 +408,19 @@ export default function ShopeeSalesPage() {
             </option>
           ))}
         </select>
-        <TextField
-          label="Period"
-          placeholder="YYYY or YYYY-MM or YYYY-MM-DD"
-          value={period}
-          onChange={(e) => {
-            setPeriod(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 220 }}
-          InputLabelProps={{ shrink: true }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Period"
+            format="yyyy-MM-dd"
+            value={new Date(period)}
+            onChange={(date) => {
+              if (!date) return;
+              setPeriod(date.toISOString().split("T")[0]);
+              setPage(1);
+            }}
+            slotProps={{ textField: { size: "small", sx: { width: 220 }, InputLabelProps: { shrink: true } } }}
+          />
+        </LocalizationProvider>
       </div>
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>

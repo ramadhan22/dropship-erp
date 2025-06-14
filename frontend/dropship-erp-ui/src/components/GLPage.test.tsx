@@ -26,10 +26,10 @@ jest.mock("../api/gl", () => ({
 test("fetch gl grouped", async () => {
   render(<GLPage />);
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
-  fireEvent.change(screen.getByLabelText(/^From$/i), {
+  fireEvent.change(screen.getByLabelText(/^From$/i, { selector: "input" }), {
     target: { value: "2025-01-01" },
   });
-  fireEvent.change(screen.getByLabelText(/^To$/i), {
+  fireEvent.change(screen.getByLabelText(/^To$/i, { selector: "input" }), {
     target: { value: "2025-01-31" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));

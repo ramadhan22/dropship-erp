@@ -5,6 +5,7 @@ export interface Column<T> {
   label: string;
   key?: keyof T;
   render?: (value: any, row: T) => React.ReactNode;
+  align?: "left" | "right" | "center";
 }
 
 export default function SortableTable<T extends Record<string, any>>({ columns, data }: { columns: Column<T>[]; data: T[] }) {
@@ -37,7 +38,7 @@ export default function SortableTable<T extends Record<string, any>>({ columns, 
       <TableHead>
         <TableRow>
           {columns.map((col) => (
-            <TableCell key={String(col.label)}>
+            <TableCell key={String(col.label)} align={col.align}>
               {col.key ? (
                 <TableSortLabel
                   active={sortKey === col.key}
@@ -57,7 +58,7 @@ export default function SortableTable<T extends Record<string, any>>({ columns, 
         {sorted.map((row, idx) => (
           <TableRow key={idx}>
             {columns.map((col) => (
-              <TableCell key={String(col.label)}>
+              <TableCell key={String(col.label)} align={col.align}>
                 {col.render ? col.render(col.key ? (row as any)[col.key] : undefined, row) : col.key ? String((row as any)[col.key]) : null}
               </TableCell>
             ))}

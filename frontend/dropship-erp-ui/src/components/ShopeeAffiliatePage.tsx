@@ -1,3 +1,7 @@
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Pagination } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   Alert,
   Button,
@@ -8,6 +12,7 @@ import {
   Pagination,
   TextField,
 } from "@mui/material";
+
 import { useEffect, useState } from "react";
 import {
   importShopeeAffiliate,
@@ -69,6 +74,26 @@ export default function ShopeeAffiliatePage() {
     { label: "Jumlah", key: "jumlah" },
     { label: "Nama Affiliate", key: "nama_affiliate" },
     { label: "Username", key: "username_affiliate" },
+
+    {
+      label: "Waktu Pesanan",
+      key: "waktu_pesanan",
+      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+    },
+    {
+      label: "Nilai Pembelian",
+      key: "nilai_pembelian",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Komisi Affiliate",
+      key: "estimasi_komisi_affiliate_per_pesanan",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+
     { label: "MCN", key: "mcn_terhubung" },
     { label: "ID Komisi Pesanan", key: "id_komisi_pesanan" },
     { label: "Partner Promo", key: "partner_promo" },
@@ -103,6 +128,7 @@ export default function ShopeeAffiliatePage() {
       label: "Waktu Pemotongan",
       key: "waktu_pemotongan",
       render: (v) => new Date(v).toLocaleString(),
+
     },
   ];
 
@@ -161,6 +187,24 @@ export default function ShopeeAffiliatePage() {
       >
         Import
       </Button>
+
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Period"
+          views={["year", "month"]}
+          openTo="month"
+          format="yyyy-MM"
+          value={new Date(period)}
+          onChange={date => {
+            if (!date) return;
+            setPeriod(date.toISOString().slice(0, 7));
+            setPage(1);
+          }}
+          slotProps={{ textField: { size: "small", sx: { mb: 2, ml: 1 }, InputLabelProps: { shrink: true } } }}
+        />
+      </LocalizationProvider>
+      {msg && <Alert severity={msg.type} sx={{ mb: 2 }}>{msg.text}</Alert>}
+
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         <TextField
           label="Date"
@@ -216,6 +260,7 @@ export default function ShopeeAffiliatePage() {
           {msg.text}
         </Alert>
       )}
+
       <div style={{ overflowX: "auto" }}>
         <SortableTable columns={columns} data={data} />
       </div>

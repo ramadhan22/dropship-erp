@@ -1,13 +1,15 @@
 import { Fragment, useEffect, useState } from "react";
 import {
   Button,
-  TextField,
   Table,
   TableHead,
   TableRow,
   TableCell,
   TableBody,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { fetchGeneralLedger } from "../api/gl";
 import { listAllStores } from "../api";
 import type { Account, Store } from "../types";
@@ -67,20 +69,30 @@ export default function GLPage() {
             </option>
           ))}
         </select>
-        <TextField
-          label="From"
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label="To"
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="From"
+            format="yyyy-MM-dd"
+            value={new Date(from)}
+            onChange={(date) => {
+              if (!date) return;
+              setFrom(date.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="To"
+            format="yyyy-MM-dd"
+            value={new Date(to)}
+            onChange={(date) => {
+              if (!date) return;
+              setTo(date.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
         <Button onClick={handleFetch}>Fetch</Button>
       </div>
       <Table size="small">
@@ -88,11 +100,34 @@ export default function GLPage() {
           <TableRow>
             <TableCell>Code</TableCell>
             <TableCell>Account</TableCell>
-            <TableCell>Debit</TableCell>
-            <TableCell>Credit</TableCell>
+            <TableCell align="right">Debit</TableCell>
+            <TableCell align="right">Credit</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
+
+          {paginated.map((a) => (
+            <TableRow key={a.account_id}>
+              <TableCell>{a.account_code}</TableCell>
+              <TableCell>{a.account_name}</TableCell>
+              <TableCell align="right">
+                {a.balance > 0
+                  ? a.balance.toLocaleString("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                    })
+                  : ""}
+              </TableCell>
+              <TableCell align="right">
+                {a.balance < 0
+                  ? (-a.balance).toLocaleString("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                    })
+                  : ""}
+              </TableCell>
+            </TableRow>
+
           {groupByType(data).map((grp) => (
             <Fragment key={grp.type}>
               <TableRow>
@@ -109,6 +144,7 @@ export default function GLPage() {
                 </TableRow>
               ))}
             </Fragment>
+
           ))}
         </TableBody>
       </Table>

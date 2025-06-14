@@ -8,8 +8,10 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
 import { computeMetrics, fetchMetrics, listAllStores } from "../api";
 import type { Store } from "../types";
@@ -69,11 +71,20 @@ export default function MetricsPage() {
             </option>
           ))}
         </select>
-        <TextField
-          label="Period (YYYY-MM)"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Period (YYYY-MM)"
+            views={["year", "month"]}
+            openTo="month"
+            format="yyyy-MM"
+            value={new Date(period)}
+            onChange={(date) => {
+              if (!date) return;
+              setPeriod(date.toISOString().slice(0, 7));
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
         <Button variant="contained" onClick={handleCompute}>
           Compute
         </Button>
@@ -93,14 +104,21 @@ export default function MetricsPage() {
           <TableHead>
             <TableRow>
               <TableCell>Metric</TableCell>
-              <TableCell>Value</TableCell>
+              <TableCell align="right">Value</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {paginated.map(([key, val]) => (
               <TableRow key={key}>
                 <TableCell>{key}</TableCell>
-                <TableCell>{val}</TableCell>
+                <TableCell align="right">
+                  {typeof val === "number"
+                    ? val.toLocaleString("id-ID", {
+                        style: "currency",
+                        currency: "IDR",
+                      })
+                    : (val as any)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

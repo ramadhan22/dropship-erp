@@ -10,8 +10,10 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
@@ -55,9 +57,27 @@ export default function DropshipImport() {
       render: (v) => new Date(v).toLocaleDateString("id-ID"),
     },
     { label: "Status Pesanan", key: "status_pesanan_terakhir" },
-    { label: "Biaya Lainnya", key: "biaya_lainnya" },
-    { label: "Biaya Mitra Jakmall", key: "biaya_mitra_jakmall" },
-    { label: "Total Transaksi", key: "total_transaksi" },
+    {
+      label: "Biaya Lainnya",
+      key: "biaya_lainnya",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Biaya Mitra Jakmall",
+      key: "biaya_mitra_jakmall",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    {
+      label: "Total Transaksi",
+      key: "total_transaksi",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
     { label: "Dibuat Oleh", key: "dibuat_oleh" },
     { label: "Channel", key: "jenis_channel" },
     { label: "Nama Toko", key: "nama_toko" },
@@ -212,18 +232,19 @@ export default function DropshipImport() {
             </option>
           ))}
         </select>
-        <TextField
-          label="Period"
-          placeholder="YYYY or YYYY-MM or YYYY-MM-DD"
-          value={period}
-          onChange={(e) => {
-            setPeriod(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 220 }}
-          InputLabelProps={{ shrink: true }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Period"
+            format="yyyy-MM-dd"
+            value={new Date(period)}
+            onChange={(date) => {
+              if (!date) return;
+              setPeriod(date.toISOString().split("T")[0]);
+              setPage(1);
+            }}
+            slotProps={{ textField: { size: "small", sx: { width: 220 }, InputLabelProps: { shrink: true } } }}
+          />
+        </LocalizationProvider>
       </div>
       <div style={{ marginBottom: "0.5rem" }}>
         <strong>Page Total:</strong>{" "}
