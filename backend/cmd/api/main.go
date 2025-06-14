@@ -52,7 +52,7 @@ func main() {
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
 	journalSvc := service.NewJournalService(repo.DB, repo.JournalRepo)
-	plSvc := service.NewPLService(repo.MetricRepo)
+	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	glSvc := service.NewGLService(repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
