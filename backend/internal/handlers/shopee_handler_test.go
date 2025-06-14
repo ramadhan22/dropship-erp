@@ -26,6 +26,13 @@ func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Re
 	return 1, nil
 }
 
+func (f *fakeShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error) {
+	if f.err {
+		return 0, errors.New("fail import")
+	}
+	return 1, nil
+}
+
 func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error) {
 	return nil, 0, nil
 }
@@ -79,5 +86,29 @@ func TestShopeeHandleImport_Error(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rec.Code)
+	}
+}
+
+func TestShopeeHandleImportAffiliate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &fakeShopeeService{}
+	h := NewShopeeHandler(svc)
+
+	rec := httptest.NewRecorder()
+	r := gin.New()
+	r.POST("/api/shopee/affiliate", h.HandleImportAffiliate)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("file", "ok.csv")
+	part.Write([]byte("csv"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/shopee/affiliate", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 }

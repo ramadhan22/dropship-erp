@@ -87,6 +87,48 @@ func (r *ShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) 
 	return exists, err
 }
 
+// InsertShopeeAffiliateSale inserts a row into the shopee_affiliate_sales table.
+func (r *ShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *models.ShopeeAffiliateSale) error {
+	query := `
+        INSERT INTO shopee_affiliate_sales (
+                kode_pesanan, status_pesanan, status_terverifikasi,
+                waktu_pesanan, waktu_pesanan_selesai, waktu_pesanan_terverifikasi,
+                kode_produk, nama_produk, id_model, l1_kategori_global, l2_kategori_global,
+                l3_kategori_global, kode_promo, harga, jumlah, nama_affiliate,
+                username_affiliate, mcn_terhubung, id_komisi_pesanan, partner_promo,
+                jenis_promo, nilai_pembelian, jumlah_pengembalian, tipe_pesanan,
+                estimasi_komisi_per_produk, estimasi_komisi_affiliate_per_produk,
+                persentase_komisi_affiliate_per_produk, estimasi_komisi_mcn_per_produk,
+                persentase_komisi_mcn_per_produk, estimasi_komisi_per_pesanan,
+                estimasi_komisi_affiliate_per_pesanan, estimasi_komisi_mcn_per_pesanan,
+                catatan_produk, platform, tingkat_komisi, pengeluaran,
+                status_pemotongan, metode_pemotongan, waktu_pemotongan
+        ) VALUES (
+                :kode_pesanan, :status_pesanan, :status_terverifikasi,
+                :waktu_pesanan, :waktu_pesanan_selesai, :waktu_pesanan_terverifikasi,
+                :kode_produk, :nama_produk, :id_model, :l1_kategori_global, :l2_kategori_global,
+                :l3_kategori_global, :kode_promo, :harga, :jumlah, :nama_affiliate,
+                :username_affiliate, :mcn_terhubung, :id_komisi_pesanan, :partner_promo,
+                :jenis_promo, :nilai_pembelian, :jumlah_pengembalian, :tipe_pesanan,
+                :estimasi_komisi_per_produk, :estimasi_komisi_affiliate_per_produk,
+                :persentase_komisi_affiliate_per_produk, :estimasi_komisi_mcn_per_produk,
+                :persentase_komisi_mcn_per_produk, :estimasi_komisi_per_pesanan,
+                :estimasi_komisi_affiliate_per_pesanan, :estimasi_komisi_mcn_per_pesanan,
+                :catatan_produk, :platform, :tingkat_komisi, :pengeluaran,
+                :status_pemotongan, :metode_pemotongan, :waktu_pemotongan
+        )`
+	_, err := r.db.NamedExecContext(ctx, query, s)
+	return err
+}
+
+// ExistsShopeeAffiliateSale checks if a row exists for the given order and product.
+func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error) {
+	var exists bool
+	err := r.db.GetContext(ctx, &exists,
+		`SELECT EXISTS(SELECT 1 FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2)`, orderID, productCode)
+	return exists, err
+}
+
 // GetShopeeOrderByID retrieves one settled order by its unique order_id.
 // This is used when reconciling with dropship purchases or calculating revenue.
 func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*models.ShopeeSettledOrder, error) {

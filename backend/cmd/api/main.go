@@ -73,6 +73,7 @@ func main() {
 		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
 		apiGroup.GET("/dropship/top-products", handlers.NewDropshipHandler(dropshipSvc).HandleTopProducts)
 		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
+		apiGroup.POST("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleImportAffiliate)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
 		apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"strconv"
@@ -60,9 +61,11 @@ var expectedHeaders = []string{
 // ShopeeRepoInterface defines methods used by ShopeeService.
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
+	InsertShopeeAffiliateSale(ctx context.Context, s *models.ShopeeAffiliateSale) error
 	ListShopeeSettled(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, date, month, year string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
+	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -145,6 +148,51 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	return inserted, nil
 }
 
+// ImportAffiliateCSV reads a CSV file of affiliate sales and inserts rows.
+func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error) {
+	reader := csv.NewReader(r)
+	header, err := reader.Read()
+	if err != nil {
+		return 0, fmt.Errorf("read header: %w", err)
+	}
+	if len(header) > 0 {
+		header[0] = strings.TrimPrefix(header[0], "\ufeff")
+	}
+	inserted := 0
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return inserted, fmt.Errorf("read row: %w", err)
+		}
+		if len(row) < 39 {
+			continue
+		}
+		row[0] = strings.TrimSpace(row[0])
+		if row[0] == "" {
+			continue
+		}
+		entry, err := parseAffiliateRow(row)
+		if err != nil {
+			continue
+		}
+		exists, err := s.repo.ExistsShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk)
+		if err != nil {
+			return inserted, fmt.Errorf("check existing: %w", err)
+		}
+		if exists {
+			continue
+		}
+		if err := s.repo.InsertShopeeAffiliateSale(ctx, entry); err != nil {
+			return inserted, fmt.Errorf("insert: %w", err)
+		}
+		inserted++
+	}
+	return inserted, nil
+}
+
 func parseDate(s string) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, nil
@@ -156,6 +204,24 @@ func parseDate(s string) (time.Time, error) {
 		}
 	}
 	return time.Time{}, fmt.Errorf("invalid date %s", s)
+}
+
+func parseDateTime(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, nil
+	}
+	layouts := []string{"2006-01-02 15:04:05", "2006/01/02 15:04", "02/01/2006 15:04:05"}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid datetime %s", s)
+}
+
+func parsePercent(s string) (float64, error) {
+	s = strings.TrimSpace(strings.TrimSuffix(s, "%"))
+	return parseFloat(s)
 }
 
 func parseFloat(s string) (float64, error) {
@@ -265,6 +331,87 @@ func parseShopeeRow(row []string, namaToko string) (*models.ShopeeSettled, error
 		return nil, err
 	}
 	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[38]); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func parseAffiliateRow(row []string) (*models.ShopeeAffiliateSale, error) {
+	var err error
+	res := &models.ShopeeAffiliateSale{}
+	res.KodePesanan = row[0]
+	res.StatusPesanan = row[1]
+	res.StatusTerverifikasi = row[2]
+	if res.WaktuPesanan, err = parseDateTime(row[3]); err != nil {
+		return nil, err
+	}
+	if res.WaktuPesananSelesai, err = parseDateTime(row[4]); err != nil {
+		return nil, err
+	}
+	if res.WaktuPesananTerverifikasi, err = parseDateTime(row[5]); err != nil {
+		return nil, err
+	}
+	res.KodeProduk = row[6]
+	res.NamaProduk = row[7]
+	res.IDModel = row[8]
+	res.L1KategoriGlobal = row[9]
+	res.L2KategoriGlobal = row[10]
+	res.L3KategoriGlobal = row[11]
+	res.KodePromo = row[12]
+	if res.Harga, err = parseFloat(row[13]); err != nil {
+		return nil, err
+	}
+	if res.Jumlah, err = strconv.Atoi(row[14]); err != nil {
+		return nil, err
+	}
+	res.NamaAffiliate = row[15]
+	res.UsernameAffiliate = row[16]
+	res.MCNTerhubung = row[17]
+	res.IDKomisiPesanan = row[18]
+	res.PartnerPromo = row[19]
+	res.JenisPromo = row[20]
+	if res.NilaiPembelian, err = parseFloat(row[21]); err != nil {
+		return nil, err
+	}
+	if res.JumlahPengembalian, err = parseFloat(row[22]); err != nil {
+		return nil, err
+	}
+	res.TipePesanan = row[23]
+	if res.EstimasiKomisiPerProduk, err = parseFloat(row[24]); err != nil {
+		return nil, err
+	}
+	if res.EstimasiKomisiAffiliatePerProduk, err = parseFloat(row[25]); err != nil {
+		return nil, err
+	}
+	if res.PersentaseKomisiAffiliatePerProduk, err = parsePercent(row[26]); err != nil {
+		return nil, err
+	}
+	if res.EstimasiKomisiMCNPerProduk, err = parseFloat(row[27]); err != nil {
+		return nil, err
+	}
+	if res.PersentaseKomisiMCNPerProduk, err = parsePercent(row[28]); err != nil {
+		return nil, err
+	}
+	if res.EstimasiKomisiPerPesanan, err = parseFloat(row[29]); err != nil {
+		return nil, err
+	}
+	if res.EstimasiKomisiAffiliatePerPesanan, err = parseFloat(row[30]); err != nil {
+		return nil, err
+	}
+	if res.EstimasiKomisiMCNPerPesanan, err = parseFloat(row[31]); err != nil {
+		return nil, err
+	}
+	res.CatatanProduk = row[32]
+	res.Platform = row[33]
+	if res.TingkatKomisi, err = parsePercent(row[34]); err != nil {
+		return nil, err
+	}
+	if res.Pengeluaran, err = parseFloat(row[35]); err != nil {
+		return nil, err
+	}
+	res.StatusPemotongan = row[36]
+	res.MetodePemotongan = row[37]
+	if res.WaktuPemotongan, err = parseDateTime(row[38]); err != nil {
 		return nil, err
 	}
 	return res, nil

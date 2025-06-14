@@ -12,7 +12,6 @@ import type {
   ShopeeSettledSummary,
 } from "../types";
 
-
 export interface ImportResponse {
   inserted: number;
 }
@@ -75,6 +74,14 @@ export function importShopee(file: File) {
   });
 }
 
+export function importShopeeAffiliate(file: File) {
+  const data = new FormData();
+  data.append("file", file);
+  return api.post<ImportResponse>("/shopee/affiliate", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
 // Reconcile
 export function reconcile(purchaseId: string, orderId: string, shop: string) {
   return api.post("/reconcile", {
@@ -132,12 +139,11 @@ export async function listAllStores() {
   const channels = await listJenisChannels().then((r) => r.data);
   const lists = await Promise.all(
     channels.map((c) =>
-      listStores(c.jenis_channel_id).then((r) => r.data ?? [])
+      listStores(c.jenis_channel_id).then((r) => r.data ?? []),
     ),
   );
   return lists.flat();
 }
-
 
 export function listShopeeSettled(params: {
   channel?: string;
@@ -157,7 +163,7 @@ export function listShopeeSettled(params: {
   if (params.page) q.append("page", String(params.page));
   if (params.page_size) q.append("page_size", String(params.page_size));
   return api.get<{ data: ShopeeSettled[]; total: number }>(
-    `/shopee/settled?${q.toString()}`
+    `/shopee/settled?${q.toString()}`,
   );
 }
 
@@ -174,7 +180,9 @@ export function sumShopeeSettled(params: {
   if (params.date) q.append("date", params.date);
   if (params.month) q.append("month", params.month);
   if (params.year) q.append("year", params.year);
-  return api.get<ShopeeSettledSummary>(`/shopee/settled/summary?${q.toString()}`);
+  return api.get<ShopeeSettledSummary>(
+    `/shopee/settled/summary?${q.toString()}`,
+  );
 }
 
 export interface DropshipPurchaseList {
@@ -223,7 +231,9 @@ export function sumDropshipPurchases(params: {
   if (params.date) q.append("date", params.date);
   if (params.month) q.append("month", params.month);
   if (params.year) q.append("year", params.year);
-  return api.get<{ total: number }>(`/dropship/purchases/summary?${q.toString()}`);
+  return api.get<{ total: number }>(
+    `/dropship/purchases/summary?${q.toString()}`,
+  );
 }
 
 export function fetchTopProducts(params: {
