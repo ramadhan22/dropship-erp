@@ -45,6 +45,10 @@ func (f *fakeShopeeService) ListAffiliate(ctx context.Context, date, month, year
 	return nil, 0, nil
 }
 
+func (f *fakeShopeeService) SumAffiliate(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error) {
+	return &models.ShopeeAffiliateSummary{}, nil
+}
+
 func TestShopeeHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeShopeeService{}

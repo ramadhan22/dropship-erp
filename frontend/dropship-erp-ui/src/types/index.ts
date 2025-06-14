@@ -173,11 +173,49 @@ export interface ProductSales {
 }
 
 export interface ShopeeAffiliateSale {
+  nama_toko: string;
   kode_pesanan: string;
   status_pesanan: string;
+  status_terverifikasi: string;
+  waktu_pesanan: string;
+  waktu_pesanan_selesai: string;
+  waktu_pesanan_terverifikasi: string;
+  kode_produk: string;
+  nama_produk: string;
+  id_model: string;
+  l1_kategori_global: string;
+  l2_kategori_global: string;
+  l3_kategori_global: string;
+  kode_promo: string;
+  harga: number;
+  jumlah: number;
   nama_affiliate: string;
   username_affiliate: string;
-  waktu_pesanan: string;
+  mcn_terhubung: string;
+  id_komisi_pesanan: string;
+  partner_promo: string;
+  jenis_promo: string;
   nilai_pembelian: number;
+  jumlah_pengembalian: number;
+  tipe_pesanan: string;
+  estimasi_komisi_per_produk: number;
+  estimasi_komisi_affiliate_per_produk: number;
+  persentase_komisi_affiliate_per_produk: number;
+  estimasi_komisi_mcn_per_produk: number;
+  persentase_komisi_mcn_per_produk: number;
+  estimasi_komisi_per_pesanan: number;
   estimasi_komisi_affiliate_per_pesanan: number;
+  estimasi_komisi_mcn_per_pesanan: number;
+  catatan_produk: string;
+  platform: string;
+  tingkat_komisi: number;
+  pengeluaran: number;
+  status_pemotongan: string;
+  metode_pemotongan: string;
+  waktu_pemotongan: string;
+}
+
+export interface ShopeeAffiliateSummary {
+  total_nilai_pembelian: number;
+  total_komisi_affiliate: number;
 }

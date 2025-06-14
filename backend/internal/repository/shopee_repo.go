@@ -91,6 +91,7 @@ func (r *ShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) 
 func (r *ShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *models.ShopeeAffiliateSale) error {
 	query := `
         INSERT INTO shopee_affiliate_sales (
+                nama_toko,
                 kode_pesanan, status_pesanan, status_terverifikasi,
                 waktu_pesanan, waktu_pesanan_selesai, waktu_pesanan_terverifikasi,
                 kode_produk, nama_produk, id_model, l1_kategori_global, l2_kategori_global,
@@ -104,6 +105,7 @@ func (r *ShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *models.Sh
                 catatan_produk, platform, tingkat_komisi, pengeluaran,
                 status_pemotongan, metode_pemotongan, waktu_pemotongan
         ) VALUES (
+                :nama_toko,
                 :kode_pesanan, :status_pesanan, :status_terverifikasi,
                 :waktu_pesanan, :waktu_pesanan_selesai, :waktu_pesanan_terverifikasi,
                 :kode_produk, :nama_produk, :id_model, :l1_kategori_global, :l2_kategori_global,
@@ -283,5 +285,24 @@ func (r *ShopeeRepo) SumShopeeSettled(
 		return nil, err
 	}
 	sum.GMV = sum.HargaAsliProduk - sum.TotalDiskonProduk
+	return &sum, nil
+}
+
+// SumShopeeAffiliateSales aggregates nilai_pembelian and komisi for filtered rows.
+func (r *ShopeeRepo) SumShopeeAffiliateSales(
+	ctx context.Context,
+	date, month, year string,
+) (*models.ShopeeAffiliateSummary, error) {
+	query := `SELECT
+               COALESCE(SUM(nilai_pembelian),0) AS total_nilai_pembelian,
+               COALESCE(SUM(estimasi_komisi_affiliate_per_pesanan),0) AS total_komisi_affiliate
+               FROM shopee_affiliate_sales
+               WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
+                 AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
+                 AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)`
+	var sum models.ShopeeAffiliateSummary
+	if err := r.db.GetContext(ctx, &sum, query, date, month, year); err != nil {
+		return nil, err
+	}
 	return &sum, nil
 }
