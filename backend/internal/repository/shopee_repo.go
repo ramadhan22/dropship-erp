@@ -162,8 +162,15 @@ func (r *ShopeeRepo) ListShopeeSettled(
 func (r *ShopeeRepo) SumShopeeSettled(
 	ctx context.Context,
 	channel, store, date, month, year string,
-) (float64, error) {
-	base := `SELECT COALESCE(SUM(s.total_penghasilan),0) FROM shopee_settled s
+) (*models.ShopeeSummary, error) {
+	base := `SELECT
+                COALESCE(SUM(s.harga_asli_produk),0) AS harga_asli_produk,
+                COALESCE(SUM(s.total_diskon_produk),0) AS total_diskon_produk,
+                COALESCE(SUM(s.diskon_voucher_ditanggung_penjual),0) AS diskon_voucher_ditanggung_penjual,
+                COALESCE(SUM(s.biaya_administrasi),0) AS biaya_administrasi,
+                COALESCE(SUM(s.biaya_layanan_termasuk_ppn_11),0) AS biaya_layanan_termasuk_ppn_11,
+                COALESCE(SUM(s.total_penghasilan),0) AS total_penghasilan
+        FROM shopee_settled s
         LEFT JOIN stores st ON s.nama_toko = st.nama_toko
         LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
 	args := []interface{}{}
@@ -198,9 +205,10 @@ func (r *ShopeeRepo) SumShopeeSettled(
 	if len(conds) > 0 {
 		query += " WHERE " + strings.Join(conds, " AND ")
 	}
-	var sum float64
+	var sum models.ShopeeSummary
 	if err := r.db.GetContext(ctx, &sum, query, args...); err != nil {
-		return 0, err
+		return nil, err
 	}
-	return sum, nil
+	sum.GMV = sum.HargaAsliProduk - sum.TotalDiskonProduk
+	return &sum, nil
 }
