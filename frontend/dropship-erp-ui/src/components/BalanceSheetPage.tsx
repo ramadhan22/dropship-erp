@@ -54,7 +54,9 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [period, setPeriod] = useState("");
+  const [period, setPeriod] = useState(
+    new Date().toISOString().slice(0, 7),
+  );
   const [data, setData] = useState<BalanceCategory[]>([]);
 
   useEffect(() => {
