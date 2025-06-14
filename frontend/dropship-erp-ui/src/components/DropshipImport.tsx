@@ -43,8 +43,11 @@ export default function DropshipImport() {
   const [date, setDate] = useState(
     () => new Date().toISOString().split("T")[0],
   );
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
+  const now = new Date();
+  const [month, setMonth] = useState(
+    String(now.getMonth() + 1).padStart(2, "0"),
+  );
+  const [year, setYear] = useState(String(now.getFullYear()));
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -238,12 +241,18 @@ export default function DropshipImport() {
       </div>
       <div style={{ marginBottom: "0.5rem" }}>
         <strong>Page Total:</strong>{" "}
-        {pageTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {pageTotal.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}
         {" | "}
         <strong>Total Rows:</strong> {total}
         {" | "}
         <strong>All Total:</strong>{" "}
-        {allTotal.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
+        {allTotal.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}
       </div>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
