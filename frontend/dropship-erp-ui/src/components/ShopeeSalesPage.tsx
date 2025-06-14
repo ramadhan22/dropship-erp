@@ -7,6 +7,10 @@ import {
   DialogTitle,
   Pagination,
   TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
 } from "@mui/material";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
@@ -293,36 +297,148 @@ export default function ShopeeSalesPage() {
         })}
       </div>
       {pageSummary && (
-        <div style={{ marginBottom: "0.5rem" }}>
-          <strong>Page Summary:</strong>{" "}
-          Harga Asli Produk: {pageSummary.harga_asli_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Total Diskon Produk: {pageSummary.total_diskon_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          GMV: {pageSummary.gmv.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Diskon Voucher Penjual: {pageSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Biaya Administrasi: {pageSummary.biaya_administrasi.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Biaya Layanan (+PPN): {pageSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-        </div>
+        <Table size="small" sx={{ mb: 1, maxWidth: 600 }}>
+          <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}>
+            Page Summary
+          </caption>
+          <TableBody>
+            <TableRow>
+              <TableCell>Harga Asli Produk</TableCell>
+              <TableCell align="right">
+                {pageSummary.harga_asli_produk.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Total Diskon Produk</TableCell>
+              <TableCell align="right">
+                {pageSummary.total_diskon_produk.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>GMV</TableCell>
+              <TableCell align="right">
+                {pageSummary.gmv.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Diskon Voucher Penjual</TableCell>
+              <TableCell align="right">
+                {pageSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Biaya Administrasi</TableCell>
+              <TableCell align="right">
+                {pageSummary.biaya_administrasi.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Biaya Layanan (+PPN)</TableCell>
+              <TableCell align="right">
+                {pageSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Total Penghasilan</TableCell>
+              <TableCell align="right">
+                {pageSummary.total_penghasilan.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       )}
       {allSummary && (
-        <div style={{ marginBottom: "0.5rem" }}>
-          <strong>All Summary:</strong>{" "}
-          Harga Asli Produk: {allSummary.harga_asli_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Total Diskon Produk: {allSummary.total_diskon_produk.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          GMV: {allSummary.gmv.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Diskon Voucher Penjual: {allSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Biaya Administrasi: {allSummary.biaya_administrasi.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-          {" | "}
-          Biaya Layanan (+PPN): {allSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", { style: "currency", currency: "IDR" })}
-        </div>
+        <Table size="small" sx={{ mb: 1, maxWidth: 600 }}>
+          <caption style={{ captionSide: "top", textAlign: "left", fontWeight: 600 }}>
+            All Summary
+          </caption>
+          <TableBody>
+            <TableRow>
+              <TableCell>Harga Asli Produk</TableCell>
+              <TableCell align="right">
+                {allSummary.harga_asli_produk.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Total Diskon Produk</TableCell>
+              <TableCell align="right">
+                {allSummary.total_diskon_produk.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>GMV</TableCell>
+              <TableCell align="right">
+                {allSummary.gmv.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Diskon Voucher Penjual</TableCell>
+              <TableCell align="right">
+                {allSummary.diskon_voucher_ditanggung_penjual.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Biaya Administrasi</TableCell>
+              <TableCell align="right">
+                {allSummary.biaya_administrasi.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Biaya Layanan (+PPN)</TableCell>
+              <TableCell align="right">
+                {allSummary.biaya_layanan_termasuk_ppn_11.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell>Total Penghasilan</TableCell>
+              <TableCell align="right">
+                {allSummary.total_penghasilan.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       )}
       <div style={{ overflowX: "auto" }}>
         <SortableTable columns={columns} data={data} />
