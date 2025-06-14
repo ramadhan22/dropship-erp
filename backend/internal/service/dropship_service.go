@@ -26,13 +26,20 @@ type DropshipRepoInterface interface {
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
+type DropshipJournalRepo interface {
+	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
+	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+}
+
+// DropshipService handles CSV‐import and any Dropship‐related business logic.
 type DropshipService struct {
-	repo DropshipRepoInterface
+	repo        DropshipRepoInterface
+	journalRepo DropshipJournalRepo
 }
 
 // NewDropshipService constructs a DropshipService with the given repository.
-func NewDropshipService(repo DropshipRepoInterface) *DropshipService {
-	return &DropshipService{repo: repo}
+func NewDropshipService(repo DropshipRepoInterface, jr DropshipJournalRepo) *DropshipService {
+	return &DropshipService{repo: repo, journalRepo: jr}
 }
 
 // ImportFromCSV reads a Dumpsihp CSV file (with a header row) and inserts each purchase row.
@@ -120,6 +127,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 				if err := s.repo.InsertDropshipPurchase(ctx, header); err != nil {
 					return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
 				}
+				if err := s.createPendingSalesJournal(ctx, header); err != nil {
+					return count, fmt.Errorf("journal %s: %w", header.KodePesanan, err)
+				}
 				inserted[header.KodePesanan] = true
 			}
 		}
@@ -169,4 +179,59 @@ func (s *DropshipService) GetDropshipPurchaseByID(ctx context.Context, kodePesan
 
 func (s *DropshipService) ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error) {
 	return s.repo.ListDropshipPurchaseDetails(ctx, kodePesanan)
+}
+
+func (s *DropshipService) createPendingSalesJournal(ctx context.Context, p *models.DropshipPurchase) error {
+	if s.journalRepo == nil {
+		return nil
+	}
+	je := &models.JournalEntry{
+		EntryDate:    p.WaktuPesananTerbuat,
+		Description:  ptrString("Pending sales " + p.KodePesanan),
+		SourceType:   "pending_sales",
+		SourceID:     p.KodePesanan,
+		ShopUsername: p.NamaToko,
+		Store:        p.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := s.journalRepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+
+	debit := pendingAccountID(p.NamaToko)
+	credit := int64(4001)
+	lines := []models.JournalLine{
+		{
+			JournalID: id,
+			AccountID: debit,
+			IsDebit:   true,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("Pending receivable " + p.KodePesanan),
+		},
+		{
+			JournalID: id,
+			AccountID: credit,
+			IsDebit:   false,
+			Amount:    p.TotalTransaksi,
+			Memo:      ptrString("Sales " + p.KodePesanan),
+		},
+	}
+	for i := range lines {
+		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func pendingAccountID(store string) int64 {
+	switch store {
+	case "MR eStore Shopee":
+		return 11010
+	case "MR Barista Gear":
+		return 11012
+	default:
+		return 11010
+	}
 }
