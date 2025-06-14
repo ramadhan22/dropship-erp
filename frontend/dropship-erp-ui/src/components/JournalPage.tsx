@@ -22,7 +22,9 @@ export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
   const { paginated, controls } = usePagination(list);
   const [open, setOpen] = useState(false);
-  const [entryDate, setEntryDate] = useState("");
+  const [entryDate, setEntryDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [description, setDescription] = useState("");
   const [lines, setLines] = useState<
     { account: string; debit: string; credit: string }[]
