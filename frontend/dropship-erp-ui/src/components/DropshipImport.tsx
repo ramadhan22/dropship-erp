@@ -42,9 +42,11 @@ export default function DropshipImport() {
 
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
-  const [period, setPeriod] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const [period, setPeriod] = useState(firstOfMonth);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 

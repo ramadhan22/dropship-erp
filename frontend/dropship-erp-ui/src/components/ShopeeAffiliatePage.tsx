@@ -15,7 +15,10 @@ import type { ShopeeAffiliateSale } from "../types";
 
 export default function ShopeeAffiliatePage() {
   const now = new Date();
-  const [date, setDate] = useState(() => now.toISOString().split("T")[0]);
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const [date, setDate] = useState(firstOfMonth);
   const [month, setMonth] = useState(
     String(now.getMonth() + 1).padStart(2, "0"),
   );
