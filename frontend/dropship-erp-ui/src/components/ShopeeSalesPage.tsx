@@ -34,14 +34,9 @@ export default function ShopeeSalesPage() {
   const [channel, setChannel] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState("");
-  const [date, setDate] = useState(
+  const [period, setPeriod] = useState(
     () => new Date().toISOString().split("T")[0],
   );
-  const now = new Date();
-  const [month, setMonth] = useState(
-    String(now.getMonth() + 1).padStart(2, "0"),
-  );
-  const [year, setYear] = useState(String(now.getFullYear()));
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ShopeeSettled[]>([]);
   const [total, setTotal] = useState(0);
@@ -154,12 +149,24 @@ export default function ShopeeSalesPage() {
 
   const fetchData = async () => {
     try {
+      let dateParam = "";
+      let monthParam = "";
+      let yearParam = "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+        dateParam = period;
+      } else if (/^\d{4}-\d{2}$/.test(period)) {
+        const [y, m] = period.split("-");
+        monthParam = m;
+        yearParam = y;
+      } else if (/^\d{4}$/.test(period)) {
+        yearParam = period;
+      }
       const res = await listShopeeSettled({
         channel: channel || undefined,
         store,
-        date,
-        month,
-        year,
+        date: dateParam || undefined,
+        month: monthParam || undefined,
+        year: yearParam || undefined,
         page,
         page_size: pageSize,
       });
@@ -193,9 +200,9 @@ export default function ShopeeSalesPage() {
       const totalRes = await sumShopeeSettled({
         channel: channel || undefined,
         store,
-        date,
-        month,
-        year,
+        date: dateParam || undefined,
+        month: monthParam || undefined,
+        year: yearParam || undefined,
       });
       setAllTotal(totalRes.data.total_penghasilan);
       setAllSummary(totalRes.data);
@@ -208,7 +215,7 @@ export default function ShopeeSalesPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, store, date, month, year, page]);
+  }, [channel, store, period, page]);
 
   const handleImport = async () => {
     try {
@@ -262,34 +269,16 @@ export default function ShopeeSalesPage() {
           ))}
         </select>
         <TextField
-          label="Date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          label="Period"
+          placeholder="YYYY or YYYY-MM or YYYY-MM-DD"
+          value={period}
+          onChange={(e) => {
+            setPeriod(e.target.value);
+            setPage(1);
+          }}
           size="small"
+          sx={{ width: 220 }}
           InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          label="Month"
-          type="number"
-          value={month}
-          onChange={(e) => {
-            setMonth(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
-        />
-        <TextField
-          label="Year"
-          type="number"
-          value={year}
-          onChange={(e) => {
-            setYear(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
         />
       </div>
       {msg && (
