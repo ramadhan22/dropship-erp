@@ -19,11 +19,11 @@ export default function ReconcileDashboard() {
   const [diffOnly, setDiffOnly] = useState(false);
 
   const fetchData = () => {
-    if (shop) listCandidates(shop).then((r) => setData(r.data));
+    listCandidates(shop).then((r) => setData(r.data));
   };
 
   useEffect(() => {
-    if (shop) fetchData();
+    fetchData();
   }, [shop]);
 
   const handleBulk = async () => {
