@@ -171,3 +171,13 @@ export interface ProductSales {
   total_qty: number;
   total_value: number;
 }
+
+export interface ShopeeAffiliateSale {
+  kode_pesanan: string;
+  status_pesanan: string;
+  nama_affiliate: string;
+  username_affiliate: string;
+  waktu_pesanan: string;
+  nilai_pembelian: number;
+  estimasi_komisi_affiliate_per_pesanan: number;
+}

@@ -57,6 +57,10 @@ func (f *fakeShopeeRepo) SumShopeeSettled(ctx context.Context, channel, store, d
 	return &models.ShopeeSummary{}, nil
 }
 
+func (f *fakeShopeeRepo) ListShopeeAffiliateSales(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error) {
+	return nil, 0, nil
+}
+
 func TestImportSettledOrdersXLSX(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
