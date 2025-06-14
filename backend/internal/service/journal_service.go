@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 type JournalRepoInterface interface {
@@ -12,6 +13,7 @@ type JournalRepoInterface interface {
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
 	ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error)
 	GetJournalEntry(ctx context.Context, id int64) (*models.JournalEntry, error)
+	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
 	DeleteJournalEntry(ctx context.Context, id int64) error
 }
 
@@ -31,6 +33,10 @@ func (s *JournalService) Get(ctx context.Context, id int64) (*models.JournalEntr
 
 func (s *JournalService) Delete(ctx context.Context, id int64) error {
 	return s.repo.DeleteJournalEntry(ctx, id)
+}
+
+func (s *JournalService) Lines(ctx context.Context, id int64) ([]repository.JournalLineDetail, error) {
+	return s.repo.GetLinesByJournalID(ctx, id)
 }
 
 // Create inserts a JournalEntry along with its lines. It ensures total debits

@@ -9,6 +9,12 @@ export function getJournal(id: number) {
   return api.get<JournalEntry>(`/journal/${id}`);
 }
 
+export function getJournalLines(id: number) {
+  return api.get<JournalLine & { account_name: string }[]>(
+    `/journal/${id}/lines`
+  );
+}
+
 export function deleteJournal(id: number) {
   return api.delete(`/journal/${id}`);
 }
