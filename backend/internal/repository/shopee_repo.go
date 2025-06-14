@@ -47,13 +47,13 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
         INSERT INTO shopee_settled (
             nama_toko, no_pesanan, no_pengajuan, username_pembeli, waktu_pesanan_dibuat,
             metode_pembayaran_pembeli, tanggal_dana_dilepaskan, harga_asli_produk,
-            total_diskon_produk, jumlah_pengembalian_dana_ke_pembeli, komisi_shopee,
-            biaya_admin_shopee, biaya_layanan, biaya_layanan_ekstra,
-            biaya_penyedia_pembayaran, asuransi, total_biaya_transaksi,
-            biaya_pengiriman, total_diskon_pengiriman, promo_gratis_ongkir_shopee,
-            promo_gratis_ongkir_penjual, promo_diskon_shopee, promo_diskon_penjual,
-            cashback_shopee, cashback_penjual, koin_shopee, potongan_lainnya,
-            total_penerimaan, kompensasi, promo_gratis_ongkir_dari_penjual,
+            total_diskon_produk, jumlah_pengembalian_dana_ke_pembeli, diskon_produk_dari_shopee,
+            diskon_voucher_ditanggung_penjual, cashback_koin_ditanggung_penjual, ongkir_dibayar_pembeli,
+            diskon_ongkir_ditanggung_jasa_kirim, gratis_ongkir_dari_shopee, ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim,
+            ongkos_kirim_pengembalian_barang, pengembalian_biaya_kirim, biaya_komisi_ams,
+            biaya_administrasi, biaya_layanan_termasuk_ppn_11, premi,
+            biaya_program, biaya_kartu_kredit, biaya_kampanye, bea_masuk_ppn_pph,
+            total_penghasilan, kompensasi, promo_gratis_ongkir_dari_penjual,
             jasa_kirim, nama_kurir, pengembalian_dana_ke_pembeli,
             pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             pro_rata_voucher_shopee_untuk_pengembalian_barang,
@@ -62,13 +62,13 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
         ) VALUES (
             :nama_toko, :no_pesanan, :no_pengajuan, :username_pembeli, :waktu_pesanan_dibuat,
             :metode_pembayaran_pembeli, :tanggal_dana_dilepaskan, :harga_asli_produk,
-            :total_diskon_produk, :jumlah_pengembalian_dana_ke_pembeli, :komisi_shopee,
-            :biaya_admin_shopee, :biaya_layanan, :biaya_layanan_ekstra,
-            :biaya_penyedia_pembayaran, :asuransi, :total_biaya_transaksi,
-            :biaya_pengiriman, :total_diskon_pengiriman, :promo_gratis_ongkir_shopee,
-            :promo_gratis_ongkir_penjual, :promo_diskon_shopee, :promo_diskon_penjual,
-            :cashback_shopee, :cashback_penjual, :koin_shopee, :potongan_lainnya,
-            :total_penerimaan, :kompensasi, :promo_gratis_ongkir_dari_penjual,
+            :total_diskon_produk, :jumlah_pengembalian_dana_ke_pembeli, :diskon_produk_dari_shopee,
+            :diskon_voucher_ditanggung_penjual, :cashback_koin_ditanggung_penjual, :ongkir_dibayar_pembeli,
+            :diskon_ongkir_ditanggung_jasa_kirim, :gratis_ongkir_dari_shopee, :ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim,
+            :ongkos_kirim_pengembalian_barang, :pengembalian_biaya_kirim, :biaya_komisi_ams,
+            :biaya_administrasi, :biaya_layanan_termasuk_ppn_11, :premi,
+            :biaya_program, :biaya_kartu_kredit, :biaya_kampanye, :bea_masuk_ppn_pph,
+            :total_penghasilan, :kompensasi, :promo_gratis_ongkir_dari_penjual,
             :jasa_kirim, :nama_kurir, :pengembalian_dana_ke_pembeli,
             :pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             :pro_rata_voucher_shopee_untuk_pengembalian_barang,
@@ -158,12 +158,12 @@ func (r *ShopeeRepo) ListShopeeSettled(
 	return list, count, nil
 }
 
-// SumShopeeSettled returns the sum of total_penerimaan for rows matching the filters.
+// SumShopeeSettled returns the sum of total_penghasilan for rows matching the filters.
 func (r *ShopeeRepo) SumShopeeSettled(
 	ctx context.Context,
 	channel, store, date, month, year string,
 ) (float64, error) {
-	base := `SELECT COALESCE(SUM(s.total_penerimaan),0) FROM shopee_settled s
+	base := `SELECT COALESCE(SUM(s.total_penghasilan),0) FROM shopee_settled s
         LEFT JOIN stores st ON s.nama_toko = st.nama_toko
         LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
 	args := []interface{}{}

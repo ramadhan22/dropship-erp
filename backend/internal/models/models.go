@@ -79,24 +79,24 @@ type ShopeeSettled struct {
 	HargaAsliProduk                                  float64   `db:"harga_asli_produk" json:"harga_asli_produk"`
 	TotalDiskonProduk                                float64   `db:"total_diskon_produk" json:"total_diskon_produk"`
 	JumlahPengembalianDanaKePembeli                  float64   `db:"jumlah_pengembalian_dana_ke_pembeli" json:"jumlah_pengembalian_dana_ke_pembeli"`
-	KomisiShopee                                     float64   `db:"komisi_shopee" json:"komisi_shopee"`
-	BiayaAdminShopee                                 float64   `db:"biaya_admin_shopee" json:"biaya_admin_shopee"`
-	BiayaLayanan                                     float64   `db:"biaya_layanan" json:"biaya_layanan"`
-	BiayaLayananEkstra                               float64   `db:"biaya_layanan_ekstra" json:"biaya_layanan_ekstra"`
-	BiayaPenyediaPembayaran                          float64   `db:"biaya_penyedia_pembayaran" json:"biaya_penyedia_pembayaran"`
-	Asuransi                                         float64   `db:"asuransi" json:"asuransi"`
-	TotalBiayaTransaksi                              float64   `db:"total_biaya_transaksi" json:"total_biaya_transaksi"`
-	BiayaPengiriman                                  float64   `db:"biaya_pengiriman" json:"biaya_pengiriman"`
-	TotalDiskonPengiriman                            float64   `db:"total_diskon_pengiriman" json:"total_diskon_pengiriman"`
-	PromoGratisOngkirShopee                          float64   `db:"promo_gratis_ongkir_shopee" json:"promo_gratis_ongkir_shopee"`
-	PromoGratisOngkirPenjual                         float64   `db:"promo_gratis_ongkir_penjual" json:"promo_gratis_ongkir_penjual"`
-	PromoDiskonShopee                                float64   `db:"promo_diskon_shopee" json:"promo_diskon_shopee"`
-	PromoDiskonPenjual                               float64   `db:"promo_diskon_penjual" json:"promo_diskon_penjual"`
-	CashbackShopee                                   float64   `db:"cashback_shopee" json:"cashback_shopee"`
-	CashbackPenjual                                  float64   `db:"cashback_penjual" json:"cashback_penjual"`
-	KoinShopee                                       float64   `db:"koin_shopee" json:"koin_shopee"`
-	PotonganLainnya                                  float64   `db:"potongan_lainnya" json:"potongan_lainnya"`
-	TotalPenerimaan                                  float64   `db:"total_penerimaan" json:"total_penerimaan"`
+	KomisiShopee                                     float64   `db:"diskon_produk_dari_shopee" json:"diskon_produk_dari_shopee"`
+	BiayaAdminShopee                                 float64   `db:"diskon_voucher_ditanggung_penjual" json:"diskon_voucher_ditanggung_penjual"`
+	BiayaLayanan                                     float64   `db:"cashback_koin_ditanggung_penjual" json:"cashback_koin_ditanggung_penjual"`
+	BiayaLayananEkstra                               float64   `db:"ongkir_dibayar_pembeli" json:"ongkir_dibayar_pembeli"`
+	BiayaPenyediaPembayaran                          float64   `db:"diskon_ongkir_ditanggung_jasa_kirim" json:"diskon_ongkir_ditanggung_jasa_kirim"`
+	Asuransi                                         float64   `db:"gratis_ongkir_dari_shopee" json:"gratis_ongkir_dari_shopee"`
+	TotalBiayaTransaksi                              float64   `db:"ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim" json:"ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim"`
+	BiayaPengiriman                                  float64   `db:"ongkos_kirim_pengembalian_barang" json:"ongkos_kirim_pengembalian_barang"`
+	TotalDiskonPengiriman                            float64   `db:"pengembalian_biaya_kirim" json:"pengembalian_biaya_kirim"`
+	PromoGratisOngkirShopee                          float64   `db:"biaya_komisi_ams" json:"biaya_komisi_ams"`
+	PromoGratisOngkirPenjual                         float64   `db:"biaya_administrasi" json:"biaya_administrasi"`
+	PromoDiskonShopee                                float64   `db:"biaya_layanan_termasuk_ppn_11" json:"biaya_layanan_termasuk_ppn_11"`
+	PromoDiskonPenjual                               float64   `db:"premi" json:"premi"`
+	CashbackShopee                                   float64   `db:"biaya_program" json:"biaya_program"`
+	CashbackPenjual                                  float64   `db:"biaya_kartu_kredit" json:"biaya_kartu_kredit"`
+	KoinShopee                                       float64   `db:"biaya_kampanye" json:"biaya_kampanye"`
+	PotonganLainnya                                  float64   `db:"bea_masuk_ppn_pph" json:"bea_masuk_ppn_pph"`
+	TotalPenerimaan                                  float64   `db:"total_penghasilan" json:"total_penghasilan"`
 	Kompensasi                                       float64   `db:"kompensasi" json:"kompensasi"`
 	PromoGratisOngkirDariPenjual                     float64   `db:"promo_gratis_ongkir_dari_penjual" json:"promo_gratis_ongkir_dari_penjual"`
 	JasaKirim                                        string    `db:"jasa_kirim" json:"jasa_kirim"`
