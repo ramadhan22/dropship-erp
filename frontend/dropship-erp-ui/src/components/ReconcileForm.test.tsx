@@ -7,6 +7,7 @@ import ReconcileForm from "./ReconcileForm";
 describe("ReconcileForm", () => {
   it("success path", async () => {
     jest.spyOn(api, "reconcile").mockResolvedValue({} as any);
+    jest.spyOn(api, "listAllStores").mockResolvedValue([] as any);
     render(<ReconcileForm />);
     fireEvent.change(screen.getByLabelText(/Shop/i), {
       target: { value: "Shop" },

@@ -12,14 +12,19 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
-import { fetchBalanceSheet } from "../api";
-import type { BalanceCategory } from "../types";
+import { useEffect, useState } from "react";
+import { fetchBalanceSheet, listAllStores } from "../api";
+import type { BalanceCategory, Store } from "../types";
 
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [period, setPeriod] = useState("");
   const [data, setData] = useState<BalanceCategory[]>([]);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const handleFetch = async () => {
     const res = await fetchBalanceSheet(shop, period);
@@ -29,12 +34,19 @@ export default function BalanceSheetPage() {
   return (
     <div>
       <h2>Balance Sheet</h2>
-      <TextField
-        label="Shop"
+      <select
+        aria-label="Shop"
         value={shop}
         onChange={(e) => setShop(e.target.value)}
-        sx={{ mr: 2 }}
-      />
+        style={{ marginRight: "0.5rem" }}
+      >
+        <option value="">Select Store</option>
+        {stores.map((s) => (
+          <option key={s.store_id} value={s.nama_toko}>
+            {s.nama_toko}
+          </option>
+        ))}
+      </select>
       <TextField
         label="Period (YYYY-MM)"
         value={period}

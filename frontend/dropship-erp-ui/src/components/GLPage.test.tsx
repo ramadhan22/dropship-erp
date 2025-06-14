@@ -4,6 +4,10 @@ import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api/gl";
 import GLPage from "./GLPage";
 
+jest.mock("../api", () => ({
+  listAllStores: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock("../api/gl", () => ({
   fetchGeneralLedger: jest.fn().mockResolvedValue({ data: [] }),
 }));

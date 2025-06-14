@@ -107,6 +107,18 @@ export function listStoresByChannelName(channel: string) {
   return api.get<Store[]>(`/stores?${q.toString()}`);
 }
 
+// Fetch stores across all channels by first listing channels then querying each
+// channel's stores. Returns a flat array of Store objects.
+export async function listAllStores() {
+  const channels = await listJenisChannels().then((r) => r.data);
+  const lists = await Promise.all(
+    channels.map((c) =>
+      listStores(c.jenis_channel_id).then((r) => r.data ?? [])
+    ),
+  );
+  return lists.flat();
+}
+
 
 export function listShopeeSettled(params: {
   channel?: string;

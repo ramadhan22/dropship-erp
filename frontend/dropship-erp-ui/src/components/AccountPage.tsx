@@ -71,13 +71,19 @@ export default function AccountPage() {
           size="small"
           sx={{ ml: 1 }}
         />
-        <TextField
-          label="Parent ID"
+        <select
+          aria-label="Parent ID"
           value={parent}
           onChange={(e) => setParent(e.target.value)}
-          size="small"
-          sx={{ ml: 1 }}
-        />
+          style={{ marginLeft: "0.5rem" }}
+        >
+          <option value="">No Parent</option>
+          {accounts.map((a) => (
+            <option key={a.account_id} value={String(a.account_id)}>
+              {a.account_code} - {a.account_name}
+            </option>
+          ))}
+        </select>
         <Button variant="contained" onClick={handleCreate} sx={{ ml: 1 }}>
           Add Account
         </Button>

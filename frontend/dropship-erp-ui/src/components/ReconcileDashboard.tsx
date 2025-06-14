@@ -6,17 +6,22 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  TextField,
   Checkbox,
   FormControlLabel,
 } from "@mui/material";
 import { listCandidates, bulkReconcile } from "../api/reconcile";
-import type { ReconcileCandidate } from "../types";
+import { listAllStores } from "../api";
+import type { ReconcileCandidate, Store } from "../types";
 
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
+  const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<ReconcileCandidate[]>([]);
   const [diffOnly, setDiffOnly] = useState(false);
+
+  useEffect(() => {
+    listAllStores().then((s) => setStores(s));
+  }, []);
 
   const fetchData = () => {
     if (shop) listCandidates(shop).then((r) => setData(r.data));
@@ -38,11 +43,19 @@ export default function ReconcileDashboard() {
   return (
     <div>
       <h2>Reconcile Dashboard</h2>
-      <TextField
-        label="Shop"
+      <select
+        aria-label="Shop"
         value={shop}
         onChange={(e) => setShop(e.target.value)}
-      />
+        style={{ marginRight: "0.5rem" }}
+      >
+        <option value="">Select Store</option>
+        {stores.map((s) => (
+          <option key={s.store_id} value={s.nama_toko}>
+            {s.nama_toko}
+          </option>
+        ))}
+      </select>
       <Button onClick={fetchData}>Refresh</Button>
       <Button onClick={handleBulk}>Bulk</Button>
       <FormControlLabel
