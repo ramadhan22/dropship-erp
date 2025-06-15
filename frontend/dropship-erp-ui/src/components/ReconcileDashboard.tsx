@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button, Checkbox, FormControlLabel } from "@mui/material";
+import { Alert, Button } from "@mui/material";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
-import { listCandidates, bulkReconcile } from "../api/reconcile";
+import { listCandidates, reconcileCheck } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";
 import usePagination from "../usePagination";
@@ -11,10 +11,11 @@ export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<ReconcileCandidate[]>([]);
-  const [diffOnly, setDiffOnly] = useState(false);
-  const { paginated, controls } = usePagination(
-    diffOnly ? data.filter((d) => d.no_pesanan) : data,
-  );
+  const [msg, setMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const { paginated, controls } = usePagination(data);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -28,11 +29,14 @@ export default function ReconcileDashboard() {
     fetchData();
   }, [shop]);
 
-  const handleBulk = async () => {
-    const pairs = data
-      .filter((d) => d.no_pesanan)
-      .map((d) => [d.kode_invoice_channel, d.no_pesanan!] as [string, string]);
-    if (pairs.length) await bulkReconcile(pairs, shop);
+  const handleReconcile = async (kode: string) => {
+    try {
+      const res = await reconcileCheck(kode);
+      setMsg({ type: "success", text: res.data.message });
+      fetchData();
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.message || e.message });
+    }
   };
 
   const columns: Column<ReconcileCandidate>[] = [
@@ -40,8 +44,15 @@ export default function ReconcileDashboard() {
     { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
     { label: "Status", key: "status_pesanan_terakhir" },
     { label: "No Pesanan Shopee", key: "no_pesanan" },
+    {
+      label: "Action",
+      render: (_, row) => (
+        <Button size="small" onClick={() => handleReconcile(row.kode_pesanan)}>
+          Reconcile
+        </Button>
+      ),
+    },
   ];
-
 
   return (
     <div>
@@ -60,16 +71,11 @@ export default function ReconcileDashboard() {
         ))}
       </select>
       <Button onClick={fetchData}>Refresh</Button>
-      <Button onClick={handleBulk}>Bulk</Button>
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={diffOnly}
-            onChange={(e) => setDiffOnly(e.target.checked)}
-          />
-        }
-        label="Status mismatch only"
-      />
+      {msg && (
+        <Alert severity={msg.type} sx={{ mt: 2 }}>
+          {msg.text}
+        </Alert>
+      )}
       <SortableTable columns={columns} data={paginated} />
       {controls}
     </div>

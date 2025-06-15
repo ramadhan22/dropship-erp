@@ -89,6 +89,14 @@ func (r *DropshipRepo) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInv
 	return &p, nil
 }
 
+// UpdatePurchaseStatus sets status_pesanan_terakhir for the given kode_pesanan.
+func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE dropship_purchases SET status_pesanan_terakhir=$2 WHERE kode_pesanan=$1`,
+		kodePesanan, status)
+	return err
+}
+
 // ListDropshipPurchasesByShopAndDate returns all dropship purchases for a given shop_username
 // whose purchase_date falls between two string‐formatted dates (YYYY-MM-DD).
 // This lets you pull a slice of purchases to, for example, generate reports or feed reconciliation logic.

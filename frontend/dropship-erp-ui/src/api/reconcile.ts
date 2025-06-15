@@ -12,3 +12,9 @@ export function listCandidates(shop: string) {
 export function bulkReconcile(pairs: [string, string][], shop: string) {
   return api.post("/reconcile/bulk", { pairs, shop });
 }
+
+export function reconcileCheck(kodePesanan: string) {
+  return api.post<{ message: string }>("/reconcile/check", {
+    kode_pesanan: kodePesanan,
+  });
+}
