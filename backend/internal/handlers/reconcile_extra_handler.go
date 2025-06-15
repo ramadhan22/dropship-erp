@@ -12,6 +12,7 @@ type ReconcileExtraService interface {
 	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
 	ListCandidates(ctx context.Context, shop string) ([]models.ReconcileCandidate, error)
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
+	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -25,6 +26,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/unmatched", h.list)
 	grp.GET("/candidates", h.candidates)
 	grp.POST("/bulk", h.bulk)
+	grp.POST("/check", h.check)
 }
 
 func (h *ReconcileExtraHandler) list(c *gin.Context) {
@@ -61,4 +63,20 @@ func (h *ReconcileExtraHandler) bulk(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *ReconcileExtraHandler) check(c *gin.Context) {
+	var req struct {
+		KodePesanan string `json:"kode_pesanan" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.svc.CheckAndMarkComplete(context.Background(), req.KodePesanan)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "status updated"})
 }

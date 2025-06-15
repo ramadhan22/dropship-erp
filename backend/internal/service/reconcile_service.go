@@ -15,10 +15,13 @@ import (
 // ReconcileRepoInterface defines just the methods needed from each repo.
 type ReconcileServiceDropshipRepo interface {
 	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
+	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
+	UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error
 }
 type ReconcileServiceShopeeRepo interface {
 	// We only need to fetch the settled order.
 	GetShopeeOrderByID(ctx context.Context, orderID string) (*models.ShopeeSettledOrder, error)
+	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 }
 type ReconcileServiceJournalRepo interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
@@ -175,6 +178,43 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop string) ([]m
 func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error {
 	for _, p := range pairs {
 		if err := s.MatchAndJournal(ctx, p[0], p[1], shop); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CheckAndMarkComplete verifies a purchase has a corresponding shopee_settled
+// entry and updates its status to "pesanan selesai" if found.
+func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan string) error {
+	var tx *sqlx.Tx
+	dropRepo := s.dropRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		dropRepo = repository.NewDropshipRepo(tx)
+	}
+
+	dp, err := dropRepo.GetDropshipPurchaseByID(ctx, kodePesanan)
+	if err != nil || dp == nil {
+		return fmt.Errorf("fetch DropshipPurchase %s: %w", kodePesanan, err)
+	}
+	exists, err := s.shopeeRepo.ExistsShopeeSettled(ctx, dp.KodeInvoiceChannel)
+	if err != nil {
+		return fmt.Errorf("check shopee settled: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("shopee settled order not found")
+	}
+	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 	}

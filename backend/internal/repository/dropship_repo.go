@@ -100,11 +100,11 @@ func (r *DropshipRepo) GetDropshipPurchaseByTransaction(ctx context.Context, kod
 	return &p, nil
 }
 
-// UpdateDropshipStatus updates status_pesanan_terakhir for the given kode_pesanan.
-func (r *DropshipRepo) UpdateDropshipStatus(ctx context.Context, kodePesanan, status string) error {
+// UpdatePurchaseStatus sets status_pesanan_terakhir for the given kode_pesanan.
+func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE dropship_purchases SET status_pesanan_terakhir=$1 WHERE kode_pesanan=$2`,
-		status, kodePesanan)
+		`UPDATE dropship_purchases SET status_pesanan_terakhir=$2 WHERE kode_pesanan=$1`,
+		kodePesanan, status)
 	return err
 }
 
