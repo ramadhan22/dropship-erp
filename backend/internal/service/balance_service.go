@@ -45,9 +45,9 @@ func (s *BalanceService) GetBalanceSheet(
 
 	// Initialize category groups
 	groups := map[string]*CategoryBalance{
-		"Asset":     {Category: "Assets"},
-		"Liability": {Category: "Liabilities"},
-		"Equity":    {Category: "Equity"},
+		"Asset":     {Category: "Assets", Accounts: []repository.AccountBalance{}},
+		"Liability": {Category: "Liabilities", Accounts: []repository.AccountBalance{}},
+		"Equity":    {Category: "Equity", Accounts: []repository.AccountBalance{}},
 	}
 
 	// Assign each account balance to its category
