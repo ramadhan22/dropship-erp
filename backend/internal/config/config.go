@@ -18,8 +18,9 @@ type Config struct {
 
 // ServerConfig contains HTTP server settings.
 type ServerConfig struct {
-	Host string
-	Port string
+	Host        string
+	Port        string
+	CorsOrigins []string `mapstructure:"cors_origins"`
 }
 
 // DatabaseConfig contains DB connection info.
@@ -46,6 +47,8 @@ func LoadConfig() (*Config, error) {
 	// Environment variables: use uppercase with underscores
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+	// Default CORS origin for local development
+	viper.SetDefault("server.cors_origins", []string{"http://localhost:5173"})
 
 	// Read from config.yaml
 	if err := viper.ReadInConfig(); err != nil {
@@ -58,6 +61,8 @@ func LoadConfig() (*Config, error) {
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to decode config into struct: %w", err)
 	}
+	// Handle slice parsing from env vars
+	cfg.Server.CorsOrigins = viper.GetStringSlice("server.cors_origins")
 
 	// Validate required fields
 	if cfg.Database.URL == "" {
