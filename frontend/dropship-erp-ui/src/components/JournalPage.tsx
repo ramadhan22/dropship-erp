@@ -23,8 +23,15 @@ import usePagination from "../usePagination";
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
   const { paginated, controls } = usePagination(list);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [entryDate, setEntryDate] = useState(
