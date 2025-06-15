@@ -44,6 +44,13 @@ export default function GLPage() {
   const [to, setTo] = useState(lastOfMonth);
   const [data, setData] = useState<Account[]>([]);
 
+  const totalDebit = data
+    .filter((a) => a.balance > 0)
+    .reduce((sum, a) => sum + a.balance, 0);
+  const totalCredit = data
+    .filter((a) => a.balance < 0)
+    .reduce((sum, a) => sum + -a.balance, 0);
+
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
   }, []);
@@ -136,6 +143,23 @@ export default function GLPage() {
               ))}
             </Fragment>
           ))}
+          <TableRow>
+            <TableCell colSpan={2} style={{ fontWeight: "bold" }}>
+              Total
+            </TableCell>
+            <TableCell align="right" style={{ fontWeight: "bold" }}>
+              {totalDebit.toLocaleString("id-ID", {
+                style: "currency",
+                currency: "IDR",
+              })}
+            </TableCell>
+            <TableCell align="right" style={{ fontWeight: "bold" }}>
+              {totalCredit.toLocaleString("id-ID", {
+                style: "currency",
+                currency: "IDR",
+              })}
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>
