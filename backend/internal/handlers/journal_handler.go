@@ -24,7 +24,10 @@ func (h *JournalHandler) RegisterRoutes(r gin.IRouter) {
 }
 
 func (h *JournalHandler) list(c *gin.Context) {
-	list, err := h.svc.List(context.Background())
+	from := c.Query("from")
+	to := c.Query("to")
+	desc := c.Query("q")
+	list, err := h.svc.List(context.Background(), from, to, desc)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
