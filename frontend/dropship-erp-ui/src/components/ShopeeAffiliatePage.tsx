@@ -13,6 +13,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import { useEffect, useState } from "react";
+import { getCurrentMonthRange } from "../utils/date";
 import {
   importShopeeAffiliate,
   listShopeeAffiliate,
@@ -23,13 +24,7 @@ import type { Column } from "./SortableTable";
 import type { ShopeeAffiliateSale } from "../types";
 
 export default function ShopeeAffiliatePage() {
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [order, setOrder] = useState("");

@@ -19,17 +19,12 @@ import {
 import { listAccounts } from "../api";
 import type { JournalEntry, Account, JournalLineDetail } from "../types";
 import usePagination from "../usePagination";
+import { getCurrentMonthRange } from "../utils/date";
 
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
   const { paginated, controls } = usePagination(list);
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [search, setSearch] = useState("");
