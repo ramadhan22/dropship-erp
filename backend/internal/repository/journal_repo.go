@@ -232,3 +232,22 @@ func (r *JournalRepo) DeleteJournalEntry(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM journal_entries WHERE journal_id=$1`, id)
 	return err
 }
+
+// GetJournalEntryBySource fetches a journal entry by its source type and source ID.
+func (r *JournalRepo) GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error) {
+	var je models.JournalEntry
+	err := r.db.GetContext(ctx, &je,
+		`SELECT * FROM journal_entries WHERE source_type=$1 AND source_id=$2 LIMIT 1`,
+		sourceType, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	return &je, nil
+}
+
+// UpdateJournalLineAmount updates the amount of a journal line identified by line_id.
+func (r *JournalRepo) UpdateJournalLineAmount(ctx context.Context, lineID int64, amount float64) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE journal_lines SET amount=$1 WHERE line_id=$2`, amount, lineID)
+	return err
+}

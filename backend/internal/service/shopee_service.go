@@ -13,6 +13,7 @@ import (
 	"github.com/xuri/excelize/v2"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // expectedHeaders lists column names (excluding the leading "No." column)
@@ -81,6 +82,9 @@ type ShopeeDropshipRepo interface {
 type ShopeeJournalRepo interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+	GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error)
+	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
+	UpdateJournalLineAmount(ctx context.Context, lineID int64, amount float64) error
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -215,6 +219,9 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		}
 		if err := s.repo.InsertShopeeAffiliateSale(ctx, entry); err != nil {
 			return inserted, fmt.Errorf("insert: %w", err)
+		}
+		if err := s.addAffiliateToJournal(ctx, entry); err != nil {
+			return inserted, fmt.Errorf("journal: %w", err)
 		}
 		inserted++
 	}
@@ -538,4 +545,46 @@ func abs(f float64) float64 {
 		return -f
 	}
 	return f
+}
+
+// addAffiliateToJournal inserts a Biaya Affiliate line into the existing
+// Shopee settled journal entry for the given sale and reduces the Saldo
+// Shopee line amount accordingly.
+func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.ShopeeAffiliateSale) error {
+	if s.journalRepo == nil || sale == nil || sale.Pengeluaran == 0 {
+		return nil
+	}
+	je, err := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_settled", sale.KodePesanan)
+	if err != nil || je == nil {
+		return err
+	}
+	lines, err := s.journalRepo.GetLinesByJournalID(ctx, je.JournalID)
+	if err != nil {
+		return err
+	}
+	var saldoLine *repository.JournalLineDetail
+	for i := range lines {
+		if lines[i].AccountID == saldoShopeeAccountID(je.Store) {
+			saldoLine = &lines[i]
+			break
+		}
+	}
+	if saldoLine == nil {
+		return fmt.Errorf("saldo line not found for journal %d", je.JournalID)
+	}
+	jl := &models.JournalLine{
+		JournalID: je.JournalID,
+		AccountID: 52005,
+		IsDebit:   true,
+		Amount:    sale.Pengeluaran,
+		Memo:      ptrString("Biaya Affiliate " + sale.KodePesanan),
+	}
+	if err := s.journalRepo.InsertJournalLine(ctx, jl); err != nil {
+		return err
+	}
+	newAmt := saldoLine.Amount - sale.Pengeluaran
+	if newAmt < 0 {
+		newAmt = 0
+	}
+	return s.journalRepo.UpdateJournalLineAmount(ctx, saldoLine.LineID, newAmt)
 }
