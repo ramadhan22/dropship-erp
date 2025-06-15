@@ -166,9 +166,19 @@ func (r *JournalRepo) GetJournalEntry(ctx context.Context, id int64) (*models.Jo
 }
 
 // ListJournalEntries returns all entries ordered by date desc.
-func (r *JournalRepo) ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error) {
+// ListJournalEntries returns journal entries filtered by optional date range and
+// description substring. Empty strings are ignored.
+func (r *JournalRepo) ListJournalEntries(
+	ctx context.Context,
+	from, to, desc string,
+) ([]models.JournalEntry, error) {
 	var list []models.JournalEntry
-	err := r.db.SelectContext(ctx, &list, `SELECT * FROM journal_entries ORDER BY entry_date DESC`)
+	query := `SELECT * FROM journal_entries
+                WHERE ($1 = '' OR DATE(entry_date) >= $1::date)
+                  AND ($2 = '' OR DATE(entry_date) <= $2::date)
+                  AND ($3 = '' OR COALESCE(description,'') ILIKE '%' || $3 || '%')
+                ORDER BY entry_date DESC`
+	err := r.db.SelectContext(ctx, &list, query, from, to, desc)
 	if list == nil {
 		list = []models.JournalEntry{}
 	}

@@ -27,7 +27,7 @@ func (f *fakeJournalRepo) InsertJournalLine(ctx context.Context, l *models.Journ
 	return nil
 }
 
-func (f *fakeJournalRepo) ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error) {
+func (f *fakeJournalRepo) ListJournalEntries(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error) {
 	return nil, nil
 }
 

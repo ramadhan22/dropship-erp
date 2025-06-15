@@ -12,7 +12,7 @@ import (
 type JournalRepoInterface interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
-	ListJournalEntries(ctx context.Context) ([]models.JournalEntry, error)
+	ListJournalEntries(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error)
 	GetJournalEntry(ctx context.Context, id int64) (*models.JournalEntry, error)
 	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
 	DeleteJournalEntry(ctx context.Context, id int64) error
@@ -27,8 +27,8 @@ func NewJournalService(db *sqlx.DB, r JournalRepoInterface) *JournalService {
 	return &JournalService{db: db, repo: r}
 }
 
-func (s *JournalService) List(ctx context.Context) ([]models.JournalEntry, error) {
-	return s.repo.ListJournalEntries(ctx)
+func (s *JournalService) List(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error) {
+	return s.repo.ListJournalEntries(ctx, from, to, desc)
 }
 
 func (s *JournalService) Get(ctx context.Context, id int64) (*models.JournalEntry, error) {

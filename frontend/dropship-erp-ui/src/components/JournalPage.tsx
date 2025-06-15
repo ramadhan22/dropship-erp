@@ -10,7 +10,12 @@ import {
 } from "@mui/material";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
-import { listJournal, deleteJournal, createJournal, getJournalLines } from "../api/journal";
+import {
+  listJournal,
+  deleteJournal,
+  createJournal,
+  getJournalLines,
+} from "../api/journal";
 import { listAccounts } from "../api";
 import type { JournalEntry, Account, JournalLineDetail } from "../types";
 import usePagination from "../usePagination";
@@ -18,6 +23,9 @@ import usePagination from "../usePagination";
 export default function JournalPage() {
   const [list, setList] = useState<JournalEntry[]>([]);
   const { paginated, controls } = usePagination(list);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [entryDate, setEntryDate] = useState(
     () => new Date().toISOString().split("T")[0],
@@ -33,7 +41,8 @@ export default function JournalPage() {
   } | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLines, setDetailLines] = useState<JournalLineDetail[]>([]);
-  const { paginated: linesPage, controls: lineControls } = usePagination(detailLines);
+  const { paginated: linesPage, controls: lineControls } =
+    usePagination(detailLines);
   const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
   const lineColumns: Column<JournalLineDetail>[] = [
     { label: "Account", key: "account_name" },
@@ -98,9 +107,17 @@ export default function JournalPage() {
       ),
     },
   ];
-  const fetchData = () => listJournal().then((r) => setList(r.data));
+  const fetchData = () =>
+    listJournal({
+      from: from || undefined,
+      to: to || undefined,
+      q: search || undefined,
+    }).then((r) => setList(r.data));
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to, search]);
+  useEffect(() => {
     listAccounts().then((r) => setAccounts(r.data));
   }, []);
   return (
@@ -109,6 +126,30 @@ export default function JournalPage() {
       <Button variant="contained" onClick={() => setOpen(true)} sx={{ mb: 2 }}>
         Add Journal
       </Button>
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+        <TextField
+          label="Search"
+          size="small"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <TextField
+          label="From"
+          type="date"
+          size="small"
+          value={from}
+          InputLabelProps={{ shrink: true }}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <TextField
+          label="To"
+          type="date"
+          size="small"
+          value={to}
+          InputLabelProps={{ shrink: true }}
+          onChange={(e) => setTo(e.target.value)}
+        />
+      </div>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
       <SortableTable
         columns={columns}
