@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -68,6 +69,7 @@ type ShopeeRepoInterface interface {
 	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
 	ListShopeeAffiliateSales(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumShopeeAffiliateSales(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
+	GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error)
 }
 
 type ShopeeDropshipRepo interface {
@@ -76,14 +78,22 @@ type ShopeeDropshipRepo interface {
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
+type ShopeeJournalRepo interface {
+	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
+	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+}
+
+// ShopeeService handles import of settled Shopee orders from XLSX files.
 type ShopeeService struct {
+	db           *sqlx.DB
 	repo         ShopeeRepoInterface
 	dropshipRepo ShopeeDropshipRepo
+	journalRepo  ShopeeJournalRepo
 }
 
 // NewShopeeService constructs a ShopeeService.
-func NewShopeeService(r ShopeeRepoInterface, dr ShopeeDropshipRepo) *ShopeeService {
-	return &ShopeeService{repo: r, dropshipRepo: dr}
+func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo) *ShopeeService {
+	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr}
 }
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
@@ -150,6 +160,9 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 		if err := s.repo.InsertShopeeSettled(ctx, entry); err != nil {
 			return inserted, fmt.Errorf("insert row %d: %w", i+1, err)
+		}
+		if err := s.createSettlementJournal(ctx, s.journalRepo, s.repo, entry); err != nil {
+			return inserted, fmt.Errorf("journal row %d: %w", i+1, err)
 		}
 		inserted++
 	}
@@ -474,4 +487,55 @@ func (s *ShopeeService) SumAffiliate(
 	date, month, year string,
 ) (*models.ShopeeAffiliateSummary, error) {
 	return s.repo.SumShopeeAffiliateSales(ctx, date, month, year)
+}
+
+func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJournalRepo, repo ShopeeRepoInterface, entry *models.ShopeeSettled) error {
+	if jr == nil {
+		return nil
+	}
+	affiliate, _ := repo.GetAffiliateExpenseByOrder(ctx, entry.NoPesanan)
+	netSale := entry.HargaAsliProduk - entry.TotalDiskonProduk
+	voucher := abs(entry.BiayaAdminShopee)
+	admin := abs(entry.PromoGratisOngkirPenjual)
+	layanan := abs(entry.PromoDiskonShopee)
+	affiliateAmt := abs(affiliate)
+	saldo := netSale - voucher - admin - layanan - affiliateAmt
+
+	je := &models.JournalEntry{
+		EntryDate:    entry.TanggalDanaDilepaskan,
+		Description:  ptrString("Shopee settled " + entry.NoPesanan),
+		SourceType:   "shopee_settled",
+		SourceID:     entry.NoPesanan,
+		ShopUsername: entry.NamaToko,
+		Store:        entry.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: pendingAccountID(entry.NamaToko), IsDebit: false, Amount: netSale, Memo: ptrString("Pending " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52006, IsDebit: true, Amount: admin, Memo: ptrString("Biaya Administrasi " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52004, IsDebit: true, Amount: layanan, Memo: ptrString("Biaya Layanan " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52005, IsDebit: true, Amount: affiliateAmt, Memo: ptrString("Biaya Affiliate " + entry.NoPesanan)},
+		{JournalID: id, AccountID: saldoShopeeAccountID(entry.NamaToko), IsDebit: true, Amount: saldo, Memo: ptrString("Saldo Shopee " + entry.NoPesanan)},
+	}
+	for i := range lines {
+		if lines[i].Amount == 0 {
+			continue
+		}
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func abs(f float64) float64 {
+	if f < 0 {
+		return -f
+	}
+	return f
 }

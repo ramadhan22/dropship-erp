@@ -297,3 +297,12 @@ func (r *ShopeeRepo) SumShopeeAffiliateSales(
 	}
 	return &sum, nil
 }
+
+// GetAffiliateExpenseByOrder sums the pengeluaran for a given kode_pesanan.
+func (r *ShopeeRepo) GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error) {
+	var amt float64
+	err := r.db.GetContext(ctx, &amt,
+		`SELECT COALESCE(SUM(pengeluaran),0) FROM shopee_affiliate_sales WHERE kode_pesanan=$1`,
+		kodePesanan)
+	return amt, err
+}
