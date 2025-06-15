@@ -42,6 +42,11 @@ export default function DropshipImport() {
 
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
+  const [order, setOrder] = useState("");
+  const [sortKey, setSortKey] = useState<keyof DropshipPurchase>(
+    "waktu_pesanan_terbuat",
+  );
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const now = new Date();
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
@@ -154,6 +159,9 @@ export default function DropshipImport() {
       store,
       from,
       to,
+      order,
+      sort: sortKey as string,
+      dir: sortDir,
       page,
       page_size: pageSize,
     });
@@ -175,7 +183,7 @@ export default function DropshipImport() {
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, from, to, page]);
+  }, [channel, store, from, to, page, order, sortKey, sortDir]);
 
   const handleSubmit = async () => {
     try {
@@ -233,6 +241,16 @@ export default function DropshipImport() {
             </option>
           ))}
         </select>
+        <input
+          aria-label="Search Order"
+          placeholder="Order No"
+          value={order}
+          onChange={(e) => {
+            setOrder(e.target.value);
+            setPage(1);
+          }}
+          style={{ height: "2rem" }}
+        />
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
             label="From"
@@ -320,6 +338,10 @@ export default function DropshipImport() {
           columns={columns}
           data={data}
           defaultSort={{ key: "waktu_pesanan_terbuat", direction: "desc" }}
+          onSortChange={(k, d) => {
+            setSortKey(k);
+            setSortDir(d);
+          }}
         />
       </div>
       <div style={{ marginTop: "0.5rem" }}>

@@ -63,7 +63,7 @@ var expectedHeaders = []string{
 type ShopeeRepoInterface interface {
 	InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error
 	InsertShopeeAffiliateSale(ctx context.Context, s *models.ShopeeAffiliateSale) error
-	ListShopeeSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error)
+	ListShopeeSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
@@ -460,10 +460,10 @@ func formatNamaToko(username string) string {
 // ListSettled proxies to the repository for fetching settled orders with filters.
 func (s *ShopeeService) ListSettled(
 	ctx context.Context,
-	channel, store, from, to string,
+	channel, store, from, to, orderNo, sortBy, dir string,
 	limit, offset int,
 ) ([]models.ShopeeSettled, int, error) {
-	return s.repo.ListShopeeSettled(ctx, channel, store, from, to, limit, offset)
+	return s.repo.ListShopeeSettled(ctx, channel, store, from, to, orderNo, sortBy, dir, limit, offset)
 }
 
 func (s *ShopeeService) SumShopeeSettled(

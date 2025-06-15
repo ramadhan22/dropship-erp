@@ -67,7 +67,7 @@ func (f *fakeShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID,
 	return f.existing[orderID], nil
 }
 
-func (f *fakeShopeeRepo) ListShopeeSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error) {
+func (f *fakeShopeeRepo) ListShopeeSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error) {
 	return nil, 0, nil
 }
 

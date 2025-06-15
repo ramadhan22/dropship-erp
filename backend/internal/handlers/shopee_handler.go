@@ -14,7 +14,7 @@ import (
 type ShopeeServiceInterface interface {
 	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error)
 	ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error)
-	ListSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error)
+	ListSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumAffiliate(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
@@ -79,6 +79,9 @@ func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 	store := c.Query("store")
 	from := c.Query("from")
 	to := c.Query("to")
+	orderNo := c.Query("order")
+	sortBy := c.DefaultQuery("sort", "waktu_pesanan_dibuat")
+	dir := c.DefaultQuery("dir", "desc")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	if page < 1 {
@@ -89,7 +92,7 @@ func (h *ShopeeHandler) HandleListSettled(c *gin.Context) {
 	}
 	offset := (page - 1) * size
 	ctx := c.Request.Context()
-	list, total, err := h.svc.ListSettled(ctx, channel, store, from, to, size, offset)
+	list, total, err := h.svc.ListSettled(ctx, channel, store, from, to, orderNo, sortBy, dir, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

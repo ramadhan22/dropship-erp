@@ -13,7 +13,7 @@ import (
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
 	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
-	ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
@@ -56,6 +56,9 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 	store := c.Query("store")
 	from := c.Query("from")
 	to := c.Query("to")
+	orderNo := c.Query("order")
+	sortBy := c.DefaultQuery("sort", "waktu_pesanan_terbuat")
+	dir := c.DefaultQuery("dir", "desc")
 	pageStr := c.DefaultQuery("page", "1")
 	sizeStr := c.DefaultQuery("page_size", "10")
 	page, _ := strconv.Atoi(pageStr)
@@ -69,7 +72,7 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 	limit := size
 	offset := (page - 1) * size
 
-	list, total, err := h.svc.ListDropshipPurchases(context.Background(), channel, store, from, to, limit, offset)
+	list, total, err := h.svc.ListDropshipPurchases(context.Background(), channel, store, from, to, orderNo, sortBy, dir, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

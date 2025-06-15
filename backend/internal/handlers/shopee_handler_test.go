@@ -33,7 +33,7 @@ func (f *fakeShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader)
 	return 1, nil
 }
 
-func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error) {
+func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error) {
 	return nil, 0, nil
 }
 
