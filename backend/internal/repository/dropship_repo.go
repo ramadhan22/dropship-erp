@@ -89,6 +89,25 @@ func (r *DropshipRepo) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInv
 	return &p, nil
 }
 
+// GetDropshipPurchaseByTransaction retrieves a purchase by kode_transaksi.
+func (r *DropshipRepo) GetDropshipPurchaseByTransaction(ctx context.Context, kodeTransaksi string) (*models.DropshipPurchase, error) {
+	var p models.DropshipPurchase
+	err := r.db.GetContext(ctx, &p,
+		`SELECT * FROM dropship_purchases WHERE kode_transaksi = $1`, kodeTransaksi)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+// UpdateDropshipStatus updates status_pesanan_terakhir for the given kode_pesanan.
+func (r *DropshipRepo) UpdateDropshipStatus(ctx context.Context, kodePesanan, status string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE dropship_purchases SET status_pesanan_terakhir=$1 WHERE kode_pesanan=$2`,
+		status, kodePesanan)
+	return err
+}
+
 // ListDropshipPurchasesByShopAndDate returns all dropship purchases for a given shop_username
 // whose purchase_date falls between two string‐formatted dates (YYYY-MM-DD).
 // This lets you pull a slice of purchases to, for example, generate reports or feed reconciliation logic.

@@ -76,6 +76,8 @@ type ShopeeRepoInterface interface {
 type ShopeeDropshipRepo interface {
 	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
+	GetDropshipPurchaseByTransaction(ctx context.Context, kodeTransaksi string) (*models.DropshipPurchase, error)
+	UpdateDropshipStatus(ctx context.Context, kodePesanan, status string) error
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -167,6 +169,14 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 		if err := s.createSettlementJournal(ctx, s.journalRepo, s.repo, entry); err != nil {
 			return inserted, fmt.Errorf("journal row %d: %w", i+1, err)
+		}
+		// Update related dropship purchase status if applicable
+		if s.dropshipRepo != nil && entry.NoPengajuan != "" {
+			if dp, _ := s.dropshipRepo.GetDropshipPurchaseByTransaction(ctx, entry.NoPengajuan); dp != nil {
+				if dp.StatusPesananTerakhir != "Pesanan selesai" && dp.StatusPesananTerakhir != "Pesanan dibatalkan" {
+					_ = s.dropshipRepo.UpdateDropshipStatus(ctx, dp.KodePesanan, "Pesanan selesai")
+				}
+			}
 		}
 		inserted++
 	}
