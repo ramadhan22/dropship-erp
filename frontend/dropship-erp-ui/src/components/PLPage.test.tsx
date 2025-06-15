@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
-import { fireEvent, screen, waitFor } from "@testing-library/dom";
+import { waitFor } from "@testing-library/dom";
 import * as api from "../api/pl";
 import PLPage from "./PLPage";
 
@@ -11,22 +11,17 @@ jest.mock("../api", () => ({
 }));
 
 jest.mock("../api/pl", () => ({
-  fetchPL: jest.fn().mockResolvedValue({ data: { net_profit: 1 } }),
+  fetchProfitLoss: jest.fn().mockResolvedValue({ data: {} }),
 }));
 
-test("fetch pl", async () => {
+test("fetch profit loss", async () => {
   render(<PLPage />);
   await waitFor(() =>
-    expect(api.fetchPL).toHaveBeenCalledWith(
-      "",
-      new Date().toISOString().slice(0, 7),
-    ),
-  );
-  fireEvent.change(screen.getByLabelText(/Period/i, { selector: "input" }), {
-    target: { value: "2025-05" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));
-  await waitFor(() =>
-    expect(api.fetchPL).toHaveBeenLastCalledWith("", "2025-05"),
+    expect(api.fetchProfitLoss).toHaveBeenCalledWith({
+      type: "Monthly",
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      store: "",
+    }),
   );
 });
