@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
 import type { BalanceCategory, Store, Account } from "../types";
 import usePagination from "../usePagination";
-import SortableTable, { Column } from "./SortableTable";
+import SortableTable from "./SortableTable";
+import type { Column } from "./SortableTable";
 
 function AccountTable({ accounts }: { accounts: Account[] }) {
   const { paginated, controls } = usePagination(accounts);

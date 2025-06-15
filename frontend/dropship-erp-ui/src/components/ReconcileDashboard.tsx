@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Checkbox, FormControlLabel } from "@mui/material";
-import SortableTable, { Column } from "./SortableTable";
+import SortableTable from "./SortableTable";
+import type { Column } from "./SortableTable";
 import { listCandidates, bulkReconcile } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";

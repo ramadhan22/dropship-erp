@@ -8,7 +8,8 @@ import {
   TextField,
   Alert,
 } from "@mui/material";
-import SortableTable, { Column } from "./SortableTable";
+import SortableTable from "./SortableTable";
+import type { Column } from "./SortableTable";
 import { listJournal, deleteJournal, createJournal, getJournalLines } from "../api/journal";
 import { listAccounts } from "../api";
 import type { JournalEntry, Account, JournalLineDetail } from "../types";
