@@ -70,7 +70,7 @@ func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop string) ([]mode
                FROM dropship_purchases dp
                LEFT JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
                WHERE ($1 = '' OR dp.nama_toko = $1)
-                 AND (dp.status_pesanan_terakhir <> 'Pesanan selesai' or dp.status_pesanan_terakhir <> 'Pesanan dibatalkan')
+                 AND (dp.status_pesanan_terakhir <> 'Pesanan selesai' and dp.status_pesanan_terakhir <> 'Pesanan dibatalkan')
                ORDER BY dp.waktu_pesanan_terbuat DESC`
 	var list []models.ReconcileCandidate
 	err := r.db.SelectContext(ctx, &list, query, shop)
