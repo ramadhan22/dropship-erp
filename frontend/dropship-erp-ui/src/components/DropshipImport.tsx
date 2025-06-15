@@ -17,6 +17,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
+import { getCurrentMonthRange } from "../utils/date";
 import {
   importDropship,
   listDropshipPurchases,
@@ -47,13 +48,7 @@ export default function DropshipImport() {
     "waktu_pesanan_terbuat",
   );
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [page, setPage] = useState(1);

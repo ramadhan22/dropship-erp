@@ -12,6 +12,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { fetchGeneralLedger } from "../api/gl";
 import { listAllStores } from "../api";
+import { getCurrentMonthRange } from "../utils/date";
 import type { Account, Store } from "../types";
 
 interface AccountGroup {
@@ -33,13 +34,7 @@ function groupByType(data: Account[]): AccountGroup[] {
 export default function GLPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [data, setData] = useState<Account[]>([]);
