@@ -23,6 +23,11 @@ jest.mock("../api/gl", () => ({
   }),
 }));
 
+test("auto fetch on mount", async () => {
+  render(<GLPage />);
+  await waitFor(() => expect(api.fetchGeneralLedger).toHaveBeenCalled());
+});
+
 test("fetch gl grouped", async () => {
   render(<GLPage />);
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });

@@ -55,6 +55,10 @@ export default function GLPage() {
     listAllStores().then((s) => setStores(s));
   }, []);
 
+  useEffect(() => {
+    handleFetch();
+  }, [shop]);
+
   const handleFetch = async () => {
     const res = await fetchGeneralLedger(shop, from, to);
     setData(res.data);
