@@ -35,10 +35,7 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const [period, setPeriod] = useState(firstOfMonth);
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [data, setData] = useState<BalanceCategory[]>([]);
 
   useEffect(() => {
@@ -51,7 +48,7 @@ export default function BalanceSheetPage() {
   }, []);
 
   const handleFetch = async () => {
-    const res = await fetchBalanceSheet(shop, period.slice(0, 7));
+    const res = await fetchBalanceSheet(shop, period);
     setData(res.data);
   };
 
@@ -74,12 +71,13 @@ export default function BalanceSheetPage() {
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
           label="Period"
-          views={["year", "month", "day"]}
-          format="yyyy-MM-dd"
+          views={["year", "month"]}
+          openTo="month"
+          format="yyyy-MM"
           value={new Date(period)}
           onChange={(date) => {
             if (!date) return;
-            setPeriod(date.toISOString().split("T")[0]);
+            setPeriod(date.toISOString().slice(0, 7));
           }}
           slotProps={{ textField: { size: "small", sx: { mr: 2 }, InputLabelProps: { shrink: true } } }}
         />
