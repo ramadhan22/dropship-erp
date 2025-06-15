@@ -67,8 +67,8 @@ type ShopeeRepoInterface interface {
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
 	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
-	ListShopeeAffiliateSales(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
-	SumShopeeAffiliateSales(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
+	ListShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
+	SumShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error)
 }
 
@@ -476,17 +476,17 @@ func (s *ShopeeService) SumShopeeSettled(
 // ListAffiliate proxies to the repository for fetching affiliate sales with filters.
 func (s *ShopeeService) ListAffiliate(
 	ctx context.Context,
-	date, month, year string,
+	noPesanan, from, to string,
 	limit, offset int,
 ) ([]models.ShopeeAffiliateSale, int, error) {
-	return s.repo.ListShopeeAffiliateSales(ctx, date, month, year, limit, offset)
+	return s.repo.ListShopeeAffiliateSales(ctx, noPesanan, from, to, limit, offset)
 }
 
 func (s *ShopeeService) SumAffiliate(
 	ctx context.Context,
-	date, month, year string,
+	noPesanan, from, to string,
 ) (*models.ShopeeAffiliateSummary, error) {
-	return s.repo.SumShopeeAffiliateSales(ctx, date, month, year)
+	return s.repo.SumShopeeAffiliateSales(ctx, noPesanan, from, to)
 }
 
 func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJournalRepo, repo ShopeeRepoInterface, entry *models.ShopeeSettled) error {
