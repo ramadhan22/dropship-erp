@@ -30,6 +30,8 @@ type fakeJournalRepoS struct {
 
 type fakeDropRepoA struct {
 	byInvoice map[string]*models.DropshipPurchase
+	byTrans   map[string]*models.DropshipPurchase
+	updated   map[string]string
 }
 
 func (f *fakeDropRepoA) GetDropshipPurchaseByInvoice(ctx context.Context, inv string) (*models.DropshipPurchase, error) {
@@ -41,6 +43,24 @@ func (f *fakeDropRepoA) GetDropshipPurchaseByInvoice(ctx context.Context, inv st
 
 func (f *fakeDropRepoA) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
 	return nil, nil
+}
+
+func (f *fakeDropRepoA) GetDropshipPurchaseByTransaction(ctx context.Context, trx string) (*models.DropshipPurchase, error) {
+	if f.byTrans == nil {
+		return nil, nil
+	}
+	if dp, ok := f.byTrans[trx]; ok {
+		return dp, nil
+	}
+	return nil, nil
+}
+
+func (f *fakeDropRepoA) UpdateDropshipStatus(ctx context.Context, kode, status string) error {
+	if f.updated == nil {
+		f.updated = map[string]string{}
+	}
+	f.updated[kode] = status
+	return nil
 }
 
 func (f *fakeJournalRepoS) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
@@ -223,6 +243,51 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 	}
 	if inserted != 0 || repo.count != 0 {
 		t.Fatalf("expected 0 insert, got svc %d repo %d", inserted, repo.count)
+	}
+}
+
+func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Data")
+	headers := append([]string{"No."}, expectedHeaders...)
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		f.SetCellValue("Data", cell, h)
+	}
+	data := []interface{}{
+		1, "SO-2", "TRX-1", "user", "2025-01-01", "COD", "2025-01-02",
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1,
+		1,
+		1,
+		1,
+		"jne", "kurir", "",
+		1, 1, 1, 1, 1,
+	}
+	for i, v := range data {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		f.SetCellValue("Data", cell, v)
+	}
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeShopeeRepo{}
+	drop := &fakeDropRepoA{byTrans: map[string]*models.DropshipPurchase{
+		"TRX-1": {KodePesanan: "DP1", StatusPesananTerakhir: "Diproses"},
+	}}
+	svc := NewShopeeService(nil, repo, drop, nil)
+	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 1 || repo.count != 1 {
+		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
+	}
+	if drop.updated["DP1"] != "Pesanan selesai" {
+		t.Fatalf("expected status update, got %v", drop.updated)
 	}
 }
 

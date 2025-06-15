@@ -89,6 +89,17 @@ func (r *DropshipRepo) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInv
 	return &p, nil
 }
 
+// GetDropshipPurchaseByTransaction retrieves a purchase by kode_transaksi.
+func (r *DropshipRepo) GetDropshipPurchaseByTransaction(ctx context.Context, kodeTransaksi string) (*models.DropshipPurchase, error) {
+	var p models.DropshipPurchase
+	err := r.db.GetContext(ctx, &p,
+		`SELECT * FROM dropship_purchases WHERE kode_transaksi = $1`, kodeTransaksi)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 // UpdatePurchaseStatus sets status_pesanan_terakhir for the given kode_pesanan.
 func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error {
 	_, err := r.db.ExecContext(ctx,
