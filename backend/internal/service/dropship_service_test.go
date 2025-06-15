@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // fakeDropshipRepo captures calls to InsertDropshipPurchase.
@@ -72,6 +73,31 @@ func (f *fakeJournalRepoDrop) CreateJournalEntry(ctx context.Context, e *models.
 
 func (f *fakeJournalRepoDrop) InsertJournalLine(ctx context.Context, l *models.JournalLine) error {
 	f.lines = append(f.lines, l)
+	return nil
+}
+func (f *fakeJournalRepoDrop) GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error) {
+	for _, e := range f.entries {
+		if e.SourceType == sourceType && e.SourceID == sourceID {
+			return e, nil
+		}
+	}
+	return nil, nil
+}
+func (f *fakeJournalRepoDrop) GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error) {
+	res := []repository.JournalLineDetail{}
+	for _, l := range f.lines {
+		if l.JournalID == id {
+			res = append(res, repository.JournalLineDetail{LineID: l.LineID, JournalID: l.JournalID, AccountID: l.AccountID, IsDebit: l.IsDebit, Amount: l.Amount})
+		}
+	}
+	return res, nil
+}
+func (f *fakeJournalRepoDrop) UpdateJournalLineAmount(ctx context.Context, lineID int64, amount float64) error {
+	for _, l := range f.lines {
+		if l.LineID == lineID {
+			l.Amount = amount
+		}
+	}
 	return nil
 }
 
