@@ -122,7 +122,7 @@ func (r *DropshipRepo) ListDropshipPurchases(
                   AND ($2 = '' OR nama_toko = $2)
                   AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
                   AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)
-                  AND ($5 = '' OR kode_pesanan ILIKE '%' || $5 || '%')`
+                  AND ($5 = '' OR kode_invoice_channel ILIKE '%' || $5 || '%')`
 	var total int
 	if err := r.db.GetContext(ctx, &total, countQuery,
 		channel, store, from, to, orderNo); err != nil {
@@ -146,7 +146,7 @@ func (r *DropshipRepo) ListDropshipPurchases(
                   AND ($2 = '' OR nama_toko = $2)
                   AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
                   AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)
-                  AND ($5 = '' OR kode_pesanan ILIKE '%%' || $5 || '%%')
+                  AND ($5 = '' OR kode_invoice_channel ILIKE '%%' || $5 || '%%')
                 ORDER BY %s %s
                 LIMIT $6 OFFSET $7`, sortCol, direction)
 	var list []models.DropshipPurchase
