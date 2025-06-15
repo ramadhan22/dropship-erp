@@ -35,17 +35,23 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [period, setPeriod] = useState(
-    new Date().toISOString().slice(0, 7),
-  );
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const [period, setPeriod] = useState(firstOfMonth);
   const [data, setData] = useState<BalanceCategory[]>([]);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
   }, []);
 
+  useEffect(() => {
+    handleFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleFetch = async () => {
-    const res = await fetchBalanceSheet(shop, period);
+    const res = await fetchBalanceSheet(shop, period.slice(0, 7));
     setData(res.data);
   };
 
@@ -58,7 +64,7 @@ export default function BalanceSheetPage() {
         onChange={(e) => setShop(e.target.value)}
         style={{ marginRight: "0.5rem" }}
       >
-        <option value="">Select Store</option>
+        <option value="">All Stores</option>
         {stores.map((s) => (
           <option key={s.store_id} value={s.nama_toko}>
             {s.nama_toko}
@@ -67,14 +73,13 @@ export default function BalanceSheetPage() {
       </select>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
-          label="Period (YYYY-MM)"
-          views={["year", "month"]}
-          openTo="month"
-          format="yyyy-MM"
-          value={period ? new Date(period) : null}
+          label="Period"
+          views={["year", "month", "day"]}
+          format="yyyy-MM-dd"
+          value={new Date(period)}
           onChange={(date) => {
             if (!date) return;
-            setPeriod(date.toISOString().slice(0, 7));
+            setPeriod(date.toISOString().split("T")[0]);
           }}
           slotProps={{ textField: { size: "small", sx: { mr: 2 }, InputLabelProps: { shrink: true } } }}
         />

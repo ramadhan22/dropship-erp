@@ -6,11 +6,16 @@ import * as api from "../api";
 import BalanceSheetPage from "./BalanceSheetPage";
 
 jest.mock("../api", () => ({
-  fetchBalanceSheet: jest.fn(),
+  fetchBalanceSheet: jest.fn().mockResolvedValue({ data: [] }),
   listAllStores: jest.fn().mockResolvedValue([]),
 }));
 
 describe("BalanceSheetPage", () => {
+  it("auto fetch on mount", async () => {
+    render(<BalanceSheetPage />);
+    await waitFor(() => expect(api.fetchBalanceSheet).toHaveBeenCalled());
+  });
+
   it("fetch & display", async () => {
     const mock = [{ category: "Assets", accounts: [], total: 100 }];
     jest
@@ -22,7 +27,7 @@ describe("BalanceSheetPage", () => {
       target: { value: "S" },
     });
     fireEvent.change(screen.getByLabelText(/Period/i, { selector: "input" }), {
-      target: { value: "2025-05" },
+      target: { value: "2025-05-15" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));
     await waitFor(() => screen.getByText(/Assets/i));
