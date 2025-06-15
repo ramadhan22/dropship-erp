@@ -8,9 +8,19 @@ export interface Column<T> {
   align?: "left" | "right" | "center";
 }
 
-export default function SortableTable<T extends Record<string, any>>({ columns, data }: { columns: Column<T>[]; data: T[] }) {
-  const [sortKey, setSortKey] = useState<keyof T | null>(null);
-  const [direction, setDirection] = useState<"asc" | "desc">("asc");
+export default function SortableTable<T extends Record<string, any>>({
+  columns,
+  data,
+  defaultSort,
+}: {
+  columns: Column<T>[];
+  data: T[];
+  defaultSort?: { key: keyof T; direction?: "asc" | "desc" };
+}) {
+  const [sortKey, setSortKey] = useState<keyof T | null>(defaultSort?.key ?? null);
+  const [direction, setDirection] = useState<"asc" | "desc">(
+    defaultSort?.direction ?? "asc",
+  );
 
   const sorted = [...data];
   if (sortKey) {

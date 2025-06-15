@@ -608,7 +608,11 @@ export default function ShopeeSalesPage() {
         </Table>
       )}
       <div style={{ overflowX: "auto" }}>
-        <SortableTable columns={columns} data={data} />
+        <SortableTable
+          columns={columns}
+          data={data}
+          defaultSort={{ key: "waktu_pesanan_dibuat", direction: "desc" }}
+        />
       </div>
       <Pagination
         sx={{ mt: 2 }}

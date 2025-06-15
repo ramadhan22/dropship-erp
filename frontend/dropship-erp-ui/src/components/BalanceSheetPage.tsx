@@ -1,16 +1,6 @@
 // File: src/components/BalanceSheetPage.tsx
 
-import {
-  Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Button, Card, CardContent, Typography } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -18,34 +8,24 @@ import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
 import type { BalanceCategory, Store, Account } from "../types";
 import usePagination from "../usePagination";
+import SortableTable, { Column } from "./SortableTable";
 
 function AccountTable({ accounts }: { accounts: Account[] }) {
   const { paginated, controls } = usePagination(accounts);
+  const columns: Column<Account>[] = [
+    { label: "Code", key: "account_code" },
+    { label: "Name", key: "account_name" },
+    {
+      label: "Balance",
+      key: "balance",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+  ];
   return (
     <>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Code</TableCell>
-            <TableCell>Name</TableCell>
-            <TableCell align="right">Balance</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginated.map((a) => (
-            <TableRow key={a.account_id}>
-              <TableCell>{a.account_code}</TableCell>
-              <TableCell>{a.account_name}</TableCell>
-              <TableCell align="right">
-                {a.balance.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <SortableTable columns={columns} data={paginated} />
       {controls}
     </>
   );

@@ -2,16 +2,12 @@ import {
   Alert,
   Button,
   TextField,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import SortableTable, { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
 import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
 import type { Expense } from "../types";
@@ -54,6 +50,31 @@ export default function ExpensePage() {
     }
   };
 
+  const columns: Column<Expense>[] = [
+    { label: "Description", key: "description" },
+    {
+      label: "Amount",
+      key: "amount",
+      align: "right",
+      render: (v) =>
+        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+    },
+    { label: "Account", key: "account_id" },
+    {
+      label: "",
+      render: (_, e) => (
+        <Button
+          size="small"
+          onClick={() => {
+            deleteExpense(e.id).then(fetchData);
+          }}
+        >
+          Del
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div>
       <h2>Expenses</h2>
@@ -61,40 +82,7 @@ export default function ExpensePage() {
         Add Expense
       </Button>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Description</TableCell>
-            <TableCell align="right">Amount</TableCell>
-            <TableCell>Account</TableCell>
-            <TableCell></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginated.map((e) => (
-            <TableRow key={e.id}>
-              <TableCell>{e.description}</TableCell>
-              <TableCell align="right">
-                {e.amount.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </TableCell>
-              <TableCell>{e.account_id}</TableCell>
-              <TableCell>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    deleteExpense(e.id).then(fetchData);
-                  }}
-                >
-                  Del
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <SortableTable columns={columns} data={paginated} />
       {controls}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add Expense</DialogTitle>

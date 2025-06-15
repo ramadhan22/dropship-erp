@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
   Button,
   Dialog,
   DialogTitle,
@@ -13,6 +8,7 @@ import {
   TextField,
   Alert,
 } from "@mui/material";
+import SortableTable, { Column } from "./SortableTable";
 import { listJournal, deleteJournal, createJournal, getJournalLines } from "../api/journal";
 import { listAccounts } from "../api";
 import type { JournalEntry, Account, JournalLineDetail } from "../types";
@@ -38,6 +34,69 @@ export default function JournalPage() {
   const [detailLines, setDetailLines] = useState<JournalLineDetail[]>([]);
   const { paginated: linesPage, controls: lineControls } = usePagination(detailLines);
   const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
+  const lineColumns: Column<JournalLineDetail>[] = [
+    { label: "Account", key: "account_name" },
+    {
+      label: "Debit",
+      key: "amount",
+      align: "right",
+      render: (_, row) =>
+        row.is_debit
+          ? row.amount.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            })
+          : "",
+    },
+    {
+      label: "Credit",
+      key: "amount",
+      align: "right",
+      render: (_, row) =>
+        !row.is_debit
+          ? row.amount.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            })
+          : "",
+    },
+  ];
+  const columns: Column<JournalEntry>[] = [
+    { label: "ID", key: "journal_id" },
+    {
+      label: "Date",
+      key: "entry_date",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
+    { label: "Description", key: "description" },
+    {
+      label: "",
+      render: (_, j) => (
+        <>
+          <Button
+            size="small"
+            onClick={() => {
+              setDetailEntry(j);
+              getJournalLines(j.journal_id).then((r) => {
+                setDetailLines(r.data);
+                setDetailOpen(true);
+              });
+            }}
+          >
+            Detail
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              deleteJournal(j.journal_id).then(fetchData);
+            }}
+          >
+            Del
+          </Button>
+        </>
+      ),
+    },
+  ];
   const fetchData = () => listJournal().then((r) => setList(r.data));
   useEffect(() => {
     fetchData();
@@ -50,49 +109,11 @@ export default function JournalPage() {
         Add Journal
       </Button>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginated.map((j) => (
-            <TableRow key={j.journal_id}>
-              <TableCell>{j.journal_id}</TableCell>
-              <TableCell>
-                {new Date(j.entry_date).toLocaleDateString()}
-              </TableCell>
-              <TableCell>{j.description}</TableCell>
-              <TableCell>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setDetailEntry(j);
-                    getJournalLines(j.journal_id).then((r) => {
-                      setDetailLines(r.data);
-                      setDetailOpen(true);
-                    });
-                  }}
-                >
-                  Detail
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    deleteJournal(j.journal_id).then(fetchData);
-                  }}
-                >
-                  Del
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <SortableTable
+        columns={columns}
+        data={paginated}
+        defaultSort={{ key: "entry_date", direction: "desc" }}
+      />
       {controls}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add Journal</DialogTitle>
@@ -219,38 +240,7 @@ export default function JournalPage() {
               <div>Description: {detailEntry.description}</div>
             </div>
           )}
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Account</TableCell>
-                <TableCell align="right">Debit</TableCell>
-                <TableCell align="right">Credit</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {linesPage.map((l) => (
-                <TableRow key={l.line_id}>
-                  <TableCell>{l.account_name}</TableCell>
-                  <TableCell align="right">
-                    {l.is_debit
-                      ? l.amount.toLocaleString("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                        })
-                      : ""}
-                  </TableCell>
-                  <TableCell align="right">
-                    {!l.is_debit
-                      ? l.amount.toLocaleString("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                        })
-                      : ""}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <SortableTable columns={lineColumns} data={linesPage} />
           {lineControls}
         </DialogContent>
         <DialogActions>
