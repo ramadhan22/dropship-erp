@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  Button,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Checkbox,
-  FormControlLabel,
-} from "@mui/material";
+import { Button, Checkbox, FormControlLabel } from "@mui/material";
+import SortableTable, { Column } from "./SortableTable";
 import { listCandidates, bulkReconcile } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";
@@ -42,6 +34,13 @@ export default function ReconcileDashboard() {
     if (pairs.length) await bulkReconcile(pairs, shop);
   };
 
+  const columns: Column<ReconcileCandidate>[] = [
+    { label: "Kode Pesanan", key: "kode_pesanan" },
+    { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
+    { label: "Status", key: "status_pesanan_terakhir" },
+    { label: "No Pesanan Shopee", key: "no_pesanan" },
+  ];
+
 
   return (
     <div>
@@ -70,26 +69,7 @@ export default function ReconcileDashboard() {
         }
         label="Status mismatch only"
       />
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Kode Pesanan</TableCell>
-            <TableCell>Kode Invoice Channel</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>No Pesanan Shopee</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {paginated.map((r) => (
-            <TableRow key={r.kode_pesanan}>
-              <TableCell>{r.kode_pesanan}</TableCell>
-              <TableCell>{r.kode_invoice_channel}</TableCell>
-              <TableCell>{r.status_pesanan_terakhir}</TableCell>
-              <TableCell>{r.no_pesanan || "-"}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <SortableTable columns={columns} data={paginated} />
       {controls}
     </div>
   );

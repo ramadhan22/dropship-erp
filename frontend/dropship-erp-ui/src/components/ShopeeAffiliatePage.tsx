@@ -255,7 +255,11 @@ export default function ShopeeAffiliatePage() {
       )}
 
       <div style={{ overflowX: "auto" }}>
-        <SortableTable columns={columns} data={data} />
+        <SortableTable
+          columns={columns}
+          data={data}
+          defaultSort={{ key: "waktu_pesanan", direction: "desc" }}
+        />
       </div>
       <Pagination
         sx={{ mt: 2 }}

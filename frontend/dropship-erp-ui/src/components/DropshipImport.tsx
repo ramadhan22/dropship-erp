@@ -316,7 +316,11 @@ export default function DropshipImport() {
         </DialogActions>
       </Dialog>
       <div style={{ overflowX: "auto" }}>
-        <SortableTable columns={columns} data={data} />
+        <SortableTable
+          columns={columns}
+          data={data}
+          defaultSort={{ key: "waktu_pesanan_terbuat", direction: "desc" }}
+        />
       </div>
       <div style={{ marginTop: "0.5rem" }}>
         <Button
