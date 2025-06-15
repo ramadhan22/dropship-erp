@@ -15,16 +15,32 @@ import (
 
 // fakeShopeeRepo captures inserted rows.
 type fakeShopeeRepo struct {
-	count      int
-	fail       bool
-	existing   map[string]bool
-	affExpense float64
+	count             int
+	fail              bool
+	existingSettled   map[string]bool
+	existingAffiliate map[string]bool
+	affExpense        float64
 }
 
 type fakeJournalRepoS struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine
 	nextID  int64
+}
+
+type fakeDropRepoA struct {
+	byInvoice map[string]*models.DropshipPurchase
+}
+
+func (f *fakeDropRepoA) GetDropshipPurchaseByInvoice(ctx context.Context, inv string) (*models.DropshipPurchase, error) {
+	if dp, ok := f.byInvoice[inv]; ok {
+		return dp, nil
+	}
+	return nil, nil
+}
+
+func (f *fakeDropRepoA) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
+	return nil, nil
 }
 
 func (f *fakeJournalRepoS) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
@@ -80,17 +96,17 @@ func (f *fakeShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *model
 }
 
 func (f *fakeShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error) {
-	if f.existing == nil {
+	if f.existingSettled == nil {
 		return false, nil
 	}
-	return f.existing[noPesanan], nil
+	return f.existingSettled[noPesanan], nil
 }
 
 func (f *fakeShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error) {
-	if f.existing == nil {
+	if f.existingAffiliate == nil {
 		return false, nil
 	}
-	return f.existing[orderID], nil
+	return f.existingAffiliate[orderID], nil
 }
 
 func (f *fakeShopeeRepo) ListShopeeSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error) {
@@ -141,7 +157,7 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := &fakeShopeeRepo{}
+	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
 	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
@@ -163,7 +179,7 @@ func TestImportSettledOrdersXLSX_HeaderMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := &fakeShopeeRepo{}
+	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
 	_, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err == nil {
@@ -199,7 +215,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := &fakeShopeeRepo{existing: map[string]bool{"SO-1": true}}
+	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO-1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
 	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
@@ -213,7 +229,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 func TestImportAffiliateCSV(t *testing.T) {
 	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,ID Model,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
 		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
-	repo := &fakeShopeeRepo{}
+	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
@@ -221,5 +237,57 @@ func TestImportAffiliateCSV(t *testing.T) {
 	}
 	if inserted != 1 || repo.count != 1 {
 		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
+	}
+}
+
+func TestImportAffiliateCSV_SkipDuplicate(t *testing.T) {
+	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,ID Model,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
+		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
+	repo := &fakeShopeeRepo{
+		existingSettled:   map[string]bool{"SO1": true},
+		existingAffiliate: map[string]bool{"SO1": true},
+	}
+	svc := NewShopeeService(nil, repo, nil, nil)
+	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 0 || repo.count != 0 {
+		t.Fatalf("expected 0 insert, got svc %d repo %d", inserted, repo.count)
+	}
+}
+
+func TestImportAffiliateCSV_SkipMissingOrder(t *testing.T) {
+	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,ID Model,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
+		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
+	repo := &fakeShopeeRepo{}
+	drop := &fakeDropRepoA{byInvoice: map[string]*models.DropshipPurchase{
+		"SO1": {NamaToko: "TOKO"},
+	}}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, drop, jr)
+	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 1 || repo.count != 1 {
+		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
+	}
+	if len(jr.entries) != 0 {
+		t.Fatalf("expected no journal entries, got %d", len(jr.entries))
+	}
+}
+
+func TestImportAffiliateCSV_FilterStatus(t *testing.T) {
+	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,IDModel,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
+		"SO1,Sedang Dikirim,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
+	repo := &fakeShopeeRepo{}
+	svc := NewShopeeService(nil, repo, nil, nil)
+	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 0 || repo.count != 0 {
+		t.Fatalf("expected 0 insert, got svc %d repo %d", inserted, repo.count)
 	}
 }
