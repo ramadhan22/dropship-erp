@@ -58,10 +58,9 @@ func main() {
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
-	// CORS configuration – allow your Vite dev server origin explicitly so
-	// that browsers can send credentials.
+	// CORS configuration – origins can be configured via config.yaml
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     cfg.Server.CorsOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
