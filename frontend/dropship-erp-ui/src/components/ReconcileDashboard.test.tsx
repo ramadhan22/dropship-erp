@@ -5,12 +5,14 @@ import * as api from "../api/reconcile";
 import ReconcileDashboard from "./ReconcileDashboard";
 
 jest.mock("../api", () => ({
-  listAllStores: jest.fn().mockResolvedValue([{ store_id: 1, nama_toko: "S", jenis_channel_id: 1 }]),
+  listAllStores: jest
+    .fn()
+    .mockResolvedValue([{ store_id: 1, nama_toko: "S", jenis_channel_id: 1 }]),
 }));
 
 jest.mock("../api/reconcile", () => ({
   listCandidates: jest.fn().mockResolvedValue({ data: [] }),
-  bulkReconcile: jest.fn(),
+  reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
 }));
 
 beforeEach(() => {
@@ -32,28 +34,20 @@ test("load candidates with filter", async () => {
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith("S"));
 });
 
-test("filter status mismatch", async () => {
+test("click reconcile button", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
     data: [
       {
         kode_pesanan: "A",
+        kode_invoice_channel: "INV",
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
-        no_pesanan: "1",
-      },
-      {
-        kode_pesanan: "B",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: null,
+        no_pesanan: "INV",
       },
     ],
   });
   render(<ReconcileDashboard />);
-  await screen.findByText("S");
-  fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
-  await waitFor(() => expect(screen.getByLabelText(/Shop/i)).toHaveValue("S"));
-  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
-  fireEvent.click(screen.getByLabelText(/Status mismatch only/i));
-  expect(screen.queryByText("B")).toBeNull();
+  await screen.findByText("Reconcile");
+  fireEvent.click(screen.getByText("Reconcile"));
+  await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledWith("A"));
 });

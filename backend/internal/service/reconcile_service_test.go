@@ -24,6 +24,21 @@ func (f *fakeDropRepoRec) GetDropshipPurchaseByInvoice(ctx context.Context, invo
 	return nil, errors.New("not found")
 }
 
+func (f *fakeDropRepoRec) GetDropshipPurchaseByID(ctx context.Context, kode string) (*models.DropshipPurchase, error) {
+	if dp, ok := f.data[kode]; ok {
+		return dp, nil
+	}
+	return nil, errors.New("not found")
+}
+
+func (f *fakeDropRepoRec) UpdatePurchaseStatus(ctx context.Context, kode, status string) error {
+	if dp, ok := f.data[kode]; ok {
+		dp.StatusPesananTerakhir = status
+		return nil
+	}
+	return errors.New("not found")
+}
+
 type fakeShopeeRepoRec struct {
 	data map[string]*models.ShopeeSettledOrder
 }
@@ -33,6 +48,11 @@ func (f *fakeShopeeRepoRec) GetShopeeOrderByID(ctx context.Context, orderID stri
 		return so, nil
 	}
 	return nil, errors.New("not found")
+}
+
+func (f *fakeShopeeRepoRec) ExistsShopeeSettled(ctx context.Context, no string) (bool, error) {
+	_, ok := f.data[no]
+	return ok, nil
 }
 
 type fakeJournalRepoRec struct {
