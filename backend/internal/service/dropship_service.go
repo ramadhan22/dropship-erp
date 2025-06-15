@@ -21,8 +21,8 @@ type DropshipRepoInterface interface {
 	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
 	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
-	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
-	SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
@@ -183,17 +183,17 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 // ListDropshipPurchases proxies to the repository to fetch filtered purchases.
 func (s *DropshipService) ListDropshipPurchases(
 	ctx context.Context,
-	channel, store, date, month, year string,
+	channel, store, from, to string,
 	limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
-	return s.repo.ListDropshipPurchases(ctx, channel, store, date, month, year, limit, offset)
+	return s.repo.ListDropshipPurchases(ctx, channel, store, from, to, limit, offset)
 }
 
 func (s *DropshipService) SumDropshipPurchases(
 	ctx context.Context,
-	channel, store, date, month, year string,
+	channel, store, from, to string,
 ) (float64, error) {
-	return s.repo.SumDropshipPurchases(ctx, channel, store, date, month, year)
+	return s.repo.SumDropshipPurchases(ctx, channel, store, from, to)
 }
 
 func (s *DropshipService) GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error) {

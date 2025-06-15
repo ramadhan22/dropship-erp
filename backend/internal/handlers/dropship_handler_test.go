@@ -28,7 +28,7 @@ func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (i
 	return 1, nil
 }
 
-func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error) {
 	return nil, 0, nil
 }
 
@@ -40,7 +40,7 @@ func (f *fakeDropshipService) ListDropshipPurchaseDetails(ctx context.Context, k
 	return nil, nil
 }
 
-func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error) {
+func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error) {
 	return 0, nil
 }
 
