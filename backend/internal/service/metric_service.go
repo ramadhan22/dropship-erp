@@ -102,7 +102,7 @@ func (s *MetricService) CalculateAndCacheMetrics(
 	}
 	var endingCash float64
 	for _, ab := range balances {
-		if ab.AccountCode == "1001" {
+		if ab.AccountID == 1001 {
 			endingCash = ab.Balance
 			break
 		}
