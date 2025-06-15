@@ -138,6 +138,48 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
 	return result, nil
 }
 
+// GetAccountBalancesBetween returns each account's net balance within the given
+// date range. It sums debit amounts as positive and credit amounts as negative
+// for journal entries between the from and to dates (inclusive).
+func (r *JournalRepo) GetAccountBalancesBetween(
+	ctx context.Context,
+	shop string,
+	from, to time.Time,
+) ([]AccountBalance, error) {
+	query := `
+        SELECT
+          a.account_id,
+          a.account_code,
+          a.account_name,
+          a.account_type,
+          a.parent_id,
+          COALESCE(SUM(
+            CASE WHEN jl.is_debit THEN jl.amount ELSE -jl.amount END
+          ), 0) AS balance
+        FROM journal_lines jl
+        JOIN journal_entries je ON jl.journal_id = je.journal_id
+        JOIN accounts a ON jl.account_id = a.account_id
+        WHERE je.entry_date BETWEEN $1 AND $2`
+
+	args := []interface{}{from, to}
+	if shop != "" {
+		query += " AND je.shop_username = $3"
+		args = append(args, shop)
+	}
+
+	query += `
+        GROUP BY
+          a.account_id, a.account_code, a.account_name,
+          a.account_type, a.parent_id
+        ORDER BY a.account_code;`
+
+	var result []AccountBalance
+	if err := r.db.SelectContext(ctx, &result, query, args...); err != nil {
+		return nil, fmt.Errorf("GetAccountBalancesBetween: %w", err)
+	}
+	return result, nil
+}
+
 // GetLinesByJournalID returns all journal lines for a given journal entry
 // joined with the account name.
 func (r *JournalRepo) GetLinesByJournalID(ctx context.Context, id int64) ([]JournalLineDetail, error) {

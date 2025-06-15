@@ -37,6 +37,7 @@ func tempCleanupAccount(t *testing.T, db *sqlx.DB, accountID int64) {
 func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 	ctx := context.Background()
 	jrepo := NewJournalRepo(testDB)
+	now := time.Now()
 
 	// 1. Insert two test accounts: Asset and Expense
 	acc1 := insertTestAccount(t, testDB, "TEST100", "Test Asset", "Asset", nil)
@@ -45,7 +46,7 @@ func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 
 	// 2. Create a JournalEntry
 	je := &models.JournalEntry{
-		EntryDate:   time.Now(),
+		EntryDate:   now,
 		Description: ptrString("Test Journal Entry"),
 		SourceType:  "test", SourceID: "SRC-1", ShopUsername: "TestShop",
 	}
@@ -80,7 +81,7 @@ func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 
 	// 4. Get lines by shop and date range
 	lines, err := jrepo.GetJournalLinesByShopAndDate(
-		ctx, "TestShop", time.Now().Add(-time.Hour), time.Now().Add(time.Hour),
+		ctx, "TestShop", now.Add(-time.Hour), now.Add(time.Hour),
 	)
 	if err != nil {
 		t.Fatalf("GetJournalLinesByShopAndDate failed: %v", err)
@@ -90,7 +91,7 @@ func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 	}
 
 	// 5. Check account balances as of now
-	balances, err := jrepo.GetAccountBalancesAsOf(ctx, "TestShop", time.Now().Add(time.Hour))
+	balances, err := jrepo.GetAccountBalancesAsOf(ctx, "TestShop", now.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("GetAccountBalancesAsOf failed: %v", err)
 	}
@@ -114,7 +115,34 @@ func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 		t.Errorf("Did not find balances for both test accounts: %v, %v", foundAcc1, foundAcc2)
 	}
 
-	// 6. Cleanup: delete journal entry and the two accounts
+	// 6. Check balances within date range
+	rangeBalances, err := jrepo.GetAccountBalancesBetween(ctx, "TestShop", now.Add(-time.Hour), now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("GetAccountBalancesBetween failed: %v", err)
+	}
+	if len(rangeBalances) == 0 {
+		t.Fatalf("Expected balances, got 0")
+	}
+
+	foundAcc1, foundAcc2 = false, false
+	for _, ab := range rangeBalances {
+		if ab.AccountID == acc1 {
+			foundAcc1 = true
+			if ab.Balance != 100 {
+				t.Errorf("Expected range balance 100 for acc1, got %f", ab.Balance)
+			}
+		}
+		if ab.AccountID == acc2 {
+			foundAcc2 = true
+			if ab.Balance != -100 {
+				t.Errorf("Expected range balance -100 for acc2, got %f", ab.Balance)
+			}
+		}
+	}
+	if !foundAcc1 || !foundAcc2 {
+		t.Errorf("Did not find range balances for both test accounts: %v, %v", foundAcc1, foundAcc2)
+	}
+	// 7. Cleanup: delete journal entry and the two accounts
 	testDB.ExecContext(ctx, "DELETE FROM journal_entries WHERE journal_id = $1", journalID)
 	tempCleanupAccount(t, testDB, acc1)
 	tempCleanupAccount(t, testDB, acc2)
