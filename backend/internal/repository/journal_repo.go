@@ -117,15 +117,22 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
         FROM journal_lines jl
         JOIN journal_entries je ON jl.journal_id = je.journal_id
         JOIN accounts a ON jl.account_id = a.account_id
-        WHERE je.shop_username = $1
-          AND je.entry_date <= $2
+        WHERE je.entry_date <= $1`
+
+	args := []interface{}{asOfDate}
+	if shop != "" {
+		query += " AND je.shop_username = $2"
+		args = append(args, shop)
+	}
+
+	query += `
         GROUP BY
           a.account_id, a.account_code, a.account_name,
           a.account_type, a.parent_id
-        ORDER BY a.account_code;
-    `
+        ORDER BY a.account_code;`
+
 	var result []AccountBalance
-	if err := r.db.SelectContext(ctx, &result, query, shop, asOfDate); err != nil {
+	if err := r.db.SelectContext(ctx, &result, query, args...); err != nil {
 		return nil, fmt.Errorf("GetAccountBalancesAsOf: %w", err)
 	}
 	return result, nil
