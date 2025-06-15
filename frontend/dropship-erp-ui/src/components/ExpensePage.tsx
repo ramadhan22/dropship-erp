@@ -7,7 +7,8 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import SortableTable, { Column } from "./SortableTable";
+import SortableTable from "./SortableTable";
+import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
 import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
 import type { Expense } from "../types";
