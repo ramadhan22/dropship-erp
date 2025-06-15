@@ -502,7 +502,7 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	saldo := netSale - voucher - admin - layanan - affiliateAmt
 
 	je := &models.JournalEntry{
-		EntryDate:    entry.TanggalDanaDilepaskan,
+		EntryDate:    entry.WaktuPesananDibuat,
 		Description:  ptrString("Shopee settled " + entry.NoPesanan),
 		SourceType:   "shopee_settled",
 		SourceID:     entry.NoPesanan,
