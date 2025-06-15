@@ -13,8 +13,8 @@ import (
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
 	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
-	ListDropshipPurchases(ctx context.Context, channel, store, date, month, year string, limit, offset int) ([]models.DropshipPurchase, int, error)
-	SumDropshipPurchases(ctx context.Context, channel, store, date, month, year string) (float64, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
@@ -54,9 +54,8 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 func (h *DropshipHandler) HandleList(c *gin.Context) {
 	channel := c.Query("channel")
 	store := c.Query("store")
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	from := c.Query("from")
+	to := c.Query("to")
 	pageStr := c.DefaultQuery("page", "1")
 	sizeStr := c.DefaultQuery("page_size", "10")
 	page, _ := strconv.Atoi(pageStr)
@@ -70,7 +69,7 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 	limit := size
 	offset := (page - 1) * size
 
-	list, total, err := h.svc.ListDropshipPurchases(context.Background(), channel, store, date, month, year, limit, offset)
+	list, total, err := h.svc.ListDropshipPurchases(context.Background(), channel, store, from, to, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -82,11 +81,10 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 func (h *DropshipHandler) HandleSum(c *gin.Context) {
 	channel := c.Query("channel")
 	store := c.Query("store")
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	from := c.Query("from")
+	to := c.Query("to")
 	ctx := c.Request.Context()
-	sum, err := h.svc.SumDropshipPurchases(ctx, channel, store, date, month, year)
+	sum, err := h.svc.SumDropshipPurchases(ctx, channel, store, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

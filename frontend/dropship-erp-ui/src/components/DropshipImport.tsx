@@ -46,7 +46,11 @@ export default function DropshipImport() {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
     .split("T")[0];
-  const [period, setPeriod] = useState(firstOfMonth);
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -64,21 +68,30 @@ export default function DropshipImport() {
       key: "biaya_lainnya",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
     {
       label: "Biaya Mitra Jakmall",
       key: "biaya_mitra_jakmall",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
     {
       label: "Total Transaksi",
       key: "total_transaksi",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
     { label: "Dibuat Oleh", key: "dibuat_oleh" },
     { label: "Channel", key: "jenis_channel" },
@@ -136,24 +149,11 @@ export default function DropshipImport() {
   }, [channel]);
 
   const fetchData = async () => {
-    let dateParam = "";
-    let monthParam = "";
-    let yearParam = "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
-      dateParam = period;
-    } else if (/^\d{4}-\d{2}$/.test(period)) {
-      const [y, m] = period.split("-");
-      monthParam = m;
-      yearParam = y;
-    } else if (/^\d{4}$/.test(period)) {
-      yearParam = period;
-    }
     const res = await listDropshipPurchases({
       channel,
       store,
-      date: dateParam || undefined,
-      month: monthParam || undefined,
-      year: yearParam || undefined,
+      from,
+      to,
       page,
       page_size: pageSize,
     });
@@ -167,16 +167,15 @@ export default function DropshipImport() {
     const totalRes = await sumDropshipPurchases({
       channel,
       store,
-      date: dateParam || undefined,
-      month: monthParam || undefined,
-      year: yearParam || undefined,
+      from,
+      to,
     });
     setAllTotal(totalRes.data.total);
   };
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, period, page]);
+  }, [channel, store, from, to, page]);
 
   const handleSubmit = async () => {
     try {
@@ -236,15 +235,28 @@ export default function DropshipImport() {
         </select>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
-            label="Period"
+            label="From"
             format="yyyy-MM-dd"
-            value={new Date(period)}
+            value={new Date(from)}
             onChange={(date) => {
               if (!date) return;
-              setPeriod(date.toISOString().split("T")[0]);
+              setFrom(date.toISOString().split("T")[0]);
               setPage(1);
             }}
-            slotProps={{ textField: { size: "small", sx: { width: 220 }, InputLabelProps: { shrink: true } } }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="To"
+            format="yyyy-MM-dd"
+            value={new Date(to)}
+            onChange={(date) => {
+              if (!date) return;
+              setTo(date.toISOString().split("T")[0]);
+              setPage(1);
+            }}
+            slotProps={{ textField: { size: "small" } }}
           />
         </LocalizationProvider>
       </div>

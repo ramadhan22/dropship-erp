@@ -229,18 +229,16 @@ export interface ProductSales {
 export function listDropshipPurchases(params: {
   channel?: string;
   store?: string;
-  date?: string;
-  month?: string;
-  year?: string;
+  from?: string;
+  to?: string;
   page?: number;
   page_size?: number;
 }) {
   const q = new URLSearchParams();
   if (params.channel) q.append("channel", params.channel);
   if (params.store) q.append("store", params.store);
-  if (params.date) q.append("date", params.date);
-  if (params.month) q.append("month", params.month);
-  if (params.year) q.append("year", params.year);
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
   if (params.page) q.append("page", String(params.page));
   if (params.page_size) q.append("page_size", String(params.page_size));
   const qs = q.toString();
@@ -251,16 +249,14 @@ export function listDropshipPurchases(params: {
 export function sumDropshipPurchases(params: {
   channel?: string;
   store?: string;
-  date?: string;
-  month?: string;
-  year?: string;
+  from?: string;
+  to?: string;
 }) {
   const q = new URLSearchParams();
   if (params.channel) q.append("channel", params.channel);
   if (params.store) q.append("store", params.store);
-  if (params.date) q.append("date", params.date);
-  if (params.month) q.append("month", params.month);
-  if (params.year) q.append("year", params.year);
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
   return api.get<{ total: number }>(
     `/dropship/purchases/summary?${q.toString()}`,
   );
