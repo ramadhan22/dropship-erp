@@ -210,7 +210,7 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 	if !exists {
 		return fmt.Errorf("shopee settled order not found")
 	}
-	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "pesanan selesai"); err != nil {
+	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
 	if tx != nil {
