@@ -291,3 +291,14 @@ func pendingAccountID(store string) int64 {
 		return 11010
 	}
 }
+
+func saldoShopeeAccountID(store string) int64 {
+	switch store {
+	case "MR eStore Shopee":
+		return 11011
+	case "MR Barista Gear":
+		return 11013
+	default:
+		return 11011
+	}
+}
