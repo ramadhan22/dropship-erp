@@ -21,7 +21,7 @@ type DropshipRepoInterface interface {
 	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
 	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
-	ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
@@ -183,10 +183,10 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 // ListDropshipPurchases proxies to the repository to fetch filtered purchases.
 func (s *DropshipService) ListDropshipPurchases(
 	ctx context.Context,
-	channel, store, from, to string,
+	channel, store, from, to, orderNo, sortBy, dir string,
 	limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
-	return s.repo.ListDropshipPurchases(ctx, channel, store, from, to, limit, offset)
+	return s.repo.ListDropshipPurchases(ctx, channel, store, from, to, orderNo, sortBy, dir, limit, offset)
 }
 
 func (s *DropshipService) SumDropshipPurchases(

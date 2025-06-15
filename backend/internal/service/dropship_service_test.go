@@ -37,7 +37,7 @@ func (f *fakeDropshipRepo) ExistsDropshipPurchase(ctx context.Context, kode stri
 	return f.existing[kode], nil
 }
 
-func (f *fakeDropshipRepo) ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+func (f *fakeDropshipRepo) ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error) {
 	return nil, 0, nil
 }
 

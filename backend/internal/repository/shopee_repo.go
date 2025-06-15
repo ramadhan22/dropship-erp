@@ -179,7 +179,7 @@ func (r *ShopeeRepo) GetShopeeOrderByID(ctx context.Context, orderID string) (*m
 // and the total count is returned alongside the slice of rows.
 func (r *ShopeeRepo) ListShopeeSettled(
 	ctx context.Context,
-	channel, store, from, to string,
+	channel, store, from, to, orderNo, sortBy, dir string,
 	limit, offset int,
 ) ([]models.ShopeeSettled, int, error) {
 	base := `SELECT s.* FROM shopee_settled s
@@ -208,6 +208,11 @@ func (r *ShopeeRepo) ListShopeeSettled(
 		args = append(args, to)
 		arg++
 	}
+	if orderNo != "" {
+		conds = append(conds, fmt.Sprintf("s.no_pesanan ILIKE $%d", arg))
+		args = append(args, "%"+orderNo+"%")
+		arg++
+	}
 	query := base
 	if len(conds) > 0 {
 		query += " WHERE " + strings.Join(conds, " AND ")
@@ -217,7 +222,20 @@ func (r *ShopeeRepo) ListShopeeSettled(
 	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
 		return nil, 0, err
 	}
-	query += fmt.Sprintf(" ORDER BY s.waktu_pesanan_dibuat DESC LIMIT %d OFFSET %d", limit, offset)
+	sortCol := map[string]string{
+		"no_pesanan":           "no_pesanan",
+		"waktu_pesanan_dibuat": "waktu_pesanan_dibuat",
+		"total_penghasilan":    "total_penghasilan",
+	}[sortBy]
+	if sortCol == "" {
+		sortCol = "waktu_pesanan_dibuat"
+	}
+	direction := "ASC"
+	if strings.ToLower(dir) == "desc" {
+		direction = "DESC"
+	}
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(" ORDER BY s.%s %s LIMIT $%d OFFSET $%d", sortCol, direction, arg, arg+1)
 	var list []models.ShopeeSettled
 	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
 		return nil, 0, err

@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -112,30 +114,44 @@ func (r *DropshipRepo) ListDropshipPurchasesByShopAndDate(
 // store and date range with pagination. Empty filter values are ignored.
 func (r *DropshipRepo) ListDropshipPurchases(
 	ctx context.Context,
-	channel, store, from, to string,
+	channel, store, from, to, orderNo, sortBy, dir string,
 	limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
 	countQuery := `SELECT COUNT(*) FROM dropship_purchases
                 WHERE ($1 = '' OR jenis_channel = $1)
                   AND ($2 = '' OR nama_toko = $2)
                   AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
-                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)`
+                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)
+                  AND ($5 = '' OR kode_pesanan ILIKE '%' || $5 || '%')`
 	var total int
 	if err := r.db.GetContext(ctx, &total, countQuery,
-		channel, store, from, to); err != nil {
+		channel, store, from, to, orderNo); err != nil {
 		return nil, 0, err
 	}
 
-	query := `SELECT * FROM dropship_purchases
+	sortCol := map[string]string{
+		"kode_pesanan":          "kode_pesanan",
+		"waktu_pesanan_terbuat": "waktu_pesanan_terbuat",
+		"total_transaksi":       "total_transaksi",
+	}[sortBy]
+	if sortCol == "" {
+		sortCol = "waktu_pesanan_terbuat"
+	}
+	direction := "ASC"
+	if strings.ToLower(dir) == "desc" {
+		direction = "DESC"
+	}
+	query := fmt.Sprintf(`SELECT * FROM dropship_purchases
                 WHERE ($1 = '' OR jenis_channel = $1)
                   AND ($2 = '' OR nama_toko = $2)
                   AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
                   AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)
-                ORDER BY waktu_pesanan_terbuat DESC
-                LIMIT $5 OFFSET $6`
+                  AND ($5 = '' OR kode_pesanan ILIKE '%%' || $5 || '%%')
+                ORDER BY %s %s
+                LIMIT $6 OFFSET $7`, sortCol, direction)
 	var list []models.DropshipPurchase
 	err := r.db.SelectContext(ctx, &list, query,
-		channel, store, from, to, limit, offset)
+		channel, store, from, to, orderNo, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -28,7 +28,7 @@ func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (i
 	return 1, nil
 }
 
-func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+func (f *fakeDropshipService) ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error) {
 	return nil, 0, nil
 }
 

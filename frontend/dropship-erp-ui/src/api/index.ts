@@ -152,6 +152,9 @@ export function listShopeeSettled(params: {
   store?: string;
   from?: string;
   to?: string;
+  order?: string;
+  sort?: string;
+  dir?: string;
   page?: number;
   page_size?: number;
 }) {
@@ -160,6 +163,9 @@ export function listShopeeSettled(params: {
   if (params.store) q.append("store", params.store);
   if (params.from) q.append("from", params.from);
   if (params.to) q.append("to", params.to);
+  if (params.order) q.append("order", params.order);
+  if (params.sort) q.append("sort", params.sort);
+  if (params.dir) q.append("dir", params.dir);
   if (params.page) q.append("page", String(params.page));
   if (params.page_size) q.append("page_size", String(params.page_size));
   return api.get<{ data: ShopeeSettled[]; total: number }>(
@@ -231,6 +237,9 @@ export function listDropshipPurchases(params: {
   store?: string;
   from?: string;
   to?: string;
+  order?: string;
+  sort?: string;
+  dir?: string;
   page?: number;
   page_size?: number;
 }) {
@@ -239,6 +248,9 @@ export function listDropshipPurchases(params: {
   if (params.store) q.append("store", params.store);
   if (params.from) q.append("from", params.from);
   if (params.to) q.append("to", params.to);
+  if (params.order) q.append("order", params.order);
+  if (params.sort) q.append("sort", params.sort);
+  if (params.dir) q.append("dir", params.dir);
   if (params.page) q.append("page", String(params.page));
   if (params.page_size) q.append("page_size", String(params.page_size));
   const qs = q.toString();
