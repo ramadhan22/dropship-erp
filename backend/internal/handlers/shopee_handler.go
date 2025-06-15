@@ -16,8 +16,8 @@ type ShopeeServiceInterface interface {
 	ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error)
 	ListSettled(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
-	ListAffiliate(ctx context.Context, date, month, year string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
-	SumAffiliate(ctx context.Context, date, month, year string) (*models.ShopeeAffiliateSummary, error)
+	ListAffiliate(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
+	SumAffiliate(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 }
 
 type ShopeeHandler struct {
@@ -114,9 +114,9 @@ func (h *ShopeeHandler) HandleSumSettled(c *gin.Context) {
 
 // HandleListAffiliate returns paginated affiliate sales data with optional filters.
 func (h *ShopeeHandler) HandleListAffiliate(c *gin.Context) {
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	noPesanan := c.Query("no_pesanan")
+	from := c.Query("from")
+	to := c.Query("to")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	if page < 1 {
@@ -127,7 +127,7 @@ func (h *ShopeeHandler) HandleListAffiliate(c *gin.Context) {
 	}
 	offset := (page - 1) * size
 	ctx := c.Request.Context()
-	list, total, err := h.svc.ListAffiliate(ctx, date, month, year, size, offset)
+	list, total, err := h.svc.ListAffiliate(ctx, noPesanan, from, to, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -137,11 +137,11 @@ func (h *ShopeeHandler) HandleListAffiliate(c *gin.Context) {
 
 // HandleSumAffiliate returns total values for filtered affiliate rows.
 func (h *ShopeeHandler) HandleSumAffiliate(c *gin.Context) {
-	date := c.Query("date")
-	month := c.Query("month")
-	year := c.Query("year")
+	noPesanan := c.Query("no_pesanan")
+	from := c.Query("from")
+	to := c.Query("to")
 	ctx := c.Request.Context()
-	sum, err := h.svc.SumAffiliate(ctx, date, month, year)
+	sum, err := h.svc.SumAffiliate(ctx, noPesanan, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

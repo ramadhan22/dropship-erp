@@ -134,26 +134,40 @@ func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, pro
 // ListShopeeAffiliateSales returns affiliate sales filtered by optional date/month/year with pagination.
 func (r *ShopeeRepo) ListShopeeAffiliateSales(
 	ctx context.Context,
-	date, month, year string,
+	noPesanan, from, to string,
 	limit, offset int,
 ) ([]models.ShopeeAffiliateSale, int, error) {
-	countQuery := `SELECT COUNT(*) FROM shopee_affiliate_sales
-                WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
-                  AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
-                  AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)`
+	base := `SELECT * FROM shopee_affiliate_sales`
+	args := []interface{}{}
+	conds := []string{}
+	arg := 1
+	if noPesanan != "" {
+		conds = append(conds, fmt.Sprintf("kode_pesanan = $%d", arg))
+		args = append(args, noPesanan)
+		arg++
+	}
+	if from != "" {
+		conds = append(conds, fmt.Sprintf("DATE(waktu_pesanan) >= $%d::date", arg))
+		args = append(args, from)
+		arg++
+	}
+	if to != "" {
+		conds = append(conds, fmt.Sprintf("DATE(waktu_pesanan) <= $%d::date", arg))
+		args = append(args, to)
+		arg++
+	}
+	query := base
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
+	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
 	var total int
-	if err := r.db.GetContext(ctx, &total, countQuery, date, month, year); err != nil {
+	if err := r.db.GetContext(ctx, &total, countQuery, args...); err != nil {
 		return nil, 0, err
 	}
-
-	query := `SELECT * FROM shopee_affiliate_sales
-                WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
-                  AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
-                  AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)
-                ORDER BY waktu_pesanan DESC
-                LIMIT $4 OFFSET $5`
+	query += fmt.Sprintf(" ORDER BY waktu_pesanan DESC LIMIT %d OFFSET %d", limit, offset)
 	var list []models.ShopeeAffiliateSale
-	if err := r.db.SelectContext(ctx, &list, query, date, month, year, limit, offset); err != nil {
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
 		return nil, 0, err
 	}
 	if list == nil {
@@ -282,17 +296,36 @@ func (r *ShopeeRepo) SumShopeeSettled(
 // SumShopeeAffiliateSales aggregates nilai_pembelian and komisi for filtered rows.
 func (r *ShopeeRepo) SumShopeeAffiliateSales(
 	ctx context.Context,
-	date, month, year string,
+	noPesanan, from, to string,
 ) (*models.ShopeeAffiliateSummary, error) {
-	query := `SELECT
+	base := `SELECT
                COALESCE(SUM(nilai_pembelian),0) AS total_nilai_pembelian,
                COALESCE(SUM(estimasi_komisi_affiliate_per_pesanan),0) AS total_komisi_affiliate
-               FROM shopee_affiliate_sales
-               WHERE ($1 = '' OR DATE(waktu_pesanan) = $1::date)
-                 AND ($2 = '' OR EXTRACT(MONTH FROM waktu_pesanan) = $2::int)
-                 AND ($3 = '' OR EXTRACT(YEAR FROM waktu_pesanan) = $3::int)`
+               FROM shopee_affiliate_sales`
+	args := []interface{}{}
+	conds := []string{}
+	arg := 1
+	if noPesanan != "" {
+		conds = append(conds, fmt.Sprintf("kode_pesanan = $%d", arg))
+		args = append(args, noPesanan)
+		arg++
+	}
+	if from != "" {
+		conds = append(conds, fmt.Sprintf("DATE(waktu_pesanan) >= $%d::date", arg))
+		args = append(args, from)
+		arg++
+	}
+	if to != "" {
+		conds = append(conds, fmt.Sprintf("DATE(waktu_pesanan) <= $%d::date", arg))
+		args = append(args, to)
+		arg++
+	}
+	query := base
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
 	var sum models.ShopeeAffiliateSummary
-	if err := r.db.GetContext(ctx, &sum, query, date, month, year); err != nil {
+	if err := r.db.GetContext(ctx, &sum, query, args...); err != nil {
 		return nil, err
 	}
 	return &sum, nil

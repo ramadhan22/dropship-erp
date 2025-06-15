@@ -1,4 +1,13 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Pagination, TextField } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Pagination,
+  TextField,
+} from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -18,11 +27,12 @@ export default function ShopeeAffiliatePage() {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
     .split("T")[0];
-  const [date, setDate] = useState(firstOfMonth);
-  const [month, setMonth] = useState(
-    String(now.getMonth() + 1).padStart(2, "0"),
-  );
-  const [year, setYear] = useState(String(now.getFullYear()));
+  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split("T")[0];
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
+  const [order, setOrder] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ShopeeAffiliateSale[]>([]);
   const [total, setTotal] = useState(0);
@@ -78,14 +88,20 @@ export default function ShopeeAffiliatePage() {
       key: "nilai_pembelian",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
     {
       label: "Komisi Affiliate",
       key: "estimasi_komisi_affiliate_per_pesanan",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
     { label: "MCN", key: "mcn_terhubung" },
     { label: "ID Komisi Pesanan", key: "id_komisi_pesanan" },
@@ -121,16 +137,15 @@ export default function ShopeeAffiliatePage() {
       label: "Waktu Pemotongan",
       key: "waktu_pemotongan",
       render: (v) => new Date(v).toLocaleString(),
-
     },
   ];
 
   const fetchData = async () => {
     try {
       const res = await listShopeeAffiliate({
-        date,
-        month,
-        year,
+        no_pesanan: order || undefined,
+        from,
+        to,
         page,
         page_size: pageSize,
       });
@@ -141,7 +156,11 @@ export default function ShopeeAffiliatePage() {
         0,
       );
       setPageTotal(sum);
-      const allRes = await sumShopeeAffiliate({ date, month, year });
+      const allRes = await sumShopeeAffiliate({
+        no_pesanan: order || undefined,
+        from,
+        to,
+      });
       setAllTotal(allRes.data.total_komisi_affiliate);
       setMsg(null);
     } catch (e: any) {
@@ -152,7 +171,7 @@ export default function ShopeeAffiliatePage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, month, year, page]);
+  }, [order, from, to, page]);
 
   const handleImport = async () => {
     try {
@@ -181,57 +200,42 @@ export default function ShopeeAffiliatePage() {
         Import
       </Button>
 
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="Period"
-          views={["year", "month"]}
-          openTo="month"
-          format="yyyy-MM"
-          value={new Date(period)}
-          onChange={date => {
-            if (!date) return;
-            setPeriod(date.toISOString().slice(0, 7));
-            setPage(1);
-          }}
-          slotProps={{ textField: { size: "small", sx: { mb: 2, ml: 1 }, InputLabelProps: { shrink: true } } }}
-        />
-      </LocalizationProvider>
-      {msg && <Alert severity={msg.type} sx={{ mb: 2 }}>{msg.text}</Alert>}
-
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
         <TextField
-          label="Date"
-          type="date"
-          value={date}
+          label="No Pesanan"
+          value={order}
           onChange={(e) => {
-            setDate(e.target.value);
+            setOrder(e.target.value);
             setPage(1);
           }}
           size="small"
-          InputLabelProps={{ shrink: true }}
         />
-        <TextField
-          label="Month"
-          type="number"
-          value={month}
-          onChange={(e) => {
-            setMonth(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
-        />
-        <TextField
-          label="Year"
-          type="number"
-          value={year}
-          onChange={(e) => {
-            setYear(e.target.value);
-            setPage(1);
-          }}
-          size="small"
-          sx={{ width: 100 }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="From"
+            format="yyyy-MM-dd"
+            value={new Date(from)}
+            onChange={(date) => {
+              if (!date) return;
+              setFrom(date.toISOString().split("T")[0]);
+              setPage(1);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="To"
+            format="yyyy-MM-dd"
+            value={new Date(to)}
+            onChange={(date) => {
+              if (!date) return;
+              setTo(date.toISOString().split("T")[0]);
+              setPage(1);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
       </div>
       <div style={{ marginBottom: "0.5rem" }}>
         <strong>Page Total:</strong>{" "}
