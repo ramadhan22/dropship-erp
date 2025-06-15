@@ -15,8 +15,23 @@ type ShopeeRepo struct {
 }
 
 // ListShopeeOrdersByShopAndDate implements service.MetricServiceShopeeRepo.
-func (r *ShopeeRepo) ListShopeeOrdersByShopAndDate(ctx context.Context, shop string, from string, to string) ([]models.ShopeeSettledOrder, error) {
-	panic("unimplemented")
+func (r *ShopeeRepo) ListShopeeOrdersByShopAndDate(
+	ctx context.Context,
+	shop string,
+	from string,
+	to string,
+) ([]models.ShopeeSettledOrder, error) {
+	var list []models.ShopeeSettledOrder
+	err := r.db.SelectContext(ctx, &list,
+		`SELECT * FROM shopee_settled_orders
+         WHERE seller_username = $1
+           AND settled_date BETWEEN $2 AND $3
+         ORDER BY settled_date`,
+		shop, from, to)
+	if list == nil {
+		list = []models.ShopeeSettledOrder{}
+	}
+	return list, err
 }
 
 // NewShopeeRepo constructs a ShopeeRepo given an *sqlx.DB.
