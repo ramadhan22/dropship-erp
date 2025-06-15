@@ -28,6 +28,11 @@ export default function PLPage() {
     listAllStores().then((s) => setStores(s));
   }, []);
 
+  useEffect(() => {
+    handleFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleFetch = async () => {
     const res = await fetchPL(shop, period);
     setData(res.data);
@@ -42,7 +47,7 @@ export default function PLPage() {
           value={shop}
           onChange={(e) => setShop(e.target.value)}
         >
-          <option value="">Select Store</option>
+          <option value="">All Stores</option>
           {stores.map((s) => (
             <option key={s.store_id} value={s.nama_toko}>
               {s.nama_toko}
