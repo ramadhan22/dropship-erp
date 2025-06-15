@@ -183,6 +183,13 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 	if len(header) > 0 {
 		header[0] = strings.TrimPrefix(header[0], "\ufeff")
 	}
+	allowedStatus := map[string]bool{
+		"Belum Dibayar":   true,
+		"Sedang Diproses": true,
+		"Selesai":         true,
+		"Dibatalkan":      true,
+	}
+
 	inserted := 0
 	for {
 		row, err := reader.Read()
@@ -203,12 +210,8 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		if err != nil {
 			continue
 		}
-		if s.dropshipRepo != nil {
-			if dp, _ := s.dropshipRepo.GetDropshipPurchaseByInvoice(ctx, entry.KodePesanan); dp != nil {
-				entry.NamaToko = dp.NamaToko
-			} else if dp, _ := s.dropshipRepo.GetDropshipPurchaseByID(ctx, entry.KodePesanan); dp != nil {
-				entry.NamaToko = dp.NamaToko
-			}
+		if !allowedStatus[entry.StatusPesanan] {
+			continue
 		}
 		exists, err := s.repo.ExistsShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk)
 		if err != nil {
@@ -217,11 +220,29 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		if exists {
 			continue
 		}
+		orderExists, err := s.repo.ExistsShopeeSettled(ctx, entry.KodePesanan)
+		if err != nil {
+			return inserted, fmt.Errorf("check order: %w", err)
+		}
+		if !orderExists && s.dropshipRepo != nil {
+			if dp, _ := s.dropshipRepo.GetDropshipPurchaseByInvoice(ctx, entry.KodePesanan); dp != nil {
+				entry.NamaToko = dp.NamaToko
+			}
+		} else if orderExists && entry.NamaToko == "" && s.dropshipRepo != nil {
+			if dp, _ := s.dropshipRepo.GetDropshipPurchaseByInvoice(ctx, entry.KodePesanan); dp != nil {
+				entry.NamaToko = dp.NamaToko
+			} else if dp, _ := s.dropshipRepo.GetDropshipPurchaseByID(ctx, entry.KodePesanan); dp != nil {
+				entry.NamaToko = dp.NamaToko
+			}
+		}
+
 		if err := s.repo.InsertShopeeAffiliateSale(ctx, entry); err != nil {
 			return inserted, fmt.Errorf("insert: %w", err)
 		}
-		if err := s.addAffiliateToJournal(ctx, entry); err != nil {
-			return inserted, fmt.Errorf("journal: %w", err)
+		if orderExists {
+			if err := s.addAffiliateToJournal(ctx, entry); err != nil {
+				return inserted, fmt.Errorf("journal: %w", err)
+			}
 		}
 		inserted++
 	}
