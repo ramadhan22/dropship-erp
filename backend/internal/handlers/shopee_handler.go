@@ -52,25 +52,34 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 }
 
 func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
-		return
-	}
-	f, err := fileHeader.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer f.Close()
+        form, err := c.MultipartForm()
+        if err != nil {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+                return
+        }
+        files := form.File["file"]
+        if len(files) == 0 {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+                return
+        }
 
-	ctx := c.Request.Context()
-	count, err := h.svc.ImportAffiliateCSV(ctx, f)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"inserted": count})
+        ctx := c.Request.Context()
+        total := 0
+        for _, fh := range files {
+                f, err := fh.Open()
+                if err != nil {
+                        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+                        return
+                }
+                count, err := h.svc.ImportAffiliateCSV(ctx, f)
+                f.Close()
+                if err != nil {
+                        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+                        return
+                }
+                total += count
+        }
+        c.JSON(http.StatusOK, gin.H{"inserted": total})
 }
 
 // HandleListSettled returns paginated shopee settled data with optional filters.

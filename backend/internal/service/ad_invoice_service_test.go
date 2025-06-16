@@ -1,14 +1,18 @@
 package service
 
 import (
-	"os"
-	"testing"
+        "os"
+        "os/exec"
+        "testing"
 )
 
 func TestParsePDFSample(t *testing.T) {
-	f, err := os.Open("../../../sample_data/SPEI092025053100172422 (1).pdf")
-	if err != nil {
-		t.Fatalf("open sample pdf: %v", err)
+        if _, err := exec.LookPath("pdftotext"); err != nil {
+                t.Skip("pdftotext not installed")
+        }
+        f, err := os.Open("../../../sample_data/SPEI092025053100172422 (1).pdf")
+        if err != nil {
+                t.Fatalf("open sample pdf: %v", err)
 	}
 	defer f.Close()
 	svc := NewAdInvoiceService(nil, nil, nil)

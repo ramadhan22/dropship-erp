@@ -35,7 +35,7 @@ export default function ShopeeAffiliatePage() {
   const [allTotal, setAllTotal] = useState(0);
   const pageSize = 10;
   const [importOpen, setImportOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -170,13 +170,13 @@ export default function ShopeeAffiliatePage() {
 
   const handleImport = async () => {
     try {
-      if (!file) return;
-      const res = await importShopeeAffiliate(file);
+      if (!files.length) return;
+      const res = await importShopeeAffiliate(files);
       setMsg({
         type: "success",
         text: `Imported ${res.data.inserted} rows successfully!`,
       });
-      setFile(null);
+      setFiles([]);
       setImportOpen(false);
       fetchData();
     } catch (e: any) {
@@ -272,7 +272,8 @@ export default function ShopeeAffiliatePage() {
           <input
             type="file"
             aria-label="CSV file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            multiple
+            onChange={(e) => setFiles(Array.from(e.target.files || []))}
           />
         </DialogContent>
         <DialogActions>
