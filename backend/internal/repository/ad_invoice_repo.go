@@ -13,8 +13,16 @@ type AdInvoiceRepo struct{ db DBTX }
 func NewAdInvoiceRepo(db DBTX) *AdInvoiceRepo { return &AdInvoiceRepo{db: db} }
 
 func (r *AdInvoiceRepo) Insert(ctx context.Context, a *models.AdInvoice) error {
-	_, err := r.db.NamedExecContext(ctx, `INSERT INTO ad_invoices (invoice_no, username, store, invoice_date, total) VALUES (:invoice_no,:username,:store,:invoice_date,:total)`, a)
+	_, err := r.db.NamedExecContext(ctx, `INSERT INTO ad_invoices (invoice_no, username, store, invoice_date, total)
+                VALUES (:invoice_no,:username,:store,:invoice_date,:total)
+                ON CONFLICT (invoice_no) DO NOTHING`, a)
 	return err
+}
+
+func (r *AdInvoiceRepo) Exists(ctx context.Context, invoiceNo string) (bool, error) {
+	var exists bool
+	err := r.db.GetContext(ctx, &exists, `SELECT EXISTS(SELECT 1 FROM ad_invoices WHERE invoice_no=$1)`, invoiceNo)
+	return exists, err
 }
 
 func (r *AdInvoiceRepo) List(ctx context.Context, sortBy, dir string) ([]models.AdInvoice, error) {
