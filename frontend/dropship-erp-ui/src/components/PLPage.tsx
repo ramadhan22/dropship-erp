@@ -95,6 +95,7 @@ export default function PLPage() {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      setData(null);
       try {
         const res = await fetchProfitLoss({
           type: periodType,
