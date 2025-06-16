@@ -120,6 +120,13 @@ func (s *AdInvoiceService) ImportInvoicePDF(ctx context.Context, r io.Reader) er
 		return err
 	}
 	inv.CreatedAt = time.Now()
+	exists, err := s.repo.Exists(ctx, inv.InvoiceNo)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 	if err := s.repo.Insert(ctx, inv); err != nil {
 		return err
 	}
