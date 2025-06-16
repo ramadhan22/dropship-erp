@@ -3,7 +3,7 @@ import { useState } from "react";
 import { importShopeeAffiliate } from "../api";
 
 export default function ShopeeAffiliateImport() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -11,8 +11,8 @@ export default function ShopeeAffiliateImport() {
 
   const handleSubmit = async () => {
     try {
-      if (!file) return;
-      const res = await importShopeeAffiliate(file);
+      if (!files.length) return;
+      const res = await importShopeeAffiliate(files);
       setMsg({
         type: "success",
         text: `Imported ${res.data.inserted} rows successfully!`,
@@ -28,7 +28,8 @@ export default function ShopeeAffiliateImport() {
       <input
         type="file"
         aria-label="CSV file"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        multiple
+        onChange={(e) => setFiles(Array.from(e.target.files || []))}
       />
       <Button variant="contained" onClick={handleSubmit} sx={{ mt: 2 }}>
         Import
