@@ -43,7 +43,8 @@ func TestParseSplitInvoiceNumber(t *testing.T) {
 		"mrest0re",
 		"Tanggal Invoice",
 		"31/08/2024",
-		"Total (Termasuk PPN jika ada)",
+		"Total",
+		"(Termasuk PPN jika ada)",
 		"1,691,420.00",
 	}
 	inv := parseInvoiceText(lines)
@@ -69,7 +70,8 @@ func TestParseSecondSampleSplit(t *testing.T) {
 		"mrest0re",
 		"Tanggal Invoice",
 		"31/07/2024",
-		"Total (Termasuk PPN jika ada)",
+		"Total",
+		"(Termasuk PPN jika ada)",
 		"220,900.00",
 	}
 	inv := parseInvoiceText(lines)
