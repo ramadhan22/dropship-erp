@@ -1,14 +1,15 @@
 package handlers
 
 import (
-	"bytes"
-	"context"
-	"errors"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"net/http/httptest"
-	"testing"
+        "bytes"
+        "context"
+        "encoding/json"
+        "errors"
+        "io"
+        "mime/multipart"
+        "net/http"
+        "net/http/httptest"
+        "testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -106,17 +107,26 @@ func TestShopeeHandleImportAffiliate(t *testing.T) {
 	r := gin.New()
 	r.POST("/api/shopee/affiliate", h.HandleImportAffiliate)
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, _ := writer.CreateFormFile("file", "ok.csv")
-	part.Write([]byte("csv"))
-	writer.Close()
+        var body bytes.Buffer
+        writer := multipart.NewWriter(&body)
+        part, _ := writer.CreateFormFile("file", "a.csv")
+        part.Write([]byte("csv"))
+        part, _ = writer.CreateFormFile("file", "b.csv")
+        part.Write([]byte("csv"))
+        writer.Close()
 
 	req := httptest.NewRequest("POST", "/api/shopee/affiliate", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	r.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
+        if rec.Code != http.StatusOK {
+                t.Fatalf("expected 200, got %d", rec.Code)
+        }
+        var resp struct{ Inserted int `json:"inserted"` }
+        if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+                t.Fatalf("json unmarshal: %v", err)
+        }
+        if resp.Inserted != 2 {
+                t.Fatalf("expected inserted 2, got %d", resp.Inserted)
+        }
 }
