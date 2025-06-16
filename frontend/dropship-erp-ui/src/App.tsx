@@ -11,6 +11,7 @@ import ShopeeImport from "./components/ShopeeImport";
 import AccountPage from "./components/AccountPage";
 import ExpensePage from "./components/ExpensePage";
 import JournalPage from "./components/JournalPage";
+import AdInvoicePage from "./components/AdInvoicePage";
 import PLPage from "./components/PLPage";
 import GLPage from "./components/GLPage";
 import SalesSummaryPage from "./components/SalesSummaryPage";
@@ -28,8 +29,8 @@ export default function App() {
         <Link to="/channels">Channels</Link> |{" "}
         <Link to="/accounts">Accounts</Link> |{" "}
         <Link to="/expenses">Expenses</Link> |{" "}
-        <Link to="/journal">Journal</Link> |{" "}
-        <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
+        <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
+        | <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
         <Routes>
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/channels" element={<ChannelPage />} />
           <Route path="/accounts" element={<AccountPage />} />
           <Route path="/expenses" element={<ExpensePage />} />
+          <Route path="/ads" element={<AdInvoicePage />} />
           <Route path="/journal" element={<JournalPage />} />
         </Routes>
       </div>

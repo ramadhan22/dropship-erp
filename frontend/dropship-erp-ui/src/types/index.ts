@@ -126,6 +126,15 @@ export interface Expense {
   created_at: string;
 }
 
+export interface AdInvoice {
+  invoice_no: string;
+  username: string;
+  store: string;
+  invoice_date: string;
+  total: number;
+  created_at: string;
+}
+
 export interface JournalEntry {
   journal_id: number;
   entry_date: string;
