@@ -108,6 +108,13 @@ func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, st
 	return err
 }
 
+// UpdateDropshipStatus is a compatibility alias for UpdatePurchaseStatus.
+// ShopeeService expects this method to exist on its dropship repository
+// dependency, so we simply delegate to UpdatePurchaseStatus.
+func (r *DropshipRepo) UpdateDropshipStatus(ctx context.Context, kodePesanan, status string) error {
+	return r.UpdatePurchaseStatus(ctx, kodePesanan, status)
+}
+
 // ListDropshipPurchasesByShopAndDate returns all dropship purchases for a given shop_username
 // whose purchase_date falls between two string‐formatted dates (YYYY-MM-DD).
 // This lets you pull a slice of purchases to, for example, generate reports or feed reconciliation logic.
