@@ -6,7 +6,7 @@ import { importAdInvoice, listAdInvoices } from "../api/adInvoices";
 import type { AdInvoice } from "../types";
 
 export default function AdInvoicePage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null);
   const [list, setList] = useState<AdInvoice[]>([]);
   const [sortKey, setSortKey] = useState<keyof AdInvoice>("invoice_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -52,17 +52,23 @@ export default function AdInvoicePage() {
         <input
           type="file"
           accept="application/pdf"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          multiple
+          onChange={(e) => setFiles(e.target.files)}
         />
         <Button
           variant="contained"
           onClick={async () => {
-            if (!file) return;
+            if (!files || files.length === 0) return;
             try {
-              await importAdInvoice(file);
-              setFile(null);
+              for (const f of Array.from(files)) {
+                await importAdInvoice(f);
+              }
+              setFiles(null);
               fetchData();
-              setMsg({ type: "success", text: "uploaded" });
+              setMsg({
+                type: "success",
+                text: `uploaded ${files.length} files`,
+              });
             } catch (e: any) {
               setMsg({ type: "error", text: e.message });
             }

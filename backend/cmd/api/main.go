@@ -65,6 +65,7 @@ func main() {
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
+		AllowOriginFunc:  func(origin string) bool { return true },
 	}))
 
 	apiGroup := router.Group("/api")

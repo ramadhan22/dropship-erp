@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -59,6 +60,9 @@ func (s *AdInvoiceService) parsePDF(r io.Reader) (*models.AdInvoice, error) {
 	}
 	tmp.Close()
 
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		return nil, fmt.Errorf("pdftotext not installed: install poppler-utils")
+	}
 	out, err := exec.Command("pdftotext", tmp.Name(), "-").Output()
 	if err != nil {
 		return nil, err
