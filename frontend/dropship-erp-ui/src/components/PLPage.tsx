@@ -60,7 +60,12 @@ const months = [
 
 const years = [2023, 2024, 2025];
 
-function renderRows(rows: PLRow[], fmt: Intl.NumberFormat, indent = 1) {
+function renderRows(
+  rows: PLRow[] | null | undefined,
+  fmt: Intl.NumberFormat,
+  indent = 1,
+) {
+  if (!rows) return null;
   return rows.map((r) => (
     <TableRow key={r.label} sx={r.manual ? { bgcolor: "#fdecea" } : undefined}>
       <TableCell sx={{ pl: 4 * indent }}>{r.label}</TableCell>
