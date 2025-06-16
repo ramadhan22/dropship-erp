@@ -51,3 +51,28 @@ test("click reconcile button", async () => {
   fireEvent.click(screen.getByText("Reconcile"));
   await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledWith("A"));
 });
+
+test("reconcile all button", async () => {
+  (api.listCandidates as jest.Mock).mockResolvedValueOnce({
+    data: [
+      {
+        kode_pesanan: "A",
+        kode_invoice_channel: "INV",
+        nama_toko: "X",
+        status_pesanan_terakhir: "diproses",
+        no_pesanan: "INV",
+      },
+      {
+        kode_pesanan: "B",
+        kode_invoice_channel: "INV2",
+        nama_toko: "X",
+        status_pesanan_terakhir: "diproses",
+        no_pesanan: "INV2",
+      },
+    ],
+  });
+  render(<ReconcileDashboard />);
+  await screen.findByRole("button", { name: /Reconcile All/i });
+  fireEvent.click(screen.getByRole("button", { name: /Reconcile All/i }));
+  await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledTimes(2));
+});
