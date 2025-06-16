@@ -9,7 +9,6 @@ require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-migrate/migrate/v4 v4.18.3
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/ledongthuc/pdf v0.0.0-20170312145042-b95967f4ea5d
 	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.20.1
 	github.com/xuri/excelize/v2 v2.7.0

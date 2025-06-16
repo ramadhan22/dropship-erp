@@ -1,16 +1,16 @@
 package service
 
 import (
-	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	pdf "github.com/ledongthuc/pdf"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
@@ -60,44 +60,53 @@ func (s *AdInvoiceService) parsePDF(r io.Reader) (*models.AdInvoice, error) {
 	}
 	tmp.Close()
 
-	reader, err := pdf.Open(tmp.Name())
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		return nil, fmt.Errorf("pdftotext not installed: install poppler-utils")
+	}
+	out, err := exec.Command("pdftotext", tmp.Name(), "-").Output()
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	for i := 1; i <= reader.NumPage(); i++ {
-		p := reader.Page(i)
-		if p.V.IsNull() || p.V.Key("Contents").Kind() == pdf.Null {
-			continue
-		}
-		buf.WriteString(p.GetPlainText("\n"))
-	}
-	txt := strings.Split(buf.String(), "\n")
+	txt := strings.Split(string(out), "\n")
 	inv := &models.AdInvoice{}
 	for i, line := range txt {
 		line = strings.TrimSpace(line)
-		switch line {
-		case "No. Faktur":
-			if i+1 < len(txt) {
-				inv.InvoiceNo = strings.TrimSpace(txt[i+1])
+		switch {
+		case line == "No. Faktur":
+			for j := i + 1; j < len(txt); j++ {
+				next := strings.TrimSpace(txt[j])
+				if next != "" {
+					inv.InvoiceNo = next
+					break
+				}
 			}
-		case "Username":
-			if i+2 < len(txt) {
-				inv.Username = strings.TrimSpace(txt[i+2])
+		case line == "Username":
+			for j := i + 1; j < len(txt); j++ {
+				next := strings.TrimSpace(txt[j])
+				if next == "" || next == "Pelanggan" {
+					continue
+				}
+				inv.Username = next
+				break
 			}
-		case "Tanggal Invoice":
-			if i+1 < len(txt) {
-				d := strings.TrimSpace(txt[i+1])
-				inv.InvoiceDate, _ = time.Parse("02/01/2006", d)
+		case strings.Contains(line, "Tanggal Invoice"):
+			for j := i + 1; j < len(txt); j++ {
+				d := strings.TrimSpace(txt[j])
+				if t, err := time.Parse("02/01/2006", d); err == nil {
+					inv.InvoiceDate = t
+					break
+				}
 			}
 		}
-		if strings.HasPrefix(line, "Total (") && i+1 < len(txt) {
-			amt := strings.TrimSpace(txt[i+1])
-			amt = strings.ReplaceAll(amt, ",", "")
-			amt = strings.ReplaceAll(amt, ".", "")
-			if v, err := strconv.ParseFloat(amt, 64); err == nil {
-				inv.Total = v / 100
+		if strings.HasPrefix(line, "Total (") {
+			for j := i + 1; j < len(txt); j++ {
+				amt := strings.TrimSpace(txt[j])
+				amtClean := strings.ReplaceAll(amt, ",", "")
+				amtClean = strings.ReplaceAll(amtClean, ".", "")
+				if v, err := strconv.ParseFloat(amtClean, 64); err == nil {
+					inv.Total = v / 100
+					break
+				}
 			}
 		}
 	}
