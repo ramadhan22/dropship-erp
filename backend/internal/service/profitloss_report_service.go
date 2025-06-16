@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // ProfitLossRow represents a line in the profit loss statement.
@@ -33,70 +35,87 @@ type ProfitLoss struct {
 	LabaRugiBersih           ProfitLossRow   `json:"labaRugiBersih"`
 }
 
-// ProfitLossReportService computes profit and loss reports using CachedMetric data.
-type plComputer interface {
-	ComputePL(ctx context.Context, shop, period string) (*models.CachedMetric, error)
+// ProfitLossJournalRepo defines the journal repo method needed for PL reports.
+type ProfitLossJournalRepo interface {
+	GetAccountBalancesBetween(ctx context.Context, shop string, from, to time.Time) ([]repository.AccountBalance, error)
 }
 
+// ProfitLossReportService computes profit and loss data using journal entries.
 type ProfitLossReportService struct {
-	pl plComputer
+	jr ProfitLossJournalRepo
 }
 
 // NewProfitLossReportService constructs a ProfitLossReportService.
-func NewProfitLossReportService(pl plComputer) *ProfitLossReportService {
-	return &ProfitLossReportService{pl: pl}
+func NewProfitLossReportService(jr ProfitLossJournalRepo) *ProfitLossReportService {
+	return &ProfitLossReportService{jr: jr}
 }
 
 // GetProfitLoss returns profit and loss information for the given period.
 // typ should be "Monthly" or "Yearly". Month may be ignored for yearly reports.
 func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string, month, year int, store string) (*ProfitLoss, error) {
-	var metric models.CachedMetric
+	var start, end time.Time
 	switch typ {
 	case "Yearly":
-		for m := 1; m <= 12; m++ {
-			per := fmt.Sprintf("%04d-%02d", year, m)
-			cm, err := s.pl.ComputePL(ctx, store, per)
-			if err != nil {
-				return nil, err
-			}
-			metric.SumRevenue += cm.SumRevenue
-			metric.SumCOGS += cm.SumCOGS
-			metric.SumFees += cm.SumFees
-		}
-		metric.NetProfit = metric.SumRevenue - metric.SumCOGS - metric.SumFees
+		start = time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(1, 0, 0).Add(-time.Nanosecond)
 	default:
 		if month == 0 {
 			return nil, fmt.Errorf("month required")
 		}
-		per := fmt.Sprintf("%04d-%02d", year, month)
-		cm, err := s.pl.ComputePL(ctx, store, per)
-		if err != nil {
-			return nil, err
-		}
-		metric = *cm
+		start = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
 	}
 
-	rev := metric.SumRevenue
-	cogs := metric.SumCOGS
-	fees := metric.SumFees
-	labaKotor := rev - cogs
-	labaBersih := metric.NetProfit
+	balances, err := s.jr.GetAccountBalancesBetween(ctx, store, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	var revRows, hppRows, opRows, adminRows, taxRows []ProfitLossRow
+	var totalRev, totalHPP, totalOp, totalAdmin, totalTax float64
+
+	for _, ab := range balances {
+		code := ab.AccountCode
+		switch {
+		case strings.HasPrefix(code, "4."):
+			amt := -ab.Balance
+			revRows = append(revRows, ProfitLossRow{Label: ab.AccountName, Amount: amt})
+			totalRev += amt
+		case strings.HasPrefix(code, "5.1"):
+			hppRows = append(hppRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
+			totalHPP += ab.Balance
+		case strings.HasPrefix(code, "5.2"):
+			opRows = append(opRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
+			totalOp += ab.Balance
+		case strings.HasPrefix(code, "5.3"):
+			adminRows = append(adminRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
+			totalAdmin += ab.Balance
+		case strings.HasPrefix(code, "5.4"):
+			taxRows = append(taxRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
+			totalTax += ab.Balance
+		}
+	}
+
+	labaKotor := totalRev - totalHPP
+	totalBebanUsahaAmt := totalOp + totalAdmin
+	labaSebelumPajak := totalRev - totalHPP - totalOp - totalAdmin
+	labaBersih := labaSebelumPajak - totalTax
 
 	res := &ProfitLoss{
-		PendapatanUsaha:          []ProfitLossRow{{Label: "Penjualan", Amount: rev}},
-		TotalPendapatanUsaha:     rev,
-		HargaPokokPenjualan:      []ProfitLossRow{{Label: "HPP", Amount: cogs}},
-		TotalHargaPokokPenjualan: cogs,
-		LabaKotor:                ProfitLossRow{Amount: labaKotor, Percent: pct(labaKotor, rev)},
-		BebanOperasional:         []ProfitLossRow{{Label: "Marketplace Fees", Amount: fees}},
-		TotalBebanOperasional:    fees,
-		BebanAdministrasi:        []ProfitLossRow{},
-		TotalBebanAdministrasi:   0,
-		TotalBebanUsaha:          ProfitLossRow{Amount: fees, Percent: pct(fees, rev)},
-		LabaSebelumPajak:         labaBersih,
-		PajakPenghasilan:         []ProfitLossRow{},
-		TotalPajakPenghasilan:    0,
-		LabaRugiBersih:           ProfitLossRow{Amount: labaBersih, Percent: pct(labaBersih, rev)},
+		PendapatanUsaha:          revRows,
+		TotalPendapatanUsaha:     totalRev,
+		HargaPokokPenjualan:      hppRows,
+		TotalHargaPokokPenjualan: totalHPP,
+		LabaKotor:                ProfitLossRow{Amount: labaKotor, Percent: pct(labaKotor, totalRev)},
+		BebanOperasional:         opRows,
+		TotalBebanOperasional:    totalOp,
+		BebanAdministrasi:        adminRows,
+		TotalBebanAdministrasi:   totalAdmin,
+		TotalBebanUsaha:          ProfitLossRow{Amount: totalBebanUsahaAmt, Percent: pct(totalBebanUsahaAmt, totalRev)},
+		LabaSebelumPajak:         labaSebelumPajak,
+		PajakPenghasilan:         taxRows,
+		TotalPajakPenghasilan:    totalTax,
+		LabaRugiBersih:           ProfitLossRow{Amount: labaBersih, Percent: pct(labaBersih, totalRev)},
 	}
 	return res, nil
 }
