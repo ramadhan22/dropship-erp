@@ -39,6 +39,18 @@ export default function ReconcileDashboard() {
     }
   };
 
+  const handleReconcileAll = async () => {
+    for (const row of data) {
+      try {
+        await reconcileCheck(row.kode_pesanan);
+      } catch {
+        // ignore individual errors and continue
+      }
+    }
+    setMsg({ type: "success", text: "Completed" });
+    fetchData();
+  };
+
   const columns: Column<ReconcileCandidate>[] = [
     { label: "Kode Pesanan", key: "kode_pesanan" },
     { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
@@ -71,6 +83,9 @@ export default function ReconcileDashboard() {
         ))}
       </select>
       <Button onClick={fetchData}>Refresh</Button>
+      <Button onClick={handleReconcileAll} sx={{ ml: 1 }}>
+        Reconcile All
+      </Button>
       {msg && (
         <Alert severity={msg.type} sx={{ mt: 2 }}>
           {msg.text}
