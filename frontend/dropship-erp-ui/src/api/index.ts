@@ -76,9 +76,11 @@ export function importShopee(file: File) {
   });
 }
 
-export function importShopeeAffiliate(file: File) {
+export function importShopeeAffiliate(files: File[]) {
   const data = new FormData();
-  data.append("file", file);
+  for (const file of files) {
+    data.append("file", file);
+  }
   return api.post<ImportResponse>("/shopee/affiliate", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });

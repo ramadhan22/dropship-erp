@@ -91,6 +91,7 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 				}
 			}
 		}
+
 		if strings.HasPrefix(line, "Total (") || line == "Total" {
 			for j := i + 1; j < len(lines); j++ {
 				amt := strings.TrimSpace(lines[j])
