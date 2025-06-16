@@ -4,6 +4,12 @@ Dropship ERP is a full featured web application for managing dropshipping and
 online marketplace transactions.  The project consists of a Go backend and a
 React/TypeScript frontend.
 
+## Dependencies
+
+The backend and frontend only require Go and Node.js. PDF parsing for ads
+invoices is handled with a pure Go library so no additional system packages are
+needed.
+
 ## Backend
 
 The backend lives under [`backend`](backend) and exposes a REST API using [Gin](https://github.com/gin-gonic/gin). It connects to PostgreSQL via [`sqlx`](https://github.com/jmoiron/sqlx) and uses embedded SQL migrations (powered by `golang-migrate`).
