@@ -49,6 +49,70 @@ func adsSaldoShopeeAccountID(store string) int64 {
 	}
 }
 
+func parseInvoiceText(lines []string) *models.AdInvoice {
+	inv := &models.AdInvoice{}
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		switch {
+		case line == "No. Faktur":
+			var parts []string
+			for j := i + 1; j < len(lines); j++ {
+				next := strings.TrimSpace(lines[j])
+				if next == "" || next == "Username" || next == "Pelanggan" {
+					if next == "Username" || next == "Pelanggan" {
+						break
+					}
+					continue
+				}
+				if next == "Username" || strings.HasPrefix(next, "Username") {
+					break
+				}
+				if next == "Periode" || strings.Contains(next, "Tanggal Invoice") {
+					break
+				}
+				parts = append(parts, next)
+			}
+			inv.InvoiceNo = strings.Join(parts, "")
+		case line == "Username":
+			for j := i + 1; j < len(lines); j++ {
+				next := strings.TrimSpace(lines[j])
+				if next == "" || next == "Pelanggan" {
+					continue
+				}
+				inv.Username = next
+				break
+			}
+		case strings.Contains(line, "Tanggal Invoice"):
+			for j := i + 1; j < len(lines); j++ {
+				d := strings.TrimSpace(lines[j])
+				if t, err := time.Parse("02/01/2006", d); err == nil {
+					inv.InvoiceDate = t
+					break
+				}
+			}
+		}
+		if strings.HasPrefix(line, "Total (") || line == "Total" {
+			for j := i + 1; j < len(lines); j++ {
+				amt := strings.TrimSpace(lines[j])
+				if amt == "" || strings.HasPrefix(amt, "(") {
+					continue
+				}
+				amt = strings.TrimPrefix(amt, "Rp")
+				amt = strings.TrimSpace(amt)
+				amtClean := strings.ReplaceAll(amt, ",", "")
+				amtClean = strings.ReplaceAll(amtClean, ".", "")
+				amtClean = strings.ReplaceAll(amtClean, " ", "")
+				if v, err := strconv.ParseFloat(amtClean, 64); err == nil {
+					inv.Total = v / 100
+					break
+				}
+			}
+		}
+	}
+	inv.Store = formatStoreName(inv.Username)
+	return inv
+}
+
 func (s *AdInvoiceService) parsePDF(r io.Reader) (*models.AdInvoice, error) {
 	tmp, err := os.CreateTemp("", "adinv*.pdf")
 	if err != nil {
@@ -67,50 +131,8 @@ func (s *AdInvoiceService) parsePDF(r io.Reader) (*models.AdInvoice, error) {
 	if err != nil {
 		return nil, err
 	}
-	txt := strings.Split(string(out), "\n")
-	inv := &models.AdInvoice{}
-	for i, line := range txt {
-		line = strings.TrimSpace(line)
-		switch {
-		case line == "No. Faktur":
-			for j := i + 1; j < len(txt); j++ {
-				next := strings.TrimSpace(txt[j])
-				if next != "" {
-					inv.InvoiceNo = next
-					break
-				}
-			}
-		case line == "Username":
-			for j := i + 1; j < len(txt); j++ {
-				next := strings.TrimSpace(txt[j])
-				if next == "" || next == "Pelanggan" {
-					continue
-				}
-				inv.Username = next
-				break
-			}
-		case strings.Contains(line, "Tanggal Invoice"):
-			for j := i + 1; j < len(txt); j++ {
-				d := strings.TrimSpace(txt[j])
-				if t, err := time.Parse("02/01/2006", d); err == nil {
-					inv.InvoiceDate = t
-					break
-				}
-			}
-		}
-		if strings.HasPrefix(line, "Total (") {
-			for j := i + 1; j < len(txt); j++ {
-				amt := strings.TrimSpace(txt[j])
-				amtClean := strings.ReplaceAll(amt, ",", "")
-				amtClean = strings.ReplaceAll(amtClean, ".", "")
-				if v, err := strconv.ParseFloat(amtClean, 64); err == nil {
-					inv.Total = v / 100
-					break
-				}
-			}
-		}
-	}
-	inv.Store = formatStoreName(inv.Username)
+	lines := strings.Split(string(out), "\n")
+	inv := parseInvoiceText(lines)
 	return inv, nil
 }
 
