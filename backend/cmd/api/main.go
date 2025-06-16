@@ -51,6 +51,7 @@ func main() {
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
+	adsSvc := service.NewAdInvoiceService(repo.DB, repo.AdInvoiceRepo, repo.JournalRepo)
 	journalSvc := service.NewJournalService(repo.DB, repo.JournalRepo)
 	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	plReportSvc := service.NewProfitLossReportService(repo.JournalRepo)
@@ -98,6 +99,9 @@ func main() {
 
 		expHandler := handlers.NewExpenseHandler(expenseSvc)
 		expHandler.RegisterRoutes(apiGroup)
+
+		adsHandler := handlers.NewAdInvoiceHandler(adsSvc)
+		adsHandler.RegisterRoutes(apiGroup)
 
 		jHandler := handlers.NewJournalHandler(journalSvc)
 		jHandler.RegisterRoutes(apiGroup)
