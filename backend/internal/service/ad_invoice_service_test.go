@@ -1,18 +1,18 @@
 package service
 
 import (
-        "os"
-        "os/exec"
-        "testing"
+	"os"
+	"os/exec"
+	"testing"
 )
 
 func TestParsePDFSample(t *testing.T) {
-        if _, err := exec.LookPath("pdftotext"); err != nil {
-                t.Skip("pdftotext not installed")
-        }
-        f, err := os.Open("../../../sample_data/SPEI092025053100172422 (1).pdf")
-        if err != nil {
-                t.Fatalf("open sample pdf: %v", err)
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		t.Skip("pdftotext not installed")
+	}
+	f, err := os.Open("../../../sample_data/SPEI092025053100172422 (1).pdf")
+	if err != nil {
+		t.Fatalf("open sample pdf: %v", err)
 	}
 	defer f.Close()
 	svc := NewAdInvoiceService(nil, nil, nil)
@@ -82,6 +82,30 @@ func TestParseSecondSampleSplit(t *testing.T) {
 		t.Errorf("invoice date = %s", inv.InvoiceDate.Format("02/01/2006"))
 	}
 	if inv.Total != 220900.00 {
+		t.Errorf("total = %f", inv.Total)
+	}
+}
+
+func TestParseTotalSameLine(t *testing.T) {
+	lines := []string{
+		"Faktur",
+		"No. Faktur",
+		"SPEI092025053100289327",
+		"Username",
+		"Pelanggan",
+		"mrest0re",
+		"Tanggal Invoice",
+		"31/05/2025",
+		"Total (Termasuk PPN jika ada) 1,310,750.00",
+	}
+	inv := parseInvoiceText(lines)
+	if inv.InvoiceNo != "SPEI092025053100289327" {
+		t.Errorf("invoice number = %s", inv.InvoiceNo)
+	}
+	if inv.InvoiceDate.Format("02/01/2006") != "31/05/2025" {
+		t.Errorf("invoice date = %s", inv.InvoiceDate.Format("02/01/2006"))
+	}
+	if inv.Total != 1310750.00 {
 		t.Errorf("total = %f", inv.Total)
 	}
 }
