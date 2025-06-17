@@ -110,7 +110,6 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 			}
 		}
 
-
 		if strings.HasPrefix(line, "Total (Termasuk PPN") || line == "Total" {
 			if v, ok := parseAmount(strings.TrimPrefix(line, "Total")); ok {
 				inv.Total = v
@@ -159,6 +158,9 @@ func (s *AdInvoiceService) ImportInvoicePDF(ctx context.Context, r io.Reader) er
 	inv, err := s.parsePDF(r)
 	if err != nil {
 		return err
+	}
+	if inv.Total <= 0 {
+		return fmt.Errorf("failed to parse invoice: total <= 0")
 	}
 	inv.CreatedAt = time.Now()
 	exists, err := s.repo.Exists(ctx, inv.InvoiceNo)

@@ -69,9 +69,11 @@ export function importDropship(file: File) {
 }
 
 // Shopee import
-export function importShopee(file: File) {
+export function importShopee(files: File[]) {
   const data = new FormData();
-  data.append("file", file);
+  for (const file of files) {
+    data.append("file", file);
+  }
   return api.post<ImportResponse>("/shopee/import", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });

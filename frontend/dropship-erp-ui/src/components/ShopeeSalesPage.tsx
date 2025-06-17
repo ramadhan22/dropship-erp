@@ -359,7 +359,7 @@ export default function ShopeeSalesPage() {
   ];
 
   const [importOpen, setImportOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -438,13 +438,13 @@ export default function ShopeeSalesPage() {
 
   const handleImport = async () => {
     try {
-      if (!file) return;
-      const res = await importShopee(file);
+      if (files.length === 0) return;
+      const res = await importShopee(files);
       setMsg({
         type: "success",
         text: `Imported ${res.data.inserted} rows successfully!`,
       });
-      setFile(null);
+      setFiles([]);
       setImportOpen(false);
       fetchData();
     } catch (e: any) {
@@ -726,8 +726,9 @@ export default function ShopeeSalesPage() {
         <DialogContent>
           <input
             type="file"
+            multiple
             aria-label="XLSX file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => setFiles(Array.from(e.target.files || []))}
           />
         </DialogContent>
         <DialogActions>

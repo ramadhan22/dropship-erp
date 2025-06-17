@@ -19,11 +19,14 @@ describe("ShopeeImport", () => {
     });
 
     render(<ShopeeImport />);
-    const file = new File(["data"], "orders.xlsx", {
+    const fileA = new File(["data"], "a.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const fileB = new File(["data"], "b.xlsx", {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     fireEvent.change(screen.getByLabelText(/XLSX file/i), {
-      target: { files: [file] },
+      target: { files: [fileA, fileB] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
 

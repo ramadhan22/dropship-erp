@@ -1,8 +1,19 @@
 // File: src/api/index.test.ts
 
-
-import '@testing-library/jest-dom';
-import { api, computeMetrics, fetchBalanceSheet, fetchMetrics, importDropship, importShopee, reconcile, createJenisChannel, createStore, listJenisChannels, listStores } from './index';
+import "@testing-library/jest-dom";
+import {
+  api,
+  computeMetrics,
+  fetchBalanceSheet,
+  fetchMetrics,
+  importDropship,
+  importShopee,
+  reconcile,
+  createJenisChannel,
+  createStore,
+  listJenisChannels,
+  listStores,
+} from "./index";
 
 // Turn the axios‐style api.post and api.get into Jest mocks
 (api.post as jest.Mock) = jest.fn();
@@ -31,10 +42,13 @@ describe("API layer", () => {
   it("importShopee calls api.post correctly and resolves data", async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { inserted: 5 } });
 
-    const file = new File(["data"], "orders.xlsx", {
+    const fileA = new File(["data"], "a.xlsx", {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    const result = await importShopee(file);
+    const fileB = new File(["data"], "b.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const result = await importShopee([fileA, fileB]);
     expect(api.post).toHaveBeenCalledWith(
       "/shopee/import",
       expect.any(FormData),
@@ -94,35 +108,42 @@ describe("API layer", () => {
     );
     expect(res.data).toEqual(fakeSheet);
   });
-  it('createJenisChannel posts correctly', async () => {
-    (api.post as jest.Mock).mockResolvedValue({ data: { jenis_channel_id: 1 } });
+  it("createJenisChannel posts correctly", async () => {
+    (api.post as jest.Mock).mockResolvedValue({
+      data: { jenis_channel_id: 1 },
+    });
 
-    const res = await createJenisChannel('Tokopedia');
-    expect(api.post).toHaveBeenCalledWith('/jenis-channels', { jenis_channel: 'Tokopedia' });
+    const res = await createJenisChannel("Tokopedia");
+    expect(api.post).toHaveBeenCalledWith("/jenis-channels", {
+      jenis_channel: "Tokopedia",
+    });
     expect(res).toEqual({ data: { jenis_channel_id: 1 } });
   });
 
-  it('createStore posts correctly', async () => {
+  it("createStore posts correctly", async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { store_id: 2 } });
 
-    const res = await createStore(1, 'ShopA');
-    expect(api.post).toHaveBeenCalledWith('/stores', { jenis_channel_id: 1, nama_toko: 'ShopA' });
+    const res = await createStore(1, "ShopA");
+    expect(api.post).toHaveBeenCalledWith("/stores", {
+      jenis_channel_id: 1,
+      nama_toko: "ShopA",
+    });
     expect(res).toEqual({ data: { store_id: 2 } });
   });
 
-  it('listJenisChannels fetches list', async () => {
+  it("listJenisChannels fetches list", async () => {
     (api.get as jest.Mock).mockResolvedValue({ data: [] });
 
     const res = await listJenisChannels();
-    expect(api.get).toHaveBeenCalledWith('/jenis-channels');
+    expect(api.get).toHaveBeenCalledWith("/jenis-channels");
     expect(res.data).toEqual([]);
   });
 
-  it('listStores fetches stores for channel', async () => {
+  it("listStores fetches stores for channel", async () => {
     (api.get as jest.Mock).mockResolvedValue({ data: [] });
 
     const res = await listStores(3);
-    expect(api.get).toHaveBeenCalledWith('/jenis-channels/3/stores');
+    expect(api.get).toHaveBeenCalledWith("/jenis-channels/3/stores");
     expect(res.data).toEqual([]);
   });
 });
