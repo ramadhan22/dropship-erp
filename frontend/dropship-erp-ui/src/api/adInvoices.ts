@@ -13,5 +13,5 @@ export function listAdInvoices(params?: { sort?: string; dir?: string }) {
   const q = new URLSearchParams();
   if (params?.sort) q.append("sort", params.sort);
   if (params?.dir) q.append("dir", params.dir);
-  return api.get<AdInvoice[]>(`/ad-invoices?${q.toString()}`);
+  return api.get<AdInvoice[]>(`/ad-invoices/?${q.toString()}`);
 }
