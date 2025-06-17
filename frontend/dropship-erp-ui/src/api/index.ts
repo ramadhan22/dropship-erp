@@ -12,6 +12,7 @@ import type {
   ShopeeSettledSummary,
   ShopeeAffiliateSale,
   ShopeeAffiliateSummary,
+  SalesProfit,
 } from "../types";
 
 export interface ImportResponse {
@@ -220,6 +221,32 @@ export function sumShopeeAffiliate(params: {
   if (params.to) q.append("to", params.to);
   return api.get<ShopeeAffiliateSummary>(
     `/shopee/affiliate/summary?${q.toString()}`,
+  );
+}
+
+export function listSalesProfit(params: {
+  channel?: string;
+  store?: string;
+  from?: string;
+  to?: string;
+  order?: string;
+  sort?: string;
+  dir?: string;
+  page?: number;
+  page_size?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
+  if (params.order) q.append("order", params.order);
+  if (params.sort) q.append("sort", params.sort);
+  if (params.dir) q.append("dir", params.dir);
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  return api.get<{ data: SalesProfit[]; total: number }>(
+    `/sales?${q.toString()}`,
   );
 }
 

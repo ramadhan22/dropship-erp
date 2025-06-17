@@ -15,6 +15,7 @@ import AdInvoicePage from "./components/AdInvoicePage";
 import PLPage from "./components/PLPage";
 import GLPage from "./components/GLPage";
 import SalesSummaryPage from "./components/SalesSummaryPage";
+import SalesProfitPage from "./components/SalesProfitPage";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
       <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
         <Link to="/">Home</Link> | <Link to="/dropship">Dropship Import</Link> |{" "}
         <Link to="/shopee">Shopee Sales</Link> |{" "}
+        <Link to="/sales-profit">Sales Profit</Link> |{" "}
         <Link to="/shopee/affiliate">Affiliate Sales</Link> |{" "}
         <Link to="/reconcile">Reconcile</Link> |{" "}
         <Link to="/metrics">Metrics</Link> | <Link to="/pl">P&L</Link> |{" "}
@@ -37,6 +39,7 @@ export default function App() {
           <Route path="/" element={<SalesSummaryPage />} />
           <Route path="/dropship" element={<DropshipImport />} />
           <Route path="/shopee" element={<ShopeeSalesPage />} />
+          <Route path="/sales-profit" element={<SalesProfitPage />} />
           <Route path="/shopee/affiliate" element={<ShopeeAffiliatePage />} />
           <Route path="/reconcile" element={<ReconcileForm />} />
           <Route path="/reconcile/dashboard" element={<ReconcileDashboard />} />

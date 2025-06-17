@@ -149,6 +149,10 @@ func (f *fakeShopeeRepo) GetAffiliateExpenseByOrder(ctx context.Context, kodePes
 	return f.affExpense, nil
 }
 
+func (f *fakeShopeeRepo) ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error) {
+	return nil, 0, nil
+}
+
 func TestImportSettledOrdersXLSX(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
