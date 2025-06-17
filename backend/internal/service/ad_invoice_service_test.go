@@ -109,3 +109,27 @@ func TestParseTotalSameLine(t *testing.T) {
 		t.Errorf("total = %f", inv.Total)
 	}
 }
+
+func TestAdInvoiceAmountPositive(t *testing.T) {
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		t.Skip("pdftotext not installed")
+	}
+	files := []string{
+		"../../../sample_data/SPEI092025053100172422 (1).pdf",
+	}
+	svc := NewAdInvoiceService(nil, nil, nil)
+	for _, fp := range files {
+		f, err := os.Open(fp)
+		if err != nil {
+			t.Fatalf("open %s: %v", fp, err)
+		}
+		inv, err := svc.parsePDF(f)
+		f.Close()
+		if err != nil {
+			t.Fatalf("parse %s: %v", fp, err)
+		}
+		if inv.Total <= 0 {
+			t.Errorf("invoice %s total <= 0", fp)
+		}
+	}
+}
