@@ -561,7 +561,7 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	admin := abs(entry.PromoGratisOngkirPenjual)
 	layanan := abs(entry.PromoDiskonShopee)
 	affiliateAmt := abs(affiliate)
-	saldo := netSale + voucher + admin + layanan + affiliateAmt
+	saldo := netSale - voucher - admin - layanan - affiliateAmt
 
 	je := &models.JournalEntry{
 		EntryDate:    entry.WaktuPesananDibuat,
