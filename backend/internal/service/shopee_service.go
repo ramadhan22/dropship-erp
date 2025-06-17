@@ -556,12 +556,12 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 		return nil
 	}
 	affiliate, _ := repo.GetAffiliateExpenseByOrder(ctx, entry.NoPesanan)
-	netSale := entry.HargaAsliProduk - entry.TotalDiskonProduk
+	netSale := entry.HargaAsliProduk + entry.TotalDiskonProduk
 	voucher := abs(entry.BiayaAdminShopee)
 	admin := abs(entry.PromoGratisOngkirPenjual)
 	layanan := abs(entry.PromoDiskonShopee)
 	affiliateAmt := abs(affiliate)
-	saldo := netSale - voucher - admin - layanan - affiliateAmt
+	saldo := netSale + voucher + admin + layanan + affiliateAmt
 
 	je := &models.JournalEntry{
 		EntryDate:    entry.WaktuPesananDibuat,
