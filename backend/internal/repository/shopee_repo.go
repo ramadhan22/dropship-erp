@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -380,35 +381,37 @@ func (r *ShopeeRepo) ListSalesProfit(
 	limit, offset int,
 ) ([]models.SalesProfit, int, error) {
 	base := `SELECT
-               dp.kode_invoice_channel AS kode_pesanan,
+                je.source_id AS kode_pesanan,
                 dp.waktu_pesanan_terbuat AS tanggal_pesanan,
-                dp.total_transaksi AS modal_purchase,
-                ss.total_penghasilan AS amount_sales,
-                dp.biaya_mitra_jakmall,
-                ss.biaya_administrasi,
-                ss.biaya_layanan_termasuk_ppn_11 AS biaya_layanan,
-                ss.diskon_voucher_ditanggung_penjual AS biaya_voucher,
-                COALESCE(af.total_affiliate,0) AS biaya_affiliate,
-                ss.total_penghasilan - (
-                        dp.total_transaksi + dp.biaya_mitra_jakmall + ss.biaya_administrasi +
-                        ss.biaya_layanan_termasuk_ppn_11 + ss.diskon_voucher_ditanggung_penjual +
-                        COALESCE(af.total_affiliate,0)
-                ) AS profit,
-                CASE WHEN ss.total_penghasilan = 0 THEN 0
-                     ELSE (ss.total_penghasilan - (
-                             dp.total_transaksi + dp.biaya_mitra_jakmall + ss.biaya_administrasi +
-                             ss.biaya_layanan_termasuk_ppn_11 + ss.diskon_voucher_ditanggung_penjual +
-                             COALESCE(af.total_affiliate,0)
-                     )) / ss.total_penghasilan * 100 END AS profit_percent
-                FROM dropship_purchases dp
-                JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
-                LEFT JOIN (
-                        SELECT kode_pesanan, SUM(pengeluaran) AS total_affiliate
-                        FROM shopee_affiliate_sales
-                        GROUP BY kode_pesanan
-                ) af ON af.kode_pesanan = dp.kode_invoice_channel
-                LEFT JOIN stores st ON dp.nama_toko = st.nama_toko
-                LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
+                SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END) AS modal_purchase,
+                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) AS amount_sales,
+                SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
+                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
+                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
+                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
+                SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
+                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                  - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                     + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                     + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                     + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                     + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                     + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)) AS profit,
+                CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
+                     ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                          - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                             + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                             + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                             + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                             + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                             + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END))
+                     ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
+                FROM journal_entries je
+                JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
+                JOIN journal_lines jl ON jl.journal_id = je.journal_id
+                JOIN stores st ON dp.nama_toko = st.nama_toko
+                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
+                WHERE je.source_type IN ('pending_sales','shopee_settled')`
 	args := []interface{}{}
 	conds := []string{}
 	arg := 1
@@ -433,21 +436,22 @@ func (r *ShopeeRepo) ListSalesProfit(
 		arg++
 	}
 	if orderNo != "" {
-		conds = append(conds, fmt.Sprintf("dp.kode_invoice_channel ILIKE $%d", arg))
+		conds = append(conds, fmt.Sprintf("je.source_id ILIKE $%d", arg))
 		args = append(args, "%"+orderNo+"%")
 		arg++
 	}
 	query := base
 	if len(conds) > 0 {
-		query += " WHERE " + strings.Join(conds, " AND ")
+		query += " AND " + strings.Join(conds, " AND ")
 	}
+	query += " GROUP BY je.source_id, dp.waktu_pesanan_terbuat"
 	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
 	var count int
 	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
 		return nil, 0, err
 	}
 	sortCol := map[string]string{
-		"kode_pesanan":        "dp.kode_invoice_channel",
+		"kode_pesanan":        "kode_pesanan",
 		"tanggal_pesanan":     "tanggal_pesanan",
 		"modal_purchase":      "modal_purchase",
 		"amount_sales":        "amount_sales",
@@ -467,13 +471,38 @@ func (r *ShopeeRepo) ListSalesProfit(
 		direction = "DESC"
 	}
 	args = append(args, limit, offset)
-	query += fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", sortCol, direction, arg, arg+1)
-	var list []models.SalesProfit
-	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+	finalQuery := query + fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", sortCol, direction, arg, arg+1)
+	var rows []struct {
+		KodePesanan       string    `db:"kode_pesanan"`
+		TanggalPesanan    time.Time `db:"tanggal_pesanan"`
+		ModalPurchase     float64   `db:"modal_purchase"`
+		AmountSales       float64   `db:"amount_sales"`
+		BiayaMitraJakmall float64   `db:"biaya_mitra_jakmall"`
+		BiayaAdministrasi float64   `db:"biaya_administrasi"`
+		BiayaLayanan      float64   `db:"biaya_layanan"`
+		BiayaVoucher      float64   `db:"biaya_voucher"`
+		BiayaAffiliate    float64   `db:"biaya_affiliate"`
+		Profit            float64   `db:"profit"`
+		ProfitPercent     float64   `db:"profit_percent"`
+	}
+	if err := r.db.SelectContext(ctx, &rows, finalQuery, args...); err != nil {
 		return nil, 0, err
 	}
-	if list == nil {
-		list = []models.SalesProfit{}
+	list := make([]models.SalesProfit, len(rows))
+	for i, r := range rows {
+		list[i] = models.SalesProfit{
+			KodePesanan:       r.KodePesanan,
+			TanggalPesanan:    r.TanggalPesanan,
+			ModalPurchase:     r.ModalPurchase,
+			AmountSales:       r.AmountSales,
+			BiayaMitraJakmall: r.BiayaMitraJakmall,
+			BiayaAdministrasi: r.BiayaAdministrasi,
+			BiayaLayanan:      r.BiayaLayanan,
+			BiayaVoucher:      r.BiayaVoucher,
+			BiayaAffiliate:    r.BiayaAffiliate,
+			Profit:            r.Profit,
+			ProfitPercent:     r.ProfitPercent,
+		}
 	}
 	return list, count, nil
 }
