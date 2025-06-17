@@ -244,3 +244,18 @@ type ShopeeAffiliateSummary struct {
 	TotalNilaiPembelian  float64 `db:"total_nilai_pembelian" json:"total_nilai_pembelian"`
 	TotalKomisiAffiliate float64 `db:"total_komisi_affiliate" json:"total_komisi_affiliate"`
 }
+
+// SalesProfit represents sales along with cost and fee breakdowns.
+type SalesProfit struct {
+	KodePesanan       string    `db:"kode_pesanan" json:"kode_pesanan"`
+	TanggalPesanan    time.Time `db:"tanggal_pesanan" json:"tanggal_pesanan"`
+	ModalPurchase     float64   `db:"modal_purchase" json:"modal_purchase"`
+	AmountSales       float64   `db:"amount_sales" json:"amount_sales"`
+	BiayaMitraJakmall float64   `db:"biaya_mitra_jakmall" json:"biaya_mitra_jakmall"`
+	BiayaAdministrasi float64   `db:"biaya_administrasi" json:"biaya_administrasi"`
+	BiayaLayanan      float64   `db:"biaya_layanan" json:"biaya_layanan"`
+	BiayaVoucher      float64   `db:"biaya_voucher" json:"biaya_voucher"`
+	BiayaAffiliate    float64   `db:"biaya_affiliate" json:"biaya_affiliate"`
+	Profit            float64   `db:"-" json:"profit"`
+	ProfitPercent     float64   `db:"-" json:"profit_percent"`
+}

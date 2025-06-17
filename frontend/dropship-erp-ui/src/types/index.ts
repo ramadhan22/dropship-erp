@@ -228,3 +228,17 @@ export interface ShopeeAffiliateSummary {
   total_nilai_pembelian: number;
   total_komisi_affiliate: number;
 }
+
+export interface SalesProfit {
+  kode_pesanan: string;
+  tanggal_pesanan: string;
+  modal_purchase: number;
+  amount_sales: number;
+  biaya_mitra_jakmall: number;
+  biaya_administrasi: number;
+  biaya_layanan: number;
+  biaya_voucher: number;
+  biaya_affiliate: number;
+  profit: number;
+  profit_percent: number;
+}

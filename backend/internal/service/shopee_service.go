@@ -71,6 +71,7 @@ type ShopeeRepoInterface interface {
 	ListShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error)
+	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
 }
 
 type ShopeeDropshipRepo interface {
@@ -525,6 +526,29 @@ func (s *ShopeeService) SumAffiliate(
 	noPesanan, from, to string,
 ) (*models.ShopeeAffiliateSummary, error) {
 	return s.repo.SumShopeeAffiliateSales(ctx, noPesanan, from, to)
+}
+
+// ListSalesProfit fetches sales with cost and profit calculations.
+func (s *ShopeeService) ListSalesProfit(
+	ctx context.Context,
+	channel, store, from, to, orderNo, sortBy, dir string,
+	limit, offset int,
+) ([]models.SalesProfit, int, error) {
+	list, total, err := s.repo.ListSalesProfit(ctx, channel, store, from, to, orderNo, sortBy, dir, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range list {
+		p := list[i]
+		profit := p.AmountSales - (p.ModalPurchase + p.BiayaMitraJakmall + p.BiayaAdministrasi + p.BiayaLayanan + p.BiayaVoucher + p.BiayaAffiliate)
+		list[i].Profit = profit
+		if p.AmountSales == 0 {
+			list[i].ProfitPercent = 0
+		} else {
+			list[i].ProfitPercent = profit / p.AmountSales * 100
+		}
+	}
+	return list, total, nil
 }
 
 func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJournalRepo, repo ShopeeRepoInterface, entry *models.ShopeeSettled) error {
