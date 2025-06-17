@@ -31,25 +31,34 @@ func NewShopeeHandler(svc ShopeeServiceInterface) *ShopeeHandler {
 }
 
 func (h *ShopeeHandler) HandleImport(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
+	form, err := c.MultipartForm()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
-	f, err := fileHeader.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	files := form.File["file"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
-	defer f.Close()
 
 	ctx := c.Request.Context()
-	count, err := h.svc.ImportSettledOrdersXLSX(ctx, f)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	total := 0
+	for _, fh := range files {
+		f, err := fh.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		count, err := h.svc.ImportSettledOrdersXLSX(ctx, f)
+		f.Close()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		total += count
 	}
-	c.JSON(http.StatusOK, gin.H{"inserted": count})
+	c.JSON(http.StatusOK, gin.H{"inserted": total})
 }
 
 func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
