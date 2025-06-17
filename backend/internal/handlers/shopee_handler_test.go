@@ -65,7 +65,9 @@ func TestShopeeHandleImport_Success(t *testing.T) {
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	part, _ := writer.CreateFormFile("file", "ok.xlsx")
+	part, _ := writer.CreateFormFile("file", "a.xlsx")
+	part.Write([]byte("xlsx"))
+	part, _ = writer.CreateFormFile("file", "b.xlsx")
 	part.Write([]byte("xlsx"))
 	writer.Close()
 
@@ -75,6 +77,15 @@ func TestShopeeHandleImport_Success(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var resp struct {
+		Inserted int `json:"inserted"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	if resp.Inserted != 2 {
+		t.Fatalf("expected inserted 2, got %d", resp.Inserted)
 	}
 }
 
