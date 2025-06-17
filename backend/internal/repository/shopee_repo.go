@@ -380,7 +380,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 	limit, offset int,
 ) ([]models.SalesProfit, int, error) {
 	base := `SELECT
-                dp.kode_pesanan,
+               dp.kode_invoice_channel AS kode_pesanan,
                 dp.waktu_pesanan_terbuat AS tanggal_pesanan,
                 dp.total_transaksi AS modal_purchase,
                 ss.total_penghasilan AS amount_sales,
@@ -447,7 +447,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 		return nil, 0, err
 	}
 	sortCol := map[string]string{
-		"kode_pesanan":        "dp.kode_pesanan",
+		"kode_pesanan":        "dp.kode_invoice_channel",
 		"tanggal_pesanan":     "tanggal_pesanan",
 		"modal_purchase":      "modal_purchase",
 		"amount_sales":        "amount_sales",
