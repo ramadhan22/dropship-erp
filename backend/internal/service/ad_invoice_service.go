@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,21 @@ func adsSaldoShopeeAccountID(store string) int64 {
 	default:
 		return 11011
 	}
+}
+
+func parseAmount(s string) (float64, bool) {
+	re := regexp.MustCompile(`-?[0-9][0-9.,]*`)
+	match := re.FindString(s)
+	if match == "" {
+		return 0, false
+	}
+	clean := strings.ReplaceAll(match, ",", "")
+	clean = strings.ReplaceAll(clean, ".", "")
+	v, err := strconv.ParseFloat(clean, 64)
+	if err != nil {
+		return 0, false
+	}
+	return v / 100, true
 }
 
 func parseInvoiceText(lines []string) *models.AdInvoice {
@@ -93,18 +109,17 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 		}
 
 		if strings.HasPrefix(line, "Total (") || line == "Total" {
+			if v, ok := parseAmount(strings.TrimPrefix(line, "Total")); ok {
+				inv.Total = v
+				continue
+			}
 			for j := i + 1; j < len(lines); j++ {
 				amt := strings.TrimSpace(lines[j])
 				if amt == "" || strings.HasPrefix(amt, "(") {
 					continue
 				}
-				amt = strings.TrimPrefix(amt, "Rp")
-				amt = strings.TrimSpace(amt)
-				amtClean := strings.ReplaceAll(amt, ",", "")
-				amtClean = strings.ReplaceAll(amtClean, ".", "")
-				amtClean = strings.ReplaceAll(amtClean, " ", "")
-				if v, err := strconv.ParseFloat(amtClean, 64); err == nil {
-					inv.Total = v / 100
+				if v, ok := parseAmount(amt); ok {
+					inv.Total = v
 					break
 				}
 			}
