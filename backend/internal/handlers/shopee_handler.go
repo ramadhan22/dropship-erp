@@ -18,6 +18,7 @@ type ShopeeServiceInterface interface {
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ListAffiliate(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumAffiliate(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
+	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
 }
 
 type ShopeeHandler struct {
@@ -52,34 +53,34 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 }
 
 func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
-        form, err := c.MultipartForm()
-        if err != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
-                return
-        }
-        files := form.File["file"]
-        if len(files) == 0 {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
-                return
-        }
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
+	files := form.File["file"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
 
-        ctx := c.Request.Context()
-        total := 0
-        for _, fh := range files {
-                f, err := fh.Open()
-                if err != nil {
-                        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                        return
-                }
-                count, err := h.svc.ImportAffiliateCSV(ctx, f)
-                f.Close()
-                if err != nil {
-                        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                        return
-                }
-                total += count
-        }
-        c.JSON(http.StatusOK, gin.H{"inserted": total})
+	ctx := c.Request.Context()
+	total := 0
+	for _, fh := range files {
+		f, err := fh.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		count, err := h.svc.ImportAffiliateCSV(ctx, f)
+		f.Close()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		total += count
+	}
+	c.JSON(http.StatusOK, gin.H{"inserted": total})
 }
 
 // HandleListSettled returns paginated shopee settled data with optional filters.
@@ -159,4 +160,31 @@ func (h *ShopeeHandler) HandleSumAffiliate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, sum)
+}
+
+// HandleListSalesProfit returns sales profit rows with pagination and filters.
+func (h *ShopeeHandler) HandleListSalesProfit(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	from := c.Query("from")
+	to := c.Query("to")
+	orderNo := c.Query("order")
+	sortBy := c.DefaultQuery("sort", "tanggal_pesanan")
+	dir := c.DefaultQuery("dir", "desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 10
+	}
+	offset := (page - 1) * size
+	ctx := c.Request.Context()
+	list, total, err := h.svc.ListSalesProfit(ctx, channel, store, from, to, orderNo, sortBy, dir, size, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
 }

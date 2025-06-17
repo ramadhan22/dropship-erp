@@ -372,3 +372,108 @@ func (r *ShopeeRepo) GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan
 		kodePesanan)
 	return amt, err
 }
+
+// ListSalesProfit returns joined dropship and shopee sales with cost breakdown.
+func (r *ShopeeRepo) ListSalesProfit(
+	ctx context.Context,
+	channel, store, from, to, orderNo, sortBy, dir string,
+	limit, offset int,
+) ([]models.SalesProfit, int, error) {
+	base := `SELECT
+                dp.kode_pesanan,
+                dp.waktu_pesanan_terbuat AS tanggal_pesanan,
+                dp.total_transaksi AS modal_purchase,
+                ss.total_penghasilan AS amount_sales,
+                dp.biaya_mitra_jakmall,
+                ss.biaya_administrasi,
+                ss.biaya_layanan_termasuk_ppn_11 AS biaya_layanan,
+                ss.diskon_voucher_ditanggung_penjual AS biaya_voucher,
+                COALESCE(af.total_affiliate,0) AS biaya_affiliate,
+                ss.total_penghasilan - (
+                        dp.total_transaksi + dp.biaya_mitra_jakmall + ss.biaya_administrasi +
+                        ss.biaya_layanan_termasuk_ppn_11 + ss.diskon_voucher_ditanggung_penjual +
+                        COALESCE(af.total_affiliate,0)
+                ) AS profit,
+                CASE WHEN ss.total_penghasilan = 0 THEN 0
+                     ELSE (ss.total_penghasilan - (
+                             dp.total_transaksi + dp.biaya_mitra_jakmall + ss.biaya_administrasi +
+                             ss.biaya_layanan_termasuk_ppn_11 + ss.diskon_voucher_ditanggung_penjual +
+                             COALESCE(af.total_affiliate,0)
+                     )) / ss.total_penghasilan * 100 END AS profit_percent
+                FROM dropship_purchases dp
+                JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
+                LEFT JOIN (
+                        SELECT kode_pesanan, SUM(pengeluaran) AS total_affiliate
+                        FROM shopee_affiliate_sales
+                        GROUP BY kode_pesanan
+                ) af ON af.kode_pesanan = dp.kode_invoice_channel
+                LEFT JOIN stores st ON dp.nama_toko = st.nama_toko
+                LEFT JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id`
+	args := []interface{}{}
+	conds := []string{}
+	arg := 1
+	if channel != "" {
+		conds = append(conds, fmt.Sprintf("jc.jenis_channel = $%d", arg))
+		args = append(args, channel)
+		arg++
+	}
+	if store != "" {
+		conds = append(conds, fmt.Sprintf("dp.nama_toko = $%d", arg))
+		args = append(args, store)
+		arg++
+	}
+	if from != "" {
+		conds = append(conds, fmt.Sprintf("DATE(dp.waktu_pesanan_terbuat) >= $%d::date", arg))
+		args = append(args, from)
+		arg++
+	}
+	if to != "" {
+		conds = append(conds, fmt.Sprintf("DATE(dp.waktu_pesanan_terbuat) <= $%d::date", arg))
+		args = append(args, to)
+		arg++
+	}
+	if orderNo != "" {
+		conds = append(conds, fmt.Sprintf("dp.kode_invoice_channel ILIKE $%d", arg))
+		args = append(args, "%"+orderNo+"%")
+		arg++
+	}
+	query := base
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
+	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
+	var count int
+	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
+		return nil, 0, err
+	}
+	sortCol := map[string]string{
+		"kode_pesanan":        "dp.kode_pesanan",
+		"tanggal_pesanan":     "tanggal_pesanan",
+		"modal_purchase":      "modal_purchase",
+		"amount_sales":        "amount_sales",
+		"biaya_mitra_jakmall": "biaya_mitra_jakmall",
+		"biaya_administrasi":  "biaya_administrasi",
+		"biaya_layanan":       "biaya_layanan",
+		"biaya_voucher":       "biaya_voucher",
+		"biaya_affiliate":     "biaya_affiliate",
+		"profit":              "profit",
+		"profit_percent":      "profit_percent",
+	}[sortBy]
+	if sortCol == "" {
+		sortCol = "tanggal_pesanan"
+	}
+	direction := "ASC"
+	if strings.ToLower(dir) == "desc" {
+		direction = "DESC"
+	}
+	args = append(args, limit, offset)
+	query += fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", sortCol, direction, arg, arg+1)
+	var list []models.SalesProfit
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+		return nil, 0, err
+	}
+	if list == nil {
+		list = []models.SalesProfit{}
+	}
+	return list, count, nil
+}
