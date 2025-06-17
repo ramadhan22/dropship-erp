@@ -23,6 +23,8 @@ type AdInvoiceService struct {
 	journalRepo *repository.JournalRepo
 }
 
+var amountRe = regexp.MustCompile(`-?[0-9][0-9.,]*`)
+
 func NewAdInvoiceService(db *sqlx.DB, r *repository.AdInvoiceRepo, jr *repository.JournalRepo) *AdInvoiceService {
 	return &AdInvoiceService{db: db, repo: r, journalRepo: jr}
 }
@@ -51,8 +53,8 @@ func adsSaldoShopeeAccountID(store string) int64 {
 }
 
 func parseAmount(s string) (float64, bool) {
-	re := regexp.MustCompile(`-?[0-9][0-9.,]*`)
-	match := re.FindString(s)
+
+	match := amountRe.FindString(s)
 	if match == "" {
 		return 0, false
 	}
@@ -108,7 +110,8 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 			}
 		}
 
-		if strings.HasPrefix(line, "Total (") || line == "Total" {
+
+		if strings.HasPrefix(line, "Total (Termasuk PPN") || line == "Total" {
 			if v, ok := parseAmount(strings.TrimPrefix(line, "Total")); ok {
 				inv.Total = v
 				continue
