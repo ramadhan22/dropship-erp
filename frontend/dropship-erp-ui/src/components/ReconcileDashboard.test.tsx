@@ -131,8 +131,8 @@ test("check status button", async () => {
       <ReconcileDashboard />
     </MemoryRouter>,
   );
-  await screen.findByText(/Check Status/i);
-  fireEvent.click(screen.getByText(/Check Status/i));
+  await screen.findByRole("button", { name: /Check Status/i });
+  fireEvent.click(screen.getByRole("button", { name: /Check Status/i }));
   await waitFor(() =>
     expect(api.fetchShopeeStatus).toHaveBeenCalledWith("INV"),
   );
