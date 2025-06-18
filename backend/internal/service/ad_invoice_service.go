@@ -55,6 +55,7 @@ func adsSaldoShopeeAccountID(store string) int64 {
 func parseAmount(s string) (float64, bool) {
 
 	match := amountRe.FindString(s)
+	fmt.Println(s)
 	if match == "" {
 		return 0, false
 	}
@@ -110,8 +111,27 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 			}
 		}
 
-		if strings.HasPrefix(line, "Total (Termasuk PPN") || line == "Total" {
-			if v, ok := parseAmount(strings.TrimPrefix(line, "Total")); ok {
+		if strings.HasPrefix(line, "Total (Termasuk PPN") {
+			if v, ok := parseAmount(strings.TrimPrefix(line, "Total (Termasuk PPN")); ok {
+				println(line)
+				inv.Total = v
+				continue
+			}
+			for j := i + 1; j < len(lines); j++ {
+				amt := strings.TrimSpace(lines[j])
+				if amt == "" || strings.HasPrefix(amt, "(") {
+					continue
+				}
+				if v, ok := parseAmount(amt); ok {
+					inv.Total = v
+					break
+				}
+			}
+		}
+
+		if strings.HasPrefix(line, "0.00") {
+			if v, ok := parseAmount(strings.TrimPrefix(line, "0.00")); ok {
+				println(line)
 				inv.Total = v
 				continue
 			}
