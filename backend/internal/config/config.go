@@ -36,11 +36,12 @@ type JWTConfig struct {
 
 // ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
 type ShopeeAPIConfig struct {
-	PartnerID   string `mapstructure:"partner_id"`
-	PartnerKey  string `mapstructure:"partner_key"`
-	ShopID      string `mapstructure:"shop_id"`
-	AccessToken string `mapstructure:"access_token"`
-	BaseURL     string `mapstructure:"base_url"`
+	PartnerID    string `mapstructure:"partner_id"`
+	PartnerKey   string `mapstructure:"partner_key"`
+	ShopID       string `mapstructure:"shop_id"`
+	AccessToken  string `mapstructure:"access_token"`
+	RefreshToken string `mapstructure:"refresh_token"`
+	BaseURL      string `mapstructure:"base_url"`
 }
 
 // LoadConfig reads configuration from config.yaml and environment variables.

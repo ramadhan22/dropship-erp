@@ -18,5 +18,7 @@ shopee_api:
   partner_key: ""
   shop_id: ""
   access_token: ""
+  # long-lived token used to refresh access_token
+  refresh_token: ""
   # optional base url override
   base_url: "https://partner.shopeemobile.com"
