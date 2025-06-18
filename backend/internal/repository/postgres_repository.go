@@ -8,15 +8,16 @@ import (
 // Repository aggregates all sub-repositories for the application.
 // It holds the shared *sqlx.DB connection and each repo instance.
 type Repository struct {
-	DB            *sqlx.DB
-	DropshipRepo  *DropshipRepo
-	ShopeeRepo    *ShopeeRepo
-	ReconcileRepo *ReconcileRepo
-	JournalRepo   *JournalRepo
-	MetricRepo    *MetricRepo
-	ChannelRepo   *ChannelRepo
-	AccountRepo   *AccountRepo
-	AdInvoiceRepo *AdInvoiceRepo
+	DB               *sqlx.DB
+	DropshipRepo     *DropshipRepo
+	ShopeeRepo       *ShopeeRepo
+	ReconcileRepo    *ReconcileRepo
+	JournalRepo      *JournalRepo
+	MetricRepo       *MetricRepo
+	ChannelRepo      *ChannelRepo
+	AccountRepo      *AccountRepo
+	AdInvoiceRepo    *AdInvoiceRepo
+	AssetAccountRepo *AssetAccountRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -37,17 +38,19 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	channelRepo := NewChannelRepo(db)
 	accountRepo := NewAccountRepo(db)
 	adInvoiceRepo := NewAdInvoiceRepo(db)
+	assetAccountRepo := NewAssetAccountRepo(db)
 
 	return &Repository{
-		DB:            db,
-		DropshipRepo:  dropshipRepo,
-		ShopeeRepo:    shopeeRepo,
-		ReconcileRepo: reconcileRepo,
-		JournalRepo:   journalRepo,
-		MetricRepo:    metricRepo,
-		ChannelRepo:   channelRepo,
-		AccountRepo:   accountRepo,
-		AdInvoiceRepo: adInvoiceRepo,
+		DB:               db,
+		DropshipRepo:     dropshipRepo,
+		ShopeeRepo:       shopeeRepo,
+		ReconcileRepo:    reconcileRepo,
+		JournalRepo:      journalRepo,
+		MetricRepo:       metricRepo,
+		ChannelRepo:      channelRepo,
+		AccountRepo:      accountRepo,
+		AdInvoiceRepo:    adInvoiceRepo,
+		AssetAccountRepo: assetAccountRepo,
 	}, nil
 }
 
