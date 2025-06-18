@@ -17,6 +17,12 @@ export interface Account {
   balance: number;
 }
 
+export interface AssetAccountBalance {
+  asset_id: number;
+  account_id: number;
+  balance: number;
+}
+
 export interface BalanceCategory {
   category: string; // e.g. "Assets"
   accounts: Account[]; // list of accounts in this category
