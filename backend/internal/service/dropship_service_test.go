@@ -185,3 +185,46 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 		t.Fatalf("expected no inserts, got %d/%d", len(fake.insertedHeader), len(fake.insertedDetail))
 	}
 }
+
+func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	row1 := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-200", "TRX1", "SKU1", "ProdukA", "15.75", "2", "31.50", "1", "0.5", "33.0", "15.75", "31.50", "2.0", "user", "online", "MyShop", "INV1", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	row2 := []string{"2", "01 January 2025, 10:00:00", "selesai", "PS-200", "TRX1", "SKU2", "ProdukB", "20.00", "1", "20.00", "1", "0.5", "21.0", "20.00", "20.00", "1.0", "user", "online", "MyShop", "INV1", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row1)
+	w.Write(row2)
+	w.Flush()
+
+	fake := &fakeDropshipRepo{}
+	jfake := &fakeJournalRepoDrop{}
+	svc := NewDropshipService(nil, fake, jfake)
+
+	count, err := svc.ImportFromCSV(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected count 2, got %d", count)
+	}
+	if len(jfake.entries) != 1 {
+		t.Fatalf("expected 1 journal entry, got %d", len(jfake.entries))
+	}
+
+	var hpp, sales float64
+	for _, l := range jfake.lines {
+		if l.AccountID == 5001 {
+			hpp = l.Amount
+		}
+		if l.AccountID == 4001 {
+			sales = l.Amount
+		}
+	}
+	if hpp != 51.5 {
+		t.Errorf("expected HPP 51.5, got %.2f", hpp)
+	}
+	if sales != 51.5 {
+		t.Errorf("expected sales 51.5, got %.2f", sales)
+	}
+}
