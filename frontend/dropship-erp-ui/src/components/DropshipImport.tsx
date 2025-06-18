@@ -138,10 +138,6 @@ export default function DropshipImport() {
   const [details, setDetails] = useState<DropshipPurchaseDetail[]>([]);
   const [selected, setSelected] = useState<DropshipPurchase | null>(null);
 
-  useEffect(() => {
-    const ord = searchParams.get("order");
-    if (ord) setOrder(ord);
-  }, [searchParams]);
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));
@@ -155,13 +151,13 @@ export default function DropshipImport() {
     }
   }, [channel]);
 
-  const fetchData = async () => {
+  const fetchData = async (ord?: string) => {
     const res = await listDropshipPurchases({
       channel,
       store,
       from,
       to,
-      order,
+      order: ord ?? order,
       sort: sortKey as string,
       dir: sortDir,
       page,
@@ -186,6 +182,14 @@ export default function DropshipImport() {
   useEffect(() => {
     fetchData();
   }, [channel, store, from, to, page, order, sortKey, sortDir]);
+
+  useEffect(() => {
+    const ord = searchParams.get("order");
+    if (ord) {
+      setOrder(ord);
+      fetchData(ord);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async () => {
     try {
