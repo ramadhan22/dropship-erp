@@ -84,6 +84,15 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 
 	inserted := make(map[string]bool)
 	skipped := make(map[string]bool)
+	// track the header for each newly inserted purchase so we can
+	// create the journal entry after all rows are processed
+	headersMap := make(map[string]*models.DropshipPurchase)
+	// accumulate product totals per purchase across multiple rows
+	type totals struct {
+		prod   float64
+		prodCh float64
+	}
+	agg := make(map[string]*totals)
 	count := 0
 
 	for {
@@ -145,10 +154,8 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 				if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
 					return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
 				}
-				if err := s.createPendingSalesJournal(ctx, jrTx, header, totalHargaProduk, totalHargaChannel); err != nil {
-					return count, fmt.Errorf("journal %s: %w", header.KodePesanan, err)
-				}
 				inserted[header.KodePesanan] = true
+				headersMap[header.KodePesanan] = header
 			}
 		}
 
@@ -170,7 +177,28 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 		if err := repoTx.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
 			return count, fmt.Errorf("insert detail %s: %w", header.KodePesanan, err)
 		}
+		// accumulate totals for journal creation later
+		t, ok := agg[header.KodePesanan]
+		if !ok {
+			t = &totals{}
+			agg[header.KodePesanan] = t
+		}
+		t.prod += totalHargaProduk
+		t.prodCh += totalHargaChannel
 		count++
+	}
+	// after processing all rows, create journal entries using summed totals
+	for kode := range inserted {
+		h := headersMap[kode]
+		sum := agg[kode]
+		var prod, prodCh float64
+		if sum != nil {
+			prod = sum.prod
+			prodCh = sum.prodCh
+		}
+		if err := s.createPendingSalesJournal(ctx, jrTx, h, prod, prodCh); err != nil {
+			return count, fmt.Errorf("journal %s: %w", kode, err)
+		}
 	}
 	if tx != nil {
 		if err := tx.Commit(); err != nil {
