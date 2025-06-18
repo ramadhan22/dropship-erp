@@ -16,6 +16,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getCurrentMonthRange } from "../utils/date";
 import {
@@ -57,6 +58,7 @@ export default function ShopeeSalesPage() {
     null,
   );
   const pageSize = 10;
+  const navigate = useNavigate();
 
   const columns: Column<ShopeeSettled>[] = [
     { label: "Nama Toko", key: "nama_toko" },
@@ -355,6 +357,17 @@ export default function ShopeeSalesPage() {
           style: "currency",
           currency: "IDR",
         }),
+    },
+    {
+      label: "Dropship",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={() => navigate(`/dropship?order=${row.no_pesanan}`)}
+        >
+          View
+        </Button>
+      ),
     },
   ];
 

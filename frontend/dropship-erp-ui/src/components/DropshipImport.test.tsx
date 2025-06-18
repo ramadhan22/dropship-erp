@@ -2,6 +2,7 @@
 
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, screen, waitFor, within } from "@testing-library/dom";
 import * as api from "../api";
 import DropshipImport from "./DropshipImport";
@@ -19,7 +20,11 @@ jest.mock("../api", () => ({
 
 describe("DropshipImport", () => {
   it("renders import button and opens dialog", async () => {
-    render(<DropshipImport />);
+    render(
+      <MemoryRouter>
+        <DropshipImport />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(api.listDropshipPurchases).toHaveBeenCalled());
     const btn = screen.getByRole("button", { name: /Import/i });
     expect(btn).toBeInTheDocument();
@@ -32,7 +37,11 @@ describe("DropshipImport", () => {
       .mockResolvedValueOnce({ data: { inserted: 2 } })
       .mockResolvedValueOnce({ data: { inserted: 1 } });
 
-    render(<DropshipImport />);
+    render(
+      <MemoryRouter>
+        <DropshipImport />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(api.listDropshipPurchases).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
     const dialog = await screen.findByRole("dialog");
@@ -54,7 +63,11 @@ describe("DropshipImport", () => {
   it("shows error message on failure", async () => {
     (api.importDropship as jest.Mock).mockRejectedValue(new Error("boom"));
 
-    render(<DropshipImport />);
+    render(
+      <MemoryRouter>
+        <DropshipImport />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(api.listDropshipPurchases).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Import/i }));
     const dialog = await screen.findByRole("dialog");

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { listCandidates, reconcileCheck } from "../api/reconcile";
@@ -15,6 +16,7 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
 
   useEffect(() => {
@@ -56,6 +58,17 @@ export default function ReconcileDashboard() {
     { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
     { label: "Status", key: "status_pesanan_terakhir" },
     { label: "No Pesanan Shopee", key: "no_pesanan" },
+    {
+      label: "Dropship",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={() => navigate(`/dropship?order=${row.kode_invoice_channel}`)}
+        >
+          View
+        </Button>
+      ),
+    },
     {
       label: "Action",
       render: (_, row) => (
