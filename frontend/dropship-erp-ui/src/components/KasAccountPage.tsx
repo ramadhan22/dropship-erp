@@ -10,28 +10,28 @@ import {
 } from "@mui/material";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
-import { listAssetAccounts, adjustAssetBalance } from "../api/assetAccounts";
+import { listKasAccounts, adjustKasBalance } from "../api/kasAccounts";
 import { listAccounts } from "../api";
-import type { AssetAccountBalance, Account } from "../types";
+import type { KasAccountBalance, Account } from "../types";
 import usePagination from "../usePagination";
 
-export default function AssetAccountPage() {
-  const [list, setList] = useState<AssetAccountBalance[]>([]);
+export default function KasAccountPage() {
+  const [list, setList] = useState<KasAccountBalance[]>([]);
   const { paginated, controls } = usePagination(list);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<AssetAccountBalance | null>(null);
+  const [selected, setSelected] = useState<KasAccountBalance | null>(null);
   const [balance, setBalance] = useState("0");
 
-  const fetchData = () => listAssetAccounts().then((r) => setList(r.data));
+  const fetchData = () => listKasAccounts().then((r) => setList(r.data));
 
   useEffect(() => {
     fetchData();
     listAccounts().then((r) => setAccounts(r.data));
   }, []);
 
-  const columns: Column<AssetAccountBalance>[] = [
+  const columns: Column<KasAccountBalance>[] = [
     { label: "ID", key: "asset_id" },
     {
       label: "Account",
@@ -67,7 +67,7 @@ export default function AssetAccountPage() {
   const handleSave = async () => {
     if (!selected) return;
     try {
-      await adjustAssetBalance(selected.asset_id, Number(balance));
+      await adjustKasBalance(selected.asset_id, Number(balance));
       setOpen(false);
       setSelected(null);
       setBalance("0");
@@ -80,7 +80,7 @@ export default function AssetAccountPage() {
 
   return (
     <div>
-      <h2>Assets</h2>
+      <h2>Kas Accounts</h2>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
       <SortableTable columns={columns} data={paginated} />
       {controls}
