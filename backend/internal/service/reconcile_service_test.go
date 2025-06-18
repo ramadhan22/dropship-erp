@@ -98,7 +98,7 @@ func TestMatchAndJournal_Success(t *testing.T) {
 	fJournal := &fakeJournalRepoRec{nextID: 0}
 	fRec := &fakeRecRepoRec{}
 
-	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec)
+	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil)
 	err := svc.MatchAndJournal(ctx, "DP-111", "SO-222", "ShopA")
 	if err != nil {
 		t.Fatalf("MatchAndJournal error: %v", err)

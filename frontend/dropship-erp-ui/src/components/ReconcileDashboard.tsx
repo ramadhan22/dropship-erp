@@ -3,7 +3,11 @@ import { Alert, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
-import { listCandidates, reconcileCheck } from "../api/reconcile";
+import {
+  listCandidates,
+  reconcileCheck,
+  fetchShopeeStatus,
+} from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";
 import usePagination from "../usePagination";
@@ -42,6 +46,15 @@ export default function ReconcileDashboard() {
     }
   };
 
+  const handleCheckStatus = async (inv: string) => {
+    try {
+      const res = await fetchShopeeStatus(inv);
+      setMsg({ type: "success", text: res.data.status });
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    }
+  };
+
   const handleReconcileAll = async () => {
     for (const row of data) {
       try {
@@ -64,7 +77,9 @@ export default function ReconcileDashboard() {
       render: (_, row) => (
         <Button
           size="small"
-          onClick={() => navigate(`/dropship?order=${row.kode_invoice_channel}`)}
+          onClick={() =>
+            navigate(`/dropship?order=${row.kode_invoice_channel}`)
+          }
         >
           View
         </Button>
@@ -75,6 +90,17 @@ export default function ReconcileDashboard() {
       render: (_, row) => (
         <Button size="small" onClick={() => handleReconcile(row.kode_pesanan)}>
           Reconcile
+        </Button>
+      ),
+    },
+    {
+      label: "Check Status",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={() => handleCheckStatus(row.kode_invoice_channel)}
+        >
+          Check Status
         </Button>
       ),
     },
