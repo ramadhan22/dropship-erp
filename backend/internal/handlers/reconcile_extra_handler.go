@@ -9,10 +9,11 @@ import (
 )
 
 type ReconcileExtraService interface {
-        ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
-        ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error)
-        BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
-        CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
+	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
+	ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error)
+	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
+	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
+	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -27,6 +28,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/candidates", h.candidates)
 	grp.POST("/bulk", h.bulk)
 	grp.POST("/check", h.check)
+	grp.GET("/status", h.status)
 }
 
 func (h *ReconcileExtraHandler) list(c *gin.Context) {
@@ -40,14 +42,14 @@ func (h *ReconcileExtraHandler) list(c *gin.Context) {
 }
 
 func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
-        shop := c.Query("shop")
-        order := c.Query("order")
-        res, err := h.svc.ListCandidates(context.Background(), shop, order)
-        if err != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }
-        c.JSON(http.StatusOK, res)
+	shop := c.Query("shop")
+	order := c.Query("order")
+	res, err := h.svc.ListCandidates(context.Background(), shop, order)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func (h *ReconcileExtraHandler) bulk(c *gin.Context) {
@@ -80,4 +82,18 @@ func (h *ReconcileExtraHandler) check(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "status updated"})
+}
+
+func (h *ReconcileExtraHandler) status(c *gin.Context) {
+	invoice := c.Query("invoice")
+	if invoice == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
+		return
+	}
+	status, err := h.svc.GetShopeeOrderStatus(context.Background(), invoice)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": status})
 }

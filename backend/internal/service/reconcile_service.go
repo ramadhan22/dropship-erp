@@ -38,6 +38,7 @@ type ReconcileService struct {
 	shopeeRepo  ReconcileServiceShopeeRepo
 	journalRepo ReconcileServiceJournalRepo
 	recRepo     ReconcileServiceRecRepo
+	client      *ShopeeClient
 }
 
 // NewReconcileService constructs a ReconcileService.
@@ -47,6 +48,7 @@ func NewReconcileService(
 	sr ReconcileServiceShopeeRepo,
 	jr ReconcileServiceJournalRepo,
 	rr ReconcileServiceRecRepo,
+	c *ShopeeClient,
 ) *ReconcileService {
 	return &ReconcileService{
 		db:          db,
@@ -54,6 +56,7 @@ func NewReconcileService(
 		shopeeRepo:  sr,
 		journalRepo: jr,
 		recRepo:     rr,
+		client:      c,
 	}
 }
 
@@ -166,12 +169,12 @@ func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]mo
 
 // ListCandidates proxies to the repo to fetch transactions that need attention.
 func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error) {
-        if repo, ok := s.recRepo.(interface {
-                ListCandidates(context.Context, string, string) ([]models.ReconcileCandidate, error)
-        }); ok {
-                return repo.ListCandidates(ctx, shop, order)
-        }
-        return nil, fmt.Errorf("not implemented")
+	if repo, ok := s.recRepo.(interface {
+		ListCandidates(context.Context, string, string) ([]models.ReconcileCandidate, error)
+	}); ok {
+		return repo.ListCandidates(ctx, shop, order)
+	}
+	return nil, fmt.Errorf("not implemented")
 }
 
 // BulkReconcile simply loops MatchAndJournal over pairs.
@@ -219,4 +222,12 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 		}
 	}
 	return nil
+}
+
+// GetShopeeOrderStatus uses the Shopee API client to fetch current order status.
+func (s *ReconcileService) GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error) {
+	if s.client == nil {
+		return "", fmt.Errorf("shopee client not configured")
+	}
+	return s.client.GetOrderDetail(ctx, invoice)
 }

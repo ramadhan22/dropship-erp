@@ -14,6 +14,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
+	Shopee   ShopeeAPIConfig
 }
 
 // ServerConfig contains HTTP server settings.
@@ -31,6 +32,15 @@ type DatabaseConfig struct {
 // JWTConfig contains settings for JWT authentication.
 type JWTConfig struct {
 	Secret string
+}
+
+// ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
+type ShopeeAPIConfig struct {
+	PartnerID   string `mapstructure:"partner_id"`
+	PartnerKey  string `mapstructure:"partner_key"`
+	ShopID      string `mapstructure:"shop_id"`
+	AccessToken string `mapstructure:"access_token"`
+	BaseURL     string `mapstructure:"base_url"`
 }
 
 // LoadConfig reads configuration from config.yaml and environment variables.

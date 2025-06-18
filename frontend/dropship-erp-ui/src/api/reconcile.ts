@@ -23,3 +23,7 @@ export function reconcileCheck(kodePesanan: string) {
     kode_pesanan: kodePesanan,
   });
 }
+
+export function fetchShopeeStatus(invoice: string) {
+  return api.get<{ status: string }>(`/reconcile/status?invoice=${invoice}`);
+}
