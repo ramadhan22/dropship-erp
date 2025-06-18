@@ -33,6 +33,11 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 		expRepo = repository.NewExpenseRepo(tx)
 		jRepo = repository.NewJournalRepo(tx)
 	}
+	var total float64
+	for _, l := range e.Lines {
+		total += l.Amount
+	}
+	e.Amount = total
 	if err := expRepo.Create(ctx, e); err != nil {
 		return err
 	}
@@ -49,12 +54,15 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	if err != nil {
 		return err
 	}
-	jl1 := &models.JournalLine{JournalID: jid, AccountID: e.AccountID, IsDebit: true, Amount: e.Amount, Memo: &e.Description}
-	jl2 := &models.JournalLine{JournalID: jid, AccountID: 1001, IsDebit: false, Amount: e.Amount, Memo: &e.Description}
-	if err := jRepo.InsertJournalLine(ctx, jl1); err != nil {
-		return err
+	for i := range e.Lines {
+		l := e.Lines[i]
+		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
+		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
+			return err
+		}
 	}
-	if err := jRepo.InsertJournalLine(ctx, jl2); err != nil {
+	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
+	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
 		return err
 	}
 	if tx != nil {
@@ -63,8 +71,8 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	return nil
 }
 
-func (s *ExpenseService) ListExpenses(ctx context.Context) ([]models.Expense, error) {
-	return s.expenseRepo.List(ctx)
+func (s *ExpenseService) ListExpenses(ctx context.Context, accountID int64, sortBy, dir string, limit, offset int) ([]models.Expense, int, error) {
+	return s.expenseRepo.List(ctx, accountID, sortBy, dir, limit, offset)
 }
 
 func (s *ExpenseService) DeleteExpense(ctx context.Context, id string) error {

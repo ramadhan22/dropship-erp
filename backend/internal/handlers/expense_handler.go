@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -29,6 +30,17 @@ func (h *ExpenseHandler) create(c *gin.Context) {
 	if e.ID == "" {
 		e.ID = ""
 	} // placeholder, DB default
+	var total float64
+	for _, l := range e.Lines {
+		total += l.Amount
+	}
+	if total != e.Amount && e.Amount != 0 {
+		e.Amount = total
+	}
+	if total <= 0 || e.AssetAccountID == 0 || len(e.Lines) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid expense"})
+		return
+	}
 	if err := h.svc.CreateExpense(context.Background(), &e); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,12 +49,24 @@ func (h *ExpenseHandler) create(c *gin.Context) {
 }
 
 func (h *ExpenseHandler) list(c *gin.Context) {
-	ex, err := h.svc.ListExpenses(context.Background())
+	accountID, _ := strconv.ParseInt(c.Query("account_id"), 10, 64)
+	sortBy := c.DefaultQuery("sort", "date")
+	dir := c.DefaultQuery("dir", "desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 10
+	}
+	offset := (page - 1) * size
+	ex, total, err := h.svc.ListExpenses(context.Background(), accountID, sortBy, dir, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, ex)
+	c.JSON(http.StatusOK, gin.H{"data": ex, "total": total})
 }
 
 func (h *ExpenseHandler) delete(c *gin.Context) {

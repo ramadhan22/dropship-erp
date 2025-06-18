@@ -18,15 +18,17 @@ export default function ExpensePage() {
   const [list, setList] = useState<Expense[]>([]);
   const { paginated, controls } = usePagination(list);
   const [desc, setDesc] = useState("");
-  const [amount, setAmount] = useState("");
-  const [account, setAccount] = useState("");
+  const [asset, setAsset] = useState("");
+  const [lines, setLines] = useState<{ account: string; amount: string }[]>([
+    { account: "", amount: "" },
+  ]);
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  const fetchData = () => listExpenses().then((r) => setList(r.data));
+  const fetchData = () => listExpenses().then((r) => setList(r.data.data));
 
   useEffect(() => {
     fetchData();
@@ -36,13 +38,16 @@ export default function ExpensePage() {
     try {
       await createExpense({
         description: desc,
-        amount: Number(amount),
-        account_id: Number(account),
+        asset_account_id: Number(asset),
+        lines: lines.map((l) => ({
+          account_id: Number(l.account),
+          amount: Number(l.amount),
+        })),
         date: new Date().toISOString(),
       });
       setDesc("");
-      setAmount("");
-      setAccount("");
+      setAsset("");
+      setLines([{ account: "", amount: "" }]);
       setOpen(false);
       fetchData();
       setMsg({ type: "success", text: "saved" });
@@ -58,9 +63,17 @@ export default function ExpensePage() {
       key: "amount",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
-    { label: "Account", key: "account_id" },
+    { label: "Asset", key: "asset_account_id" },
+    {
+      label: "Lines",
+      render: (_, e) =>
+        e.lines.map((l) => `${l.account_id}:${l.amount}`).join(", "),
+    },
     {
       label: "",
       render: (_, e) => (
@@ -87,7 +100,9 @@ export default function ExpensePage() {
       {controls}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add Expense</DialogTitle>
-        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+        >
           <TextField
             label="Description"
             value={desc}
@@ -95,15 +110,39 @@ export default function ExpensePage() {
             autoFocus
           />
           <TextField
-            label="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            label="Asset Account"
+            value={asset}
+            onChange={(e) => setAsset(e.target.value)}
           />
-          <TextField
-            label="Account"
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-          />
+          {lines.map((ln, idx) => (
+            <div key={idx} style={{ display: "flex", gap: 4 }}>
+              <TextField
+                label="Expense Account"
+                value={ln.account}
+                onChange={(e) => {
+                  const n = [...lines];
+                  n[idx].account = e.target.value;
+                  setLines(n);
+                }}
+                size="small"
+              />
+              <TextField
+                label="Amount"
+                value={ln.amount}
+                onChange={(e) => {
+                  const n = [...lines];
+                  n[idx].amount = e.target.value;
+                  setLines(n);
+                }}
+                size="small"
+              />
+            </div>
+          ))}
+          <Button
+            onClick={() => setLines([...lines, { account: "", amount: "" }])}
+          >
+            Add Line
+          </Button>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
