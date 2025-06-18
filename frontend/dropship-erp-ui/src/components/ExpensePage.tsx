@@ -11,7 +11,8 @@ import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
 import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
-import type { Expense } from "../types";
+import { listAccounts } from "../api";
+import type { Expense, Account } from "../types";
 import usePagination from "../usePagination";
 
 export default function ExpensePage() {
@@ -22,6 +23,7 @@ export default function ExpensePage() {
   const [lines, setLines] = useState<{ account: string; amount: string }[]>([
     { account: "", amount: "" },
   ]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
@@ -32,6 +34,7 @@ export default function ExpensePage() {
 
   useEffect(() => {
     fetchData();
+    listAccounts().then((r) => setAccounts(r.data));
   }, []);
 
   const handleCreate = async () => {
@@ -109,23 +112,38 @@ export default function ExpensePage() {
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
           />
-          <TextField
-            label="Asset Account"
+          <select
+            aria-label="Asset Account"
             value={asset}
             onChange={(e) => setAsset(e.target.value)}
-          />
+            style={{ fontSize: "0.875rem" }}
+          >
+            <option value="">Select Account</option>
+            {accounts.map((a) => (
+              <option key={a.account_id} value={String(a.account_id)}>
+                {a.account_code} - {a.account_name}
+              </option>
+            ))}
+          </select>
           {lines.map((ln, idx) => (
             <div key={idx} style={{ display: "flex", gap: 4 }}>
-              <TextField
-                label="Expense Account"
+              <select
+                aria-label="Expense Account"
                 value={ln.account}
                 onChange={(e) => {
                   const n = [...lines];
                   n[idx].account = e.target.value;
                   setLines(n);
                 }}
-                size="small"
-              />
+                style={{ fontSize: "0.875rem" }}
+              >
+                <option value="">Select Account</option>
+                {accounts.map((a) => (
+                  <option key={a.account_id} value={String(a.account_id)}>
+                    {a.account_code} - {a.account_name}
+                  </option>
+                ))}
+              </select>
               <TextField
                 label="Amount"
                 value={ln.amount}
