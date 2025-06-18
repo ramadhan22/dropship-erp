@@ -32,6 +32,32 @@ func TestParsePDFSample(t *testing.T) {
 	}
 }
 
+func TestParsePDFSampleMultiLine(t *testing.T) {
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		t.Skip("pdftotext not installed")
+	}
+	f, err := os.Open("../../../sample_data/SPEI092024093000132653.pdf")
+	if err != nil {
+		t.Fatalf("open sample pdf: %v", err)
+	}
+	defer f.Close()
+	svc := NewAdInvoiceService(nil, nil, nil)
+	inv, err := svc.parsePDF(f)
+	if err != nil {
+		t.Logf("inv: %+v", inv)
+		t.Fatalf("parsePDF error: %v", err)
+	}
+	if inv.InvoiceNo != "SPEI092024093000132653" {
+		t.Errorf("invoice number = %s", inv.InvoiceNo)
+	}
+	if inv.InvoiceDate.Format("02/01/2006") != "30/09/2024" {
+		t.Errorf("invoice date = %s", inv.InvoiceDate.Format("02/01/2006"))
+	}
+	if inv.Total != 2073150.00 {
+		t.Errorf("total = %f", inv.Total)
+	}
+}
+
 func TestParseSplitInvoiceNumber(t *testing.T) {
 	lines := []string{
 		"Faktur",
