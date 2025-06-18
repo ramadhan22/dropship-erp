@@ -17,7 +17,7 @@ export interface Account {
   balance: number;
 }
 
-export interface AssetAccountBalance {
+export interface KasAccountBalance {
   asset_id: number;
   account_id: number;
   balance: number;

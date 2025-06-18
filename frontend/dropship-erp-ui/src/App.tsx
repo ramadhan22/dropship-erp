@@ -16,7 +16,7 @@ import PLPage from "./components/PLPage";
 import GLPage from "./components/GLPage";
 import SalesSummaryPage from "./components/SalesSummaryPage";
 import SalesProfitPage from "./components/SalesProfitPage";
-import AssetAccountPage from "./components/AssetAccountPage";
+import KasAccountPage from "./components/KasAccountPage";
 
 export default function App() {
   return (
@@ -33,7 +33,7 @@ export default function App() {
         <Link to="/accounts">Accounts</Link> |{" "}
         <Link to="/expenses">Expenses</Link> |{" "}
         <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
-        | <Link to="/assets">Assets</Link> |{" "}
+        | <Link to="/kas">Kas</Link> |{" "}
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
@@ -54,7 +54,7 @@ export default function App() {
           <Route path="/expenses" element={<ExpensePage />} />
           <Route path="/ads" element={<AdInvoicePage />} />
           <Route path="/journal" element={<JournalPage />} />
-          <Route path="/assets" element={<AssetAccountPage />} />
+          <Route path="/kas" element={<KasAccountPage />} />
         </Routes>
       </div>
     </BrowserRouter>
