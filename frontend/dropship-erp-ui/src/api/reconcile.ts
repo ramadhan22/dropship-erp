@@ -5,8 +5,13 @@ export function listUnmatched(shop: string) {
   return api.get<ReconciledTransaction[]>(`/reconcile/unmatched?shop=${shop}`);
 }
 
-export function listCandidates(shop: string) {
-  return api.get<ReconcileCandidate[]>(`/reconcile/candidates?shop=${shop}`);
+export function listCandidates(shop: string, order?: string) {
+  const q = new URLSearchParams();
+  if (shop) q.append("shop", shop);
+  if (order) q.append("order", order);
+  const qs = q.toString();
+  const url = qs ? `/reconcile/candidates?${qs}` : "/reconcile/candidates";
+  return api.get<ReconcileCandidate[]>(url);
 }
 
 export function bulkReconcile(pairs: [string, string][], shop: string) {

@@ -10,6 +10,7 @@ import usePagination from "../usePagination";
 
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
+  const [order, setOrder] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<ReconcileCandidate[]>([]);
   const [msg, setMsg] = useState<{
@@ -24,12 +25,12 @@ export default function ReconcileDashboard() {
   }, []);
 
   const fetchData = () => {
-    listCandidates(shop).then((r) => setData(r.data));
+    listCandidates(shop, order).then((r) => setData(r.data));
   };
 
   useEffect(() => {
     fetchData();
-  }, [shop]);
+  }, [shop, order]);
 
   const handleReconcile = async (kode: string) => {
     try {
@@ -95,6 +96,13 @@ export default function ReconcileDashboard() {
           </option>
         ))}
       </select>
+      <input
+        aria-label="Search Invoice"
+        placeholder="Kode Invoice"
+        value={order}
+        onChange={(e) => setOrder(e.target.value)}
+        style={{ height: "2rem", marginRight: "0.5rem" }}
+      />
       <Button onClick={fetchData}>Refresh</Button>
       <Button onClick={handleReconcileAll} sx={{ ml: 1 }}>
         Reconcile All
