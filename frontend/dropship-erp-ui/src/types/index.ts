@@ -117,13 +117,21 @@ export interface DropshipPurchaseDetail {
   potensi_keuntungan: number;
 }
 
+export interface ExpenseLine {
+  line_id: number;
+  expense_id: string;
+  account_id: number;
+  amount: number;
+}
+
 export interface Expense {
   id: string;
   date: string;
   description: string;
   amount: number;
-  account_id: number;
+  asset_account_id: number;
   created_at: string;
+  lines: ExpenseLine[];
 }
 
 export interface AdInvoice {
