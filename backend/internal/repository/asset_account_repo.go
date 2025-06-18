@@ -21,7 +21,10 @@ func (r *AssetAccountRepo) Create(ctx context.Context, a *models.AssetAccount) e
 
 func (r *AssetAccountRepo) GetByID(ctx context.Context, id int64) (*models.AssetAccount, error) {
 	var aa models.AssetAccount
-	err := r.db.GetContext(ctx, &aa, `SELECT * FROM asset_accounts WHERE id=$1`, id)
+	err := r.db.GetContext(ctx, &aa, `
+                SELECT aa.* FROM asset_accounts aa
+                JOIN accounts a ON aa.account_id = a.account_id
+                WHERE aa.id=$1 AND a.account_type='Kas'`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +33,11 @@ func (r *AssetAccountRepo) GetByID(ctx context.Context, id int64) (*models.Asset
 
 func (r *AssetAccountRepo) List(ctx context.Context) ([]models.AssetAccount, error) {
 	var list []models.AssetAccount
-	err := r.db.SelectContext(ctx, &list, `SELECT * FROM asset_accounts ORDER BY id`)
+	err := r.db.SelectContext(ctx, &list, `
+                SELECT aa.* FROM asset_accounts aa
+                JOIN accounts a ON aa.account_id = a.account_id
+                WHERE a.account_type='Kas'
+                ORDER BY aa.id`)
 	if list == nil {
 		list = []models.AssetAccount{}
 	}
