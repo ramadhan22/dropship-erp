@@ -40,12 +40,14 @@ test("renders and creates expense", async () => {
   fireEvent.change(screen.getByLabelText(/Description/i), {
     target: { value: "x" },
   });
-  fireEvent.change(screen.getByLabelText(/Asset Account/i), {
-    target: { value: "10" },
-  });
-  fireEvent.change(screen.getAllByLabelText(/Expense Account/i)[0], {
-    target: { value: "5" },
-  });
+  const assetInput = screen.getByRole("combobox", { name: /Asset Account/i });
+  fireEvent.change(assetInput, { target: { value: "A10" } });
+  fireEvent.keyDown(assetInput, { key: "ArrowDown" });
+  fireEvent.keyDown(assetInput, { key: "Enter" });
+  const expInput = screen.getAllByRole("combobox", { name: /Expense Account/i })[0];
+  fireEvent.change(expInput, { target: { value: "E5" } });
+  fireEvent.keyDown(expInput, { key: "ArrowDown" });
+  fireEvent.keyDown(expInput, { key: "Enter" });
   fireEvent.change(screen.getAllByLabelText(/Amount/i)[0], {
     target: { value: "5" },
   });
