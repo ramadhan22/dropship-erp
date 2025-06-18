@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Autocomplete,
 } from "@mui/material";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
@@ -24,6 +25,8 @@ export default function ExpensePage() {
     { account: "", amount: "" },
   ]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const assetAccounts = accounts.filter((a) => a.account_type === "asset");
+  const expenseAccounts = accounts.filter((a) => a.account_type === "expense");
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
@@ -112,38 +115,39 @@ export default function ExpensePage() {
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
           />
-          <select
-            aria-label="Asset Account"
-            value={asset}
-            onChange={(e) => setAsset(e.target.value)}
-            style={{ fontSize: "0.875rem" }}
-          >
-            <option value="">Select Account</option>
-            {accounts.map((a) => (
-              <option key={a.account_id} value={String(a.account_id)}>
-                {a.account_code} - {a.account_name}
-              </option>
-            ))}
-          </select>
+          <Autocomplete
+            options={assetAccounts}
+            getOptionLabel={(a) => `${a.account_code} - ${a.account_name}`}
+            isOptionEqualToValue={(o, v) => o.account_id === v.account_id}
+            value={
+              assetAccounts.find((a) => String(a.account_id) === asset) || null
+            }
+            onChange={(_, v) => setAsset(v ? String(v.account_id) : "")}
+            renderInput={(params) => (
+              <TextField {...params} label="Asset Account" />
+            )}
+            size="small"
+          />
           {lines.map((ln, idx) => (
             <div key={idx} style={{ display: "flex", gap: 4 }}>
-              <select
-                aria-label="Expense Account"
-                value={ln.account}
-                onChange={(e) => {
+              <Autocomplete
+                options={expenseAccounts}
+                getOptionLabel={(a) => `${a.account_code} - ${a.account_name}`}
+                isOptionEqualToValue={(o, v) => o.account_id === v.account_id}
+                value={
+                  expenseAccounts.find((a) => String(a.account_id) === ln.account) ||
+                  null
+                }
+                onChange={(_, v) => {
                   const n = [...lines];
-                  n[idx].account = e.target.value;
+                  n[idx].account = v ? String(v.account_id) : "";
                   setLines(n);
                 }}
-                style={{ fontSize: "0.875rem" }}
-              >
-                <option value="">Select Account</option>
-                {accounts.map((a) => (
-                  <option key={a.account_id} value={String(a.account_id)}>
-                    {a.account_code} - {a.account_name}
-                  </option>
-                ))}
-              </select>
+                renderInput={(params) => (
+                  <TextField {...params} label="Expense Account" size="small" />
+                )}
+                sx={{ width: 220 }}
+              />
               <TextField
                 label="Amount"
                 value={ln.amount}
