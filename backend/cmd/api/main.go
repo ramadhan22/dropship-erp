@@ -56,6 +56,7 @@ func main() {
 	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	plReportSvc := service.NewProfitLossReportService(repo.JournalRepo)
 	glSvc := service.NewGLService(repo.JournalRepo)
+	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -80,9 +81,9 @@ func main() {
 		apiGroup.GET("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleListAffiliate)
 		apiGroup.GET("/shopee/affiliate/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumAffiliate)
 		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
-                apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)
-                apiGroup.GET("/sales", handlers.NewShopeeHandler(shopeeSvc).HandleListSalesProfit)
-                apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
+		apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)
+		apiGroup.GET("/sales", handlers.NewShopeeHandler(shopeeSvc).HandleListSalesProfit)
+		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)
 		apiGroup.GET("/metrics", handlers.NewMetricHandler(metricSvc).HandleGetMetrics)
 		apiGroup.GET("/balancesheet", handlers.NewBalanceHandler(balanceSvc).HandleGetBalanceSheet)
@@ -112,6 +113,7 @@ func main() {
 		handlers.NewProfitLossReportHandler(plReportSvc).RegisterRoutes(apiGroup)
 		handlers.NewGLHandler(glSvc).RegisterRoutes(apiGroup)
 		handlers.NewReconcileExtraHandler(reconSvc).RegisterRoutes(apiGroup)
+		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
