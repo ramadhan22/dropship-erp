@@ -26,7 +26,9 @@ test("load all data on mount", async () => {
       <ReconcileDashboard />
     </MemoryRouter>,
   );
-  await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith(""));
+  await waitFor(() =>
+    expect(api.listCandidates).toHaveBeenCalledWith("", ""),
+  );
 });
 
 test("load candidates with filter", async () => {
@@ -40,7 +42,26 @@ test("load candidates with filter", async () => {
   await screen.findByText("S");
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
-  await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith("S"));
+  await waitFor(() =>
+    expect(api.listCandidates).toHaveBeenCalledWith("S", ""),
+  );
+});
+
+test("filter by invoice", async () => {
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  jest.clearAllMocks();
+  fireEvent.change(screen.getByLabelText(/Search Invoice/i), {
+    target: { value: "INV" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+  await waitFor(() =>
+    expect(api.listCandidates).toHaveBeenCalledWith("", "INV"),
+  );
 });
 
 test("click reconcile button", async () => {

@@ -9,10 +9,10 @@ import (
 )
 
 type ReconcileExtraService interface {
-	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
-	ListCandidates(ctx context.Context, shop string) ([]models.ReconcileCandidate, error)
-	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
-	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
+        ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
+        ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error)
+        BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
+        CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -40,13 +40,14 @@ func (h *ReconcileExtraHandler) list(c *gin.Context) {
 }
 
 func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
-	shop := c.Query("shop")
-	res, err := h.svc.ListCandidates(context.Background(), shop)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, res)
+        shop := c.Query("shop")
+        order := c.Query("order")
+        res, err := h.svc.ListCandidates(context.Background(), shop, order)
+        if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+                return
+        }
+        c.JSON(http.StatusOK, res)
 }
 
 func (h *ReconcileExtraHandler) bulk(c *gin.Context) {

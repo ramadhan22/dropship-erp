@@ -76,13 +76,21 @@ func TestListCandidates(t *testing.T) {
 	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
 
-	list, err := recRepo.ListCandidates(ctx, "ShopA")
-	if err != nil {
-		t.Fatalf("ListCandidates error: %v", err)
-	}
-	if len(list) < 2 {
-		t.Errorf("expected at least 2 candidates, got %d", len(list))
-	}
+       list, err := recRepo.ListCandidates(ctx, "ShopA", "")
+       if err != nil {
+               t.Fatalf("ListCandidates error: %v", err)
+       }
+       if len(list) < 2 {
+               t.Errorf("expected at least 2 candidates, got %d", len(list))
+       }
+
+       list2, err := recRepo.ListCandidates(ctx, "", kode1)
+       if err != nil {
+               t.Fatalf("ListCandidates by order error: %v", err)
+       }
+       if len(list2) != 1 {
+               t.Errorf("expected 1 candidate, got %d", len(list2))
+       }
 
 	// cleanup
 	testDB.ExecContext(ctx, "DELETE FROM shopee_settled WHERE no_pesanan=$1", kode1)
