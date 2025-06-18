@@ -294,8 +294,31 @@ export default function DropshipImport() {
         <DialogContent>
           {selected && (
             <div style={{ marginBottom: "1rem" }}>
-              <div>Kode Pesanan: {selected.kode_pesanan}</div>
-              <div>Nama Toko: {selected.nama_toko}</div>
+              <div>
+                <strong>Kode Pesanan:</strong> {selected.kode_pesanan}
+              </div>
+              <div>
+                <strong>Kode Transaksi:</strong> {selected.kode_transaksi}
+              </div>
+              <div>
+                <strong>Nama Toko:</strong> {selected.nama_toko}
+              </div>
+              <div>
+                <strong>Status:</strong> {selected.status_pesanan_terakhir}
+              </div>
+              <div>
+                <strong>Waktu Pesanan:</strong>{" "}
+                {new Date(selected.waktu_pesanan_terbuat).toLocaleString(
+                  "id-ID",
+                )}
+              </div>
+              <div>
+                <strong>Total Transaksi:</strong>{" "}
+                {selected.total_transaksi.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                })}
+              </div>
             </div>
           )}
           <Table size="small">
