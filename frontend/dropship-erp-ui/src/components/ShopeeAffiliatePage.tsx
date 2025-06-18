@@ -13,6 +13,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getCurrentMonthRange } from "../utils/date";
 import {
   importShopeeAffiliate,
@@ -40,6 +41,7 @@ export default function ShopeeAffiliatePage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const navigate = useNavigate();
 
   const columns: Column<ShopeeAffiliateSale>[] = [
     { label: "Nama Toko", key: "nama_toko" },
@@ -132,6 +134,17 @@ export default function ShopeeAffiliatePage() {
       label: "Waktu Pemotongan",
       key: "waktu_pemotongan",
       render: (v) => new Date(v).toLocaleString(),
+    },
+    {
+      label: "Dropship",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={() => navigate(`/dropship?order=${row.kode_pesanan}`)}
+        >
+          View
+        </Button>
+      ),
     },
   ];
 

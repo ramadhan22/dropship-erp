@@ -17,6 +17,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getCurrentMonthRange } from "../utils/date";
 import {
   importDropship,
@@ -40,6 +41,7 @@ export default function DropshipImport() {
     text: string;
   } | null>(null);
   const [open, setOpen] = useState(false);
+  const [searchParams] = useSearchParams();
 
   const [channel, setChannel] = useState("");
   const [store, setStore] = useState("");
@@ -135,6 +137,11 @@ export default function DropshipImport() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [details, setDetails] = useState<DropshipPurchaseDetail[]>([]);
   const [selected, setSelected] = useState<DropshipPurchase | null>(null);
+
+  useEffect(() => {
+    const ord = searchParams.get("order");
+    if (ord) setOrder(ord);
+  }, [searchParams]);
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));

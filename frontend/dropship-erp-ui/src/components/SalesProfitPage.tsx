@@ -1,8 +1,9 @@
-import { Alert, Pagination } from "@mui/material";
+import { Alert, Pagination, Button } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { getCurrentMonthRange } from "../utils/date";
@@ -32,6 +33,7 @@ export default function SalesProfitPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const navigate = useNavigate();
 
   const money = (v: number) =>
     Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" });
@@ -86,6 +88,17 @@ export default function SalesProfitPage() {
       key: "profit_percent",
       align: "right",
       render: (v) => `${v.toFixed(2)}%`,
+    },
+    {
+      label: "Dropship",
+      render: (_, row) => (
+        <Button
+          size="small"
+          onClick={() => navigate(`/dropship?order=${row.kode_pesanan}`)}
+        >
+          View
+        </Button>
+      ),
     },
   ];
 

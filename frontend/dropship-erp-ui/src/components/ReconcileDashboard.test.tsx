@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { waitFor, screen, fireEvent } from "@testing-library/dom";
 import * as api from "../api/reconcile";
 import ReconcileDashboard from "./ReconcileDashboard";
@@ -20,12 +21,20 @@ beforeEach(() => {
 });
 
 test("load all data on mount", async () => {
-  render(<ReconcileDashboard />);
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalledWith(""));
 });
 
 test("load candidates with filter", async () => {
-  render(<ReconcileDashboard />);
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
   jest.clearAllMocks();
   await screen.findByText("S");
@@ -46,7 +55,11 @@ test("click reconcile button", async () => {
       },
     ],
   });
-  render(<ReconcileDashboard />);
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
   await screen.findByText("Reconcile");
   fireEvent.click(screen.getByText("Reconcile"));
   await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledWith("A"));
@@ -71,7 +84,11 @@ test("reconcile all button", async () => {
       },
     ],
   });
-  render(<ReconcileDashboard />);
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
   await screen.findByRole("button", { name: /Reconcile All/i });
   fireEvent.click(screen.getByRole("button", { name: /Reconcile All/i }));
   await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledTimes(2));
