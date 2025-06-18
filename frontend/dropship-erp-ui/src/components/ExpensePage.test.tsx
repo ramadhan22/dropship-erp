@@ -2,12 +2,35 @@ import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
 import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as expApi from "../api/expenses";
+import * as baseApi from "../api";
 import ExpensePage from "./ExpensePage";
 
 jest.mock("../api/expenses", () => ({
   listExpenses: jest.fn().mockResolvedValue({ data: { data: [] } }),
   createExpense: jest.fn(),
   deleteExpense: jest.fn(),
+}));
+jest.mock("../api", () => ({
+  listAccounts: jest.fn().mockResolvedValue({
+    data: [
+      {
+        account_id: 10,
+        account_code: "A10",
+        account_name: "Asset 10",
+        account_type: "asset",
+        parent_id: null,
+        balance: 0,
+      },
+      {
+        account_id: 5,
+        account_code: "E5",
+        account_name: "Expense 5",
+        account_type: "expense",
+        parent_id: null,
+        balance: 0,
+      },
+    ],
+  }),
 }));
 
 test("renders and creates expense", async () => {
