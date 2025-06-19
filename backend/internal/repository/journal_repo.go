@@ -97,6 +97,12 @@ type JournalLineDetail struct {
 	Memo        *string `db:"memo" json:"memo"`
 }
 
+// EntryWithLines bundles a journal entry with its lines.
+type EntryWithLines struct {
+	Entry models.JournalEntry `json:"entry"`
+	Lines []JournalLineDetail `json:"lines"`
+}
+
 // GetAccountBalancesAsOf returns each account’s cumulative balance up to and including asOfDate.
 // It sums debit amounts as positive and credit amounts as negative.
 func (r *JournalRepo) GetAccountBalancesAsOf(
@@ -243,6 +249,18 @@ func (r *JournalRepo) GetJournalEntryBySource(ctx context.Context, sourceType, s
 		return nil, err
 	}
 	return &je, nil
+}
+
+// ListEntriesBySourceID returns all journal entries that share the given source_id.
+func (r *JournalRepo) ListEntriesBySourceID(ctx context.Context, sourceID string) ([]models.JournalEntry, error) {
+	var list []models.JournalEntry
+	err := r.db.SelectContext(ctx, &list,
+		`SELECT * FROM journal_entries WHERE source_id=$1 ORDER BY journal_id`,
+		sourceID)
+	if list == nil {
+		list = []models.JournalEntry{}
+	}
+	return list, err
 }
 
 // UpdateJournalLineAmount updates the amount of a journal line identified by line_id.

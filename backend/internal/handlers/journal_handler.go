@@ -20,6 +20,7 @@ func (h *JournalHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/", h.list)
 	grp.GET("/:id", h.get)
 	grp.GET("/:id/lines", h.getLines)
+	grp.GET("/source/:id/lines", h.getLinesBySource)
 	grp.DELETE("/:id", h.del)
 }
 
@@ -62,6 +63,16 @@ func (h *JournalHandler) getLines(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, lines)
+}
+
+func (h *JournalHandler) getLinesBySource(c *gin.Context) {
+	sourceID := c.Param("id")
+	data, err := h.svc.LinesBySource(context.Background(), sourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
 }
 
 type journalCreateReq struct {

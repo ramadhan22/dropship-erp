@@ -1,4 +1,13 @@
-import { Alert, Pagination, Button } from "@mui/material";
+import {
+  Alert,
+  Pagination,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+} from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -12,7 +21,14 @@ import {
   listStoresByChannelName,
   listSalesProfit,
 } from "../api";
-import type { JenisChannel, Store, SalesProfit } from "../types";
+import { getJournalLinesBySource } from "../api/journal";
+import type {
+  JenisChannel,
+  Store,
+  SalesProfit,
+  JournalEntryWithLines,
+  JournalLineDetail,
+} from "../types";
 
 export default function SalesProfitPage() {
   const [channels, setChannels] = useState<JenisChannel[]>([]);
@@ -33,13 +49,36 @@ export default function SalesProfitPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalData, setJournalData] = useState<JournalEntryWithLines[]>([]);
+  const [journalLoading, setJournalLoading] = useState(false);
   const navigate = useNavigate();
+
+  const openJournal = (kode: string) => {
+    setJournalLoading(true);
+    getJournalLinesBySource(kode)
+      .then((res) => {
+        setJournalData(res.data);
+      })
+      .finally(() => {
+        setJournalLoading(false);
+        setJournalOpen(true);
+      });
+  };
 
   const money = (v: number) =>
     Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" });
 
   const columns: Column<SalesProfit>[] = [
-    { label: "Kode Pesanan", key: "kode_pesanan" },
+    {
+      label: "Kode Pesanan",
+      key: "kode_pesanan",
+      render: (v, row) => (
+        <Button size="small" onClick={() => openJournal(row.kode_pesanan)}>
+          {v}
+        </Button>
+      ),
+    },
     {
       label: "Tanggal Pesanan",
       key: "tanggal_pesanan",
@@ -244,6 +283,59 @@ export default function SalesProfitPage() {
         count={Math.max(1, Math.ceil(total / pageSize))}
         onChange={(_, val) => setPage(val)}
       />
+      <Dialog open={journalOpen} onClose={() => setJournalOpen(false)}>
+        <DialogTitle>Journal Lines</DialogTitle>
+        <DialogContent>
+          {journalLoading ? (
+            <CircularProgress />
+          ) : journalData.length === 0 ? (
+            <div>No journal entries found.</div>
+          ) : (
+            journalData.map((e) => (
+              <div key={e.entry.journal_id} style={{ marginBottom: "1rem" }}>
+                <div>ID: {e.entry.journal_id}</div>
+                <div>
+                  Date: {new Date(e.entry.entry_date).toLocaleDateString()}
+                </div>
+                <div>Description: {e.entry.description}</div>
+                <SortableTable
+                  columns={[
+                    { label: "Account", key: "account_name" },
+                    {
+                      label: "Debit",
+                      key: "amount",
+                      align: "right",
+                      render: (_v, r: JournalLineDetail) =>
+                        r.is_debit
+                          ? r.amount.toLocaleString("id-ID", {
+                              style: "currency",
+                              currency: "IDR",
+                            })
+                          : "",
+                    },
+                    {
+                      label: "Credit",
+                      key: "amount",
+                      align: "right",
+                      render: (_v, r: JournalLineDetail) =>
+                        !r.is_debit
+                          ? r.amount.toLocaleString("id-ID", {
+                              style: "currency",
+                              currency: "IDR",
+                            })
+                          : "",
+                    },
+                  ]}
+                  data={e.lines}
+                />
+              </div>
+            ))
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setJournalOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

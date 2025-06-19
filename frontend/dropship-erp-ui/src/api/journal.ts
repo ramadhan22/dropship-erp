@@ -25,6 +25,15 @@ export function getJournalLines(id: number) {
   );
 }
 
+export interface JournalEntryWithLines {
+  entry: JournalEntry;
+  lines: (JournalLine & { account_name: string })[];
+}
+
+export function getJournalLinesBySource(sourceId: string) {
+  return api.get<JournalEntryWithLines[]>(`/journal/source/${sourceId}/lines`);
+}
+
 export function deleteJournal(id: number) {
   return api.delete(`/journal/${id}`);
 }
