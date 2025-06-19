@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
@@ -84,10 +85,11 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	q.Set("shop_id", c.ShopID)
 	q.Set("refresh_token", c.RefreshToken)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(q.Encode()))
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
@@ -124,7 +126,7 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	q.Set("sign", sign)
 	q.Set("shop_id", c.ShopID)
 	q.Set("access_token", c.AccessToken)
-	q.Set("order_sn", orderSn)
+	q.Set("order_sn_list", orderSn)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
 	if err != nil {

@@ -15,12 +15,22 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v2/auth/access_token/get":
+			if r.Method != http.MethodPost {
+				t.Errorf("expected POST, got %s", r.Method)
+			}
 			refreshCalled = true
+			r.ParseForm()
+			if r.Form.Get("refresh_token") != "reftok" {
+				t.Errorf("expected refresh_token=reftok, got %s", r.Form.Get("refresh_token"))
+			}
 			fmt.Fprint(w, `{"response":{"access_token":"newtoken"}}`)
 		case "/api/v2/order/get_order_detail":
 			detailCalled = true
 			if r.URL.Query().Get("access_token") != "newtoken" {
 				t.Errorf("expected access_token=newtoken, got %s", r.URL.Query().Get("access_token"))
+			}
+			if r.URL.Query().Get("order_sn_list") != "123" {
+				t.Errorf("expected order_sn_list=123, got %s", r.URL.Query().Get("order_sn_list"))
 			}
 			fmt.Fprint(w, `{"response":{"order_status":"COMPLETE"}}`)
 		default:
