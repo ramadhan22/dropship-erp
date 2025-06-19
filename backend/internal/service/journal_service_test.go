@@ -43,6 +43,10 @@ func (f *fakeJournalRepo) GetLinesByJournalID(ctx context.Context, id int64) ([]
 	return nil, nil
 }
 
+func (f *fakeJournalRepo) ListEntriesBySourceID(ctx context.Context, sourceID string) ([]models.JournalEntry, error) {
+	return nil, nil
+}
+
 func TestJournalServiceCreate_Balance(t *testing.T) {
 	repo := &fakeJournalRepo{}
 	svc := NewJournalService(nil, repo)

@@ -15,6 +15,7 @@ type JournalRepoInterface interface {
 	ListJournalEntries(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error)
 	GetJournalEntry(ctx context.Context, id int64) (*models.JournalEntry, error)
 	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
+	ListEntriesBySourceID(ctx context.Context, sourceID string) ([]models.JournalEntry, error)
 	DeleteJournalEntry(ctx context.Context, id int64) error
 }
 
@@ -41,6 +42,29 @@ func (s *JournalService) Delete(ctx context.Context, id int64) error {
 
 func (s *JournalService) Lines(ctx context.Context, id int64) ([]repository.JournalLineDetail, error) {
 	return s.repo.GetLinesByJournalID(ctx, id)
+}
+
+// EntryWithLines bundles a journal entry with its lines.
+type EntryWithLines struct {
+	Entry models.JournalEntry            `json:"entry"`
+	Lines []repository.JournalLineDetail `json:"lines"`
+}
+
+// LinesBySource returns all journal entries matching the source ID along with their lines.
+func (s *JournalService) LinesBySource(ctx context.Context, sourceID string) ([]EntryWithLines, error) {
+	entries, err := s.repo.ListEntriesBySourceID(ctx, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]EntryWithLines, 0, len(entries))
+	for _, e := range entries {
+		lines, err := s.repo.GetLinesByJournalID(ctx, e.JournalID)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, EntryWithLines{Entry: e, Lines: lines})
+	}
+	return result, nil
 }
 
 // Create inserts a JournalEntry along with its lines. It ensures total debits

@@ -172,6 +172,11 @@ export interface JournalLineDetail extends JournalLine {
   account_name: string;
 }
 
+export interface JournalEntryWithLines {
+  entry: JournalEntry;
+  lines: JournalLineDetail[];
+}
+
 export interface ReconciledTransaction {
   id: number;
   shop_username: string;
