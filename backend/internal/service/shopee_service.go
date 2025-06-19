@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/xuri/excelize/v2"
@@ -493,7 +494,7 @@ func formatNamaToko(username string) string {
 		return "MR eStore Shopee"
 	}
 	u = strings.ReplaceAll(u, ".", " ")
-	return strings.ToUpper(u[:1]) + u[1:]
+	return CapitalizeWords(u)
 }
 
 // ListSettled proxies to the repository for fetching settled orders with filters.
@@ -642,4 +643,21 @@ func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.
 		newAmt = 0
 	}
 	return s.journalRepo.UpdateJournalLineAmount(ctx, saldoLine.LineID, newAmt)
+}
+
+func CapitalizeWords(s string) string {
+	words := strings.Fields(s)
+	for i, word := range words {
+		lowerWord := strings.ToLower(word)
+		if lowerWord == "mr" {
+			words[i] = "MR"
+		} else {
+			runes := []rune(lowerWord)
+			if len(runes) > 0 {
+				runes[0] = unicode.ToUpper(runes[0])
+			}
+			words[i] = string(runes)
+		}
+	}
+	return strings.Join(words, " ")
 }
