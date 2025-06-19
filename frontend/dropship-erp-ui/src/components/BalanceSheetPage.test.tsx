@@ -38,9 +38,6 @@ describe("BalanceSheetPage", () => {
     fireEvent.change(screen.getByLabelText(/Shop/i), {
       target: { value: "S" },
     });
-    fireEvent.change(screen.getByLabelText(/Period/i, { selector: "input" }), {
-      target: { value: "2025-05-15" },
-    });
     fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));
     await waitFor(() => expect(screen.queryAllByText(/Assets/i).length).toBeGreaterThan(0));
     await waitFor(() => expect(pl.fetchProfitLoss).toHaveBeenCalled());

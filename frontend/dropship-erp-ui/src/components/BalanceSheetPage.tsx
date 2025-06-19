@@ -1,19 +1,23 @@
 // File: src/components/BalanceSheetPage.tsx
 
-import { Button, Card, CardContent, Typography } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import {
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
 import { fetchProfitLoss } from "../api/pl";
 import type { BalanceCategory, Store, Account } from "../types";
-import usePagination from "../usePagination";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 
 function AccountTable({ accounts }: { accounts: Account[] }) {
-  const { paginated, controls } = usePagination(accounts);
   const columns: Column<Account>[] = [
     { label: "Code", key: "account_code" },
     { label: "Name", key: "account_name" },
@@ -26,17 +30,33 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
     },
   ];
   return (
-    <>
-      <SortableTable columns={columns} data={paginated} />
-      {controls}
-    </>
+    <SortableTable columns={columns} data={accounts} />
   );
 }
 
 export default function BalanceSheetPage() {
   const [shop, setShop] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const now = new Date();
+  const [periodType, setPeriodType] = useState<"Monthly" | "Yearly">("Monthly");
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const years = [2023, 2024, 2025];
   const [data, setData] = useState<BalanceCategory[]>([]);
   const [netProfit, setNetProfit] = useState(0);
 
@@ -50,11 +70,16 @@ export default function BalanceSheetPage() {
   }, []);
 
   const handleFetch = async () => {
+    const periodStr =
+      periodType === "Monthly"
+        ? `${year}-${String(month).padStart(2, "0")}`
+        : `${year}-12`;
     const [bsRes, plRes] = await Promise.all([
-      fetchBalanceSheet(shop, period),
+      fetchBalanceSheet(shop, periodStr),
       fetchProfitLoss({
-        type: "Yearly",
-        year: Number(period.slice(0, 4)),
+        type: periodType,
+        month: periodType === "Monthly" ? month : undefined,
+        year,
         store: shop,
       }),
     ]);
@@ -103,20 +128,51 @@ export default function BalanceSheetPage() {
           </option>
         ))}
       </select>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="Period"
-          views={["year", "month"]}
-          openTo="month"
-          format="yyyy-MM"
-          value={new Date(period)}
-          onChange={(date) => {
-            if (!date) return;
-            setPeriod(date.toISOString().slice(0, 7));
-          }}
-          slotProps={{ textField: { size: "small", sx: { mr: 2 }, InputLabelProps: { shrink: true } } }}
-        />
-      </LocalizationProvider>
+      <Typography sx={{ minWidth: 70 }}>Periode:</Typography>
+        <FormControl size="small" sx={{ mr: 1 }}>
+          <InputLabel id="type-label">Type</InputLabel>
+          <Select
+            labelId="type-label"
+            value={periodType}
+            label="Type"
+            onChange={(e) => setPeriodType(e.target.value as any)}
+          >
+            <MenuItem value="Monthly">Monthly</MenuItem>
+            <MenuItem value="Yearly">Yearly</MenuItem>
+          </Select>
+        </FormControl>
+        {periodType === "Monthly" && (
+          <FormControl size="small" sx={{ mr: 1 }}>
+            <InputLabel id="month-label">Month</InputLabel>
+            <Select
+              labelId="month-label"
+              value={month}
+              label="Month"
+              onChange={(e) => setMonth(Number(e.target.value))}
+            >
+              {months.map((m, idx) => (
+                <MenuItem key={m} value={idx + 1}>
+                  {m}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+        <FormControl size="small" sx={{ mr: 1 }}>
+          <InputLabel id="year-label">Year</InputLabel>
+          <Select
+            labelId="year-label"
+            value={year}
+            label="Year"
+            onChange={(e) => setYear(Number(e.target.value))}
+          >
+            {years.map((y) => (
+              <MenuItem key={y} value={y}>
+                {y}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       <Button variant="contained" onClick={handleFetch}>
         Fetch
       </Button>
@@ -129,9 +185,6 @@ export default function BalanceSheetPage() {
               <AccountTable accounts={assetCat?.accounts ?? []} />
             </CardContent>
           </Card>
-          <Typography variant="subtitle1" sx={{ fontWeight: "bold", textAlign: "right" }}>
-            Total Assets: {format(assetCat?.total ?? 0)}
-          </Typography>
         </div>
         <div style={{ flex: 1 }}>
           <Card sx={{ mb: 2 }}>
@@ -146,11 +199,15 @@ export default function BalanceSheetPage() {
               <AccountTable accounts={equityAccounts} />
             </CardContent>
           </Card>
-          <Typography variant="subtitle1" sx={{ fontWeight: "bold", textAlign: "right" }}>
-            Total Liabilities + Equity:{" "}
-            {format((liabilityCat?.total ?? 0) + equityTotal)}
-          </Typography>
         </div>
+      </div>
+      <div style={{ display: "flex", marginTop: "0.5rem" }}>
+        <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}>
+          Total Assets: {format(assetCat?.total ?? 0)}
+        </Typography>
+        <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}>
+          Total Liabilities + Equity: {format((liabilityCat?.total ?? 0) + equityTotal)}
+        </Typography>
       </div>
     </div>
   );
