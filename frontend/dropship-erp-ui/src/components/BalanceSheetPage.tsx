@@ -76,7 +76,6 @@ export default function BalanceSheetPage() {
       periodType === "Monthly"
         ? `${year}-${String(month).padStart(2, "0")}`
         : `${year}-12`;
-
     const prevYears = years.filter((y) => y < year);
     const tasks = [
       fetchBalanceSheet(shop, periodStr),
