@@ -29,17 +29,17 @@ describe("BalanceSheetPage", () => {
       .spyOn(api, "fetchBalanceSheet")
       // cast to any so TS accepts the mock return type
       .mockResolvedValue({ data: mock } as any);
-    jest
-      .spyOn(pl, "fetchProfitLoss")
-      .mockResolvedValue({
-        data: { labaRugiBersih: { amount: 50 } },
-      } as any);
+    jest.spyOn(pl, "fetchProfitLoss").mockResolvedValue({
+      data: { labaRugiBersih: { amount: 50 } },
+    } as any);
     render(<BalanceSheetPage />);
     fireEvent.change(screen.getByLabelText(/Shop/i), {
       target: { value: "S" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Fetch/i }));
-    await waitFor(() => expect(screen.queryAllByText(/Assets/i).length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.queryAllByText(/Assets/i).length).toBeGreaterThan(0),
+    );
     await waitFor(() => expect(pl.fetchProfitLoss).toHaveBeenCalled());
   });
 });

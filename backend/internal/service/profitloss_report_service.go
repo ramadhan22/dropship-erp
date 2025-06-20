@@ -51,19 +51,27 @@ func NewProfitLossReportService(jr ProfitLossJournalRepo) *ProfitLossReportServi
 }
 
 // GetProfitLoss returns profit and loss information for the given period.
-// typ should be "Monthly" or "Yearly". Month may be ignored for yearly reports.
+// typ should be "Monthly" or "Yearly". If typ is "Yearly" and month > 0,
+// the report is calculated year-to-date up to the end of the given month.
 func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string, month, year int, store string) (*ProfitLoss, error) {
 	var start, end time.Time
 	switch typ {
 	case "Yearly":
 		start = time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-		end = start.AddDate(1, 0, 0).Add(-time.Nanosecond)
-	default:
+		if month > 0 && month <= 12 {
+			end = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC).
+				AddDate(0, 1, 0).Add(-time.Nanosecond)
+		} else {
+			end = start.AddDate(1, 0, 0).Add(-time.Nanosecond)
+		}
+	case "Monthly":
 		if month == 0 {
 			return nil, fmt.Errorf("month required")
 		}
 		start = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 		end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	default:
+		return nil, fmt.Errorf("invalid type")
 	}
 
 	balances, err := s.jr.GetAccountBalancesBetween(ctx, store, start, end)
