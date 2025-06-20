@@ -32,6 +32,9 @@ automatically.
 Shopee API calls require credentials including a long-lived `refresh_token`.
 `ShopeeClient` automatically refreshes the short-lived access token on each
 request using this value.
+Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
+`SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
+signing API calls.
 
 To start the backend:
 
