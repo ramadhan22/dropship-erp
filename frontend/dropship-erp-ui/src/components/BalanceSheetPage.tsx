@@ -76,7 +76,8 @@ export default function BalanceSheetPage() {
       periodType === "Monthly"
         ? `${year}-${String(month).padStart(2, "0")}`
         : `${year}-12`;
-    const [bsRes, plRes, prevPlRes] = await Promise.all([
+    const prevYears = years.filter((y) => y < year);
+    const tasks = [
       fetchBalanceSheet(shop, periodStr),
       fetchProfitLoss({
         type: "Yearly",
@@ -84,16 +85,22 @@ export default function BalanceSheetPage() {
         year,
         store: shop,
       }),
-      fetchProfitLoss({
-        type: "Yearly",
-        month: 12,
-        year: year - 1,
-        store: shop,
-      }),
-    ]);
-    setData(bsRes.data);
-    setNetProfit(plRes.data.labaRugiBersih.amount);
-    setRetainedEarnings(prevPlRes.data.labaRugiBersih.amount);
+      ...prevYears.map((y) =>
+        fetchProfitLoss({ type: "Yearly", month: 12, year: y, store: shop })
+      ),
+    ];
+    const results = await Promise.all(tasks);
+    const bsRes = results[0];
+    const plRes = results[1];
+    const prevResults = results.slice(2) as Array<{ data: { labaRugiBersih: { amount: number } } }>;
+
+    setData((bsRes as any).data);
+    setNetProfit((plRes as any).data.labaRugiBersih.amount);
+    const retained = prevResults.reduce(
+      (sum, r) => sum + r.data.labaRugiBersih.amount,
+      0,
+    );
+    setRetainedEarnings(retained);
   };
 
   const assetCat = data.find((c) => c.category === "Assets");
