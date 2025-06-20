@@ -54,6 +54,10 @@ Recharts for graphing. The application provides dashboards for sales summaries,
 profit & loss, balance sheet and general ledger as well as pages for
 reconciliation and data imports.
 
+Common UI elements include sortable tables with built-in pagination and filter
+controls. The `SortableTable` component and `usePagination` hook are reused
+across pages to keep behavior consistent.
+
 To develop the frontend:
 
 ```bash
@@ -68,6 +72,60 @@ npm test
 - `backend/` – Go services, handlers and PostgreSQL migrations
 - `frontend/` – React web application
 - `.gitignore` – ignores node modules, Go build artifacts and environment files
+
+## Data Mapping
+The tables in the PostgreSQL database correspond to specific UI pages. Updating
+models or pages should keep this list in sync.
+
+- **accounts** – managed on `AccountPage` and referenced by journal, balance
+  sheet and expense features.
+- **journal_entries** and **journal_lines** – shown on `JournalPage` and
+  summarised in `GLPage` and `PLPage`.
+- **dropship_purchases** and **dropship_purchase_details** – uploaded through
+  `DropshipImport` and reconciled with Shopee orders, forming sales metrics.
+- **shopee_settled_orders`/`shopee_settled** – used on `SalesProfitPage` and for
+  affiliate reports.
+- **reconciled_transactions** – displayed in `ReconcileDashboard`.
+- **cached_metrics** – provides data for `MetricsPage`, balance sheet and P&L.
+- **expenses** and **expense_lines** – editable via `ExpensePage`.
+- **ad_invoices** – imported from `AdInvoicePage`.
+- **asset_accounts** – listed on `KasAccountPage`.
+- **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
+  across filters.
+
+### Service ↔ Table Mapping
+Services in the backend interact with particular tables. Updating services or
+tables should keep this mapping aligned.
+
+- **AccountService** – operates on `accounts`.
+- **JournalService** – writes to `journal_entries` and `journal_lines`.
+- **DropshipService** – manages `dropship_purchases` and
+  `dropship_purchase_details`, creating journal entries for pending sales.
+- **ShopeeService** – imports `shopee_settled_orders`, `shopee_settled` and
+  `shopee_affiliate_sales` while updating dropship purchases and journal lines.
+- **ReconcileService** – logs `reconciled_transactions` and posts journals for
+  matched orders.
+- **ExpenseService** – saves `expenses` and `expense_lines` along with journal
+  postings.
+- **AdInvoiceService** – records `ad_invoices` and journals ad expenses.
+- **AssetAccountService** – uses `asset_accounts` and journal entries to adjust
+  balances.
+- **ChannelService** – CRUD for `jenis_channels` and `stores`.
+- **MetricService**, **PLService** and **ProfitLossReportService** – read
+  `cached_metrics`, journal data, dropship purchases and Shopee orders to produce
+  reports.
+- **BalanceService** and **GLService** – read from journal tables and `accounts`
+  for statements.
+
+## Contribution Guidelines
+
+Automated agents contributing to this repository should follow the
+[AGENTS.md](AGENTS.md) instructions. In short:
+
+- Format Go code with `gofmt -w` and run `go test ./...` inside `backend`.
+- Run `npm run lint` and `npm test` inside `frontend/dropship-erp-ui`.
+- Update this README or other documentation when new features or commands are
+  introduced.
 
 ## License
 
