@@ -43,7 +43,25 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	}
 }
 
-func TestProfitLossReportService_GetProfitLoss_YTD(t *testing.T) {
+func TestProfitLossReportService_GetProfitLoss_MonthlyPeriod(t *testing.T) {
+	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
+	svc := NewProfitLossReportService(repo)
+
+	_, err := svc.GetProfitLoss(context.Background(), "Monthly", 3, 2025, "ShopX")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantStart := time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC)
+	wantEnd := wantStart.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	if !repo.lastFrom.Equal(wantStart) {
+		t.Errorf("from date got %v want %v", repo.lastFrom, wantStart)
+	}
+	if !repo.lastTo.Equal(wantEnd) {
+		t.Errorf("to date got %v want %v", repo.lastTo, wantEnd)
+	}
+}
+
+func TestProfitLossReportService_GetProfitLoss_Yearly(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
 	svc := NewProfitLossReportService(repo)
 
@@ -52,7 +70,7 @@ func TestProfitLossReportService_GetProfitLoss_YTD(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	wantStart := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	wantEnd := time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 1, 0).Add(-time.Nanosecond)
+	wantEnd := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(1, 0, 0).Add(-time.Nanosecond)
 	if !repo.lastFrom.Equal(wantStart) {
 		t.Errorf("from date got %v want %v", repo.lastFrom, wantStart)
 	}
