@@ -30,7 +30,7 @@ type ShopeeClient struct {
 func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 	base := cfg.BaseURL
 	if base == "" {
-		base = "https://partner.shopeemobile.com"
+		base = "https://ads.shopeemobile.com"
 	}
 	return &ShopeeClient{
 		BaseURL:      base,
@@ -74,18 +74,20 @@ type refreshResp struct {
 
 // RefreshAccessToken fetches a new access token using the refresh token.
 func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
+	cfg := config.MustLoadConfig()
 	path := "/api/v2/auth/access_token/get"
 	ts := time.Now().Unix()
 	sign := c.signWithToken(path, ts, c.RefreshToken)
 
 	q := url.Values{}
-	q.Set("partner_id", c.PartnerID)
+	q.Set("partner_id", cfg.Shopee.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", c.ShopID)
-	q.Set("refresh_token", c.RefreshToken)
+	q.Set("shop_id", cfg.Shopee.ShopID)
+	q.Set("refresh_token", cfg.Shopee.RefreshToken)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(q.Encode()))
+	fmt.Println(cfg)
 	if err != nil {
 		return err
 	}

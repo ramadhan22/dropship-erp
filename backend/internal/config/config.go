@@ -14,7 +14,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
-	Shopee   ShopeeAPIConfig
+	Shopee   ShopeeAPIConfig `mapstructure:"shopee_api"`
 }
 
 // ServerConfig contains HTTP server settings.
