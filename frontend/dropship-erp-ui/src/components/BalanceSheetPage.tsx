@@ -60,7 +60,6 @@ export default function BalanceSheetPage() {
   const years = [2023, 2024, 2025];
   const [data, setData] = useState<BalanceCategory[]>([]);
   const [netProfit, setNetProfit] = useState(0);
-  const [retainedEarnings, setRetainedEarnings] = useState(0);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -76,7 +75,9 @@ export default function BalanceSheetPage() {
       periodType === "Monthly"
         ? `${year}-${String(month).padStart(2, "0")}`
         : `${year}-12`;
-    const [bsRes, plRes, prevPlRes] = await Promise.all([
+
+    const prevYears = years.filter((y) => y < year);
+    const tasks = [
       fetchBalanceSheet(shop, periodStr),
       fetchProfitLoss({
         type: "Yearly",
@@ -84,34 +85,26 @@ export default function BalanceSheetPage() {
         year,
         store: shop,
       }),
-      fetchProfitLoss({
-        type: "Yearly",
-        month: 12,
-        year: year - 1,
-        store: shop,
-      }),
-    ]);
-    setData(bsRes.data);
-    setNetProfit(plRes.data.labaRugiBersih.amount);
-    setRetainedEarnings(prevPlRes.data.labaRugiBersih.amount);
-  };
+      ...prevYears.map((y) =>
+        fetchProfitLoss({ type: "Yearly", month: 12, year: y, store: shop })
+      ),
+    ];
+    const results = await Promise.all(tasks);
+    const bsRes = results[0];
+    const plRes = results[1];
+    const prevResults = results.slice(2) as Array<{ data: { labaRugiBersih: { amount: number } } }>;
 
-  const assetCat = data.find((c) => c.category === "Assets");
-  const liabilityCat = data.find((c) => c.category === "Liabilities");
-  const equityCat = data.find((c) => c.category === "Equity");
-  const profitName = "Laba/Rugi Tahun Berjalan";
-  const retainedName = "Laba Ditahan";
-  const equityAccounts = (() => {
+    setData((bsRes as any).data);
+    setNetProfit((plRes as any).data.labaRugiBersih.amount);
+    const retained = prevResults.reduce(
+      (sum, r) => sum + r.data.labaRugiBersih.amount,
+      0,
+    );
+    setRetainedEarnings(retained);
     if (!equityCat) return [] as Account[];
-    const list = equityCat.accounts.map((a) => {
-      if (a.account_name === profitName) {
-        return { ...a, balance: netProfit };
-      }
-      if (a.account_name === retainedName) {
-        return { ...a, balance: retainedEarnings };
-      }
-      return a;
-    });
+    const list = equityCat.accounts.map((a) =>
+      a.account_name === profitName ? { ...a, balance: netProfit } : a,
+    );
     if (!list.some((a) => a.account_name === profitName)) {
       list.push({
         account_id: 0,
@@ -120,16 +113,6 @@ export default function BalanceSheetPage() {
         account_type: "Equity",
         parent_id: null,
         balance: netProfit,
-      });
-    }
-    if (!list.some((a) => a.account_name === retainedName)) {
-      list.push({
-        account_id: 0,
-        account_code: "3.2",
-        account_name: retainedName,
-        account_type: "Equity",
-        parent_id: null,
-        balance: retainedEarnings,
       });
     }
     return list;
