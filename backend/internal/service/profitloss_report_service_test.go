@@ -8,9 +8,15 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
-type fakeJournalRepoPL struct{ balances []repository.AccountBalance }
+type fakeJournalRepoPL struct {
+	balances []repository.AccountBalance
+	lastFrom time.Time
+	lastTo   time.Time
+}
 
 func (f *fakeJournalRepoPL) GetAccountBalancesBetween(ctx context.Context, shop string, from, to time.Time) ([]repository.AccountBalance, error) {
+	f.lastFrom = from
+	f.lastTo = to
 	return f.balances, nil
 }
 
@@ -34,5 +40,23 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	}
 	if len(pl.BebanOperasional) != 1 {
 		t.Errorf("expected 1 operasional row, got %d", len(pl.BebanOperasional))
+	}
+}
+
+func TestProfitLossReportService_GetProfitLoss_YTD(t *testing.T) {
+	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
+	svc := NewProfitLossReportService(repo)
+
+	_, err := svc.GetProfitLoss(context.Background(), "Yearly", 5, 2025, "ShopX")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wantStart := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	wantEnd := time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 1, 0).Add(-time.Nanosecond)
+	if !repo.lastFrom.Equal(wantStart) {
+		t.Errorf("from date got %v want %v", repo.lastFrom, wantStart)
+	}
+	if !repo.lastTo.Equal(wantEnd) {
+		t.Errorf("to date got %v want %v", repo.lastTo, wantEnd)
 	}
 }

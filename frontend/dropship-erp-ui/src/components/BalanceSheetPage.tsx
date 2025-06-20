@@ -26,12 +26,13 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
       key: "balance",
       align: "right",
       render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+        Number(v).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }),
     },
   ];
-  return (
-    <SortableTable columns={columns} data={accounts} />
-  );
+  return <SortableTable columns={columns} data={accounts} />;
 }
 
 export default function BalanceSheetPage() {
@@ -77,8 +78,8 @@ export default function BalanceSheetPage() {
     const [bsRes, plRes] = await Promise.all([
       fetchBalanceSheet(shop, periodStr),
       fetchProfitLoss({
-        type: periodType,
-        month: periodType === "Monthly" ? month : undefined,
+        type: "Yearly",
+        month: periodType === "Monthly" ? month : 12,
         year,
         store: shop,
       }),
@@ -129,50 +130,50 @@ export default function BalanceSheetPage() {
         ))}
       </select>
       <Typography sx={{ minWidth: 70 }}>Periode:</Typography>
+      <FormControl size="small" sx={{ mr: 1 }}>
+        <InputLabel id="type-label">Type</InputLabel>
+        <Select
+          labelId="type-label"
+          value={periodType}
+          label="Type"
+          onChange={(e) => setPeriodType(e.target.value as any)}
+        >
+          <MenuItem value="Monthly">Monthly</MenuItem>
+          <MenuItem value="Yearly">Yearly</MenuItem>
+        </Select>
+      </FormControl>
+      {periodType === "Monthly" && (
         <FormControl size="small" sx={{ mr: 1 }}>
-          <InputLabel id="type-label">Type</InputLabel>
+          <InputLabel id="month-label">Month</InputLabel>
           <Select
-            labelId="type-label"
-            value={periodType}
-            label="Type"
-            onChange={(e) => setPeriodType(e.target.value as any)}
+            labelId="month-label"
+            value={month}
+            label="Month"
+            onChange={(e) => setMonth(Number(e.target.value))}
           >
-            <MenuItem value="Monthly">Monthly</MenuItem>
-            <MenuItem value="Yearly">Yearly</MenuItem>
-          </Select>
-        </FormControl>
-        {periodType === "Monthly" && (
-          <FormControl size="small" sx={{ mr: 1 }}>
-            <InputLabel id="month-label">Month</InputLabel>
-            <Select
-              labelId="month-label"
-              value={month}
-              label="Month"
-              onChange={(e) => setMonth(Number(e.target.value))}
-            >
-              {months.map((m, idx) => (
-                <MenuItem key={m} value={idx + 1}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-        <FormControl size="small" sx={{ mr: 1 }}>
-          <InputLabel id="year-label">Year</InputLabel>
-          <Select
-            labelId="year-label"
-            value={year}
-            label="Year"
-            onChange={(e) => setYear(Number(e.target.value))}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
+            {months.map((m, idx) => (
+              <MenuItem key={m} value={idx + 1}>
+                {m}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
+      )}
+      <FormControl size="small" sx={{ mr: 1 }}>
+        <InputLabel id="year-label">Year</InputLabel>
+        <Select
+          labelId="year-label"
+          value={year}
+          label="Year"
+          onChange={(e) => setYear(Number(e.target.value))}
+        >
+          {years.map((y) => (
+            <MenuItem key={y} value={y}>
+              {y}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
       <Button variant="contained" onClick={handleFetch}>
         Fetch
       </Button>
@@ -202,11 +203,18 @@ export default function BalanceSheetPage() {
         </div>
       </div>
       <div style={{ display: "flex", marginTop: "0.5rem" }}>
-        <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}>
+        <Typography
+          variant="subtitle1"
+          sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}
+        >
           Total Assets: {format(assetCat?.total ?? 0)}
         </Typography>
-        <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}>
-          Total Liabilities + Equity: {format((liabilityCat?.total ?? 0) + equityTotal)}
+        <Typography
+          variant="subtitle1"
+          sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}
+        >
+          Total Liabilities + Equity:{" "}
+          {format((liabilityCat?.total ?? 0) + equityTotal)}
         </Typography>
       </div>
     </div>
