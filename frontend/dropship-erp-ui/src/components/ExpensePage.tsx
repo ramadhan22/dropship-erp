@@ -25,8 +25,8 @@ export default function ExpensePage() {
     { account: "", amount: "" },
   ]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const assetAccounts = accounts.filter((a) => a.account_type === "asset");
-  const expenseAccounts = accounts.filter((a) => a.account_type === "expense");
+  const assetAccounts = accounts.filter((a) => a.account_type === "Asset");
+  const expenseAccounts = accounts.filter((a) => a.account_type === "Expense");
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
