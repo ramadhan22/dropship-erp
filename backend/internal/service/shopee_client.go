@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -87,17 +89,19 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	q.Set("refresh_token", cfg.Shopee.RefreshToken)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(q.Encode()))
-	fmt.Println(cfg)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		log.Printf("RefreshAccessToken request error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("RefreshAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out refreshResp
@@ -105,6 +109,7 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 		return err
 	}
 	if out.Error != "" {
+		log.Printf("RefreshAccessToken API error: %s", out.Error)
 		return fmt.Errorf("shopee error: %s", out.Error)
 	}
 	if out.Response.AccessToken != "" {
@@ -136,10 +141,13 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		log.Printf("GetOrderDetail request error: %v", err)
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("GetOrderDetail unexpected status %d: %s", resp.StatusCode, string(body))
 		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out orderDetailResp
@@ -147,6 +155,7 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 		return "", err
 	}
 	if out.Error != "" {
+		log.Printf("GetOrderDetail API error: %s", out.Error)
 		return "", fmt.Errorf("shopee error: %s", out.Error)
 	}
 	return out.Response.OrderStatus, nil
