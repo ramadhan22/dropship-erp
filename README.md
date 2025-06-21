@@ -92,7 +92,7 @@ models or pages should keep this list in sync.
 - **cached_metrics** – provides data for `MetricsPage`, balance sheet and P&L.
 - **expenses** and **expense_lines** – editable via `ExpensePage`.
 - **ad_invoices** – imported from `AdInvoicePage`.
-- **asset_accounts** – listed on `KasAccountPage`.
+- **asset_accounts** – only accounts under code `1.1.1` appear on `KasAccountPage`.
 - **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
   across filters.
 
