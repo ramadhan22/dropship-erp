@@ -116,6 +116,7 @@ func main() {
 		handlers.NewGLHandler(glSvc).RegisterRoutes(apiGroup)
 		handlers.NewReconcileExtraHandler(reconSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
+		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
