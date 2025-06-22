@@ -7,7 +7,7 @@ server:
     - "http://localhost:4173"
 
 database:
-  url: "postgres://erp_user:erp_user@localhost:5432/dropship_erp?sslmode=disable"
+  url: "postgres://erp_user:erp_pass@localhost:5432/dropship_erp?sslmode=disable"
 
 jwt:
   secret: "cuancuan88"
