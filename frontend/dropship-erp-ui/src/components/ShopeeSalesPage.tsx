@@ -21,7 +21,6 @@ import { useEffect, useState } from "react";
 import { getCurrentMonthRange } from "../utils/date";
 import {
   importShopee,
-  confirmShopeeSettle,
   listJenisChannels,
   listStoresByChannelName,
   listShopeeSettled,
@@ -58,7 +57,6 @@ export default function ShopeeSalesPage() {
   const [allSummary, setAllSummary] = useState<ShopeeSettledSummary | null>(
     null,
   );
-  const [settling, setSettling] = useState<string | null>(null);
   const pageSize = 10;
   const navigate = useNavigate();
 
@@ -371,30 +369,6 @@ export default function ShopeeSalesPage() {
         </Button>
       ),
     },
-    {
-      label: "Mismatch",
-      key: "is_data_mismatch",
-      align: "center",
-      render: (v) => (v ? "⚠️" : ""),
-    },
-    {
-      label: "Actions",
-      key: "actions",
-      render: (_, row) => {
-        if (row.is_settled_confirmed) return "✔️";
-        if (row.is_data_mismatch) return "";
-        return (
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => handleConfirm(row.no_pesanan)}
-            disabled={settling === row.no_pesanan}
-          >
-            {settling === row.no_pesanan ? "..." : "Confirm Settle"}
-          </Button>
-        );
-      },
-    },
   ];
 
   const [importOpen, setImportOpen] = useState(false);
@@ -467,18 +441,6 @@ export default function ShopeeSalesPage() {
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
-    }
-  };
-
-  const handleConfirm = async (sn: string) => {
-    setSettling(sn);
-    try {
-      await confirmShopeeSettle(sn);
-      fetchData();
-    } catch (e: any) {
-      setMsg({ type: "error", text: e.response?.data?.error || e.message });
-    } finally {
-      setSettling(null);
     }
   };
 
