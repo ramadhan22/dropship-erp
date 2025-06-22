@@ -7,7 +7,6 @@ import ReconcileForm from "./components/ReconcileForm";
 import ReconcileDashboard from "./components/ReconcileDashboard";
 import ShopeeSalesPage from "./components/ShopeeSalesPage";
 import ShopeeAffiliatePage from "./components/ShopeeAffiliatePage";
-import ShopeeImport from "./components/ShopeeImport";
 import AccountPage from "./components/AccountPage";
 import ExpensePage from "./components/ExpensePage";
 import JournalPage from "./components/JournalPage";
