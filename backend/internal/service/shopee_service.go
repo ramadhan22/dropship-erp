@@ -3,14 +3,18 @@ package service
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -660,4 +664,98 @@ func CapitalizeWords(s string) string {
 		}
 	}
 	return strings.Join(words, " ")
+}
+
+// withdrawResp models the payout API response.
+type withdrawResp struct {
+	Fee float64 `json:"fee"`
+}
+
+// WithdrawShopeeBalance moves funds from Shopee balance to bank account.
+func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string, amount float64) error {
+	cfg := config.MustLoadConfig()
+
+	form := url.Values{}
+	form.Set("shopid", cfg.Shopee.ShopID)
+	form.Set("amount", fmt.Sprintf("%.2f", amount))
+	form.Set("access_token", cfg.Shopee.AccessToken)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.Shopee.BaseURL+"/api/v2/shop/withdraw", strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("withdraw status %d", resp.StatusCode)
+	}
+
+	var out withdrawResp
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return err
+	}
+
+	jr := s.journalRepo
+	if s.db != nil {
+		tx, err := s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		jr = repository.NewJournalRepo(tx)
+
+		if err := createWithdrawJournal(ctx, jr, store, amount, out.Fee); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+	return createWithdrawJournal(ctx, jr, store, amount, out.Fee)
+}
+
+func createWithdrawJournal(ctx context.Context, jr ShopeeJournalRepo, store string, amount, fee float64) error {
+	je := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("Withdraw Shopee Balance"),
+		SourceType:   "withdraw",
+		SourceID:     fmt.Sprintf("%s-%d", store, time.Now().UnixNano()),
+		ShopUsername: store,
+		Store:        store,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+
+	bankAcc := int64(1002) // account_code 1.1.2
+	saldoAcc := saldoShopeeAccountID(store)
+	if fee > 0 {
+		net := amount - fee
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: bankAcc, IsDebit: true, Amount: net},
+			{JournalID: jid, AccountID: 52008, IsDebit: true, Amount: fee},
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	} else {
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: bankAcc, IsDebit: true, Amount: amount},
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

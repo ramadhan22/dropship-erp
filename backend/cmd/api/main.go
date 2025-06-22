@@ -118,6 +118,7 @@ func main() {
 		handlers.NewReconcileExtraHandler(reconSvc).RegisterRoutes(apiGroup)
 		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
+		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
