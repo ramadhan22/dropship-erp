@@ -101,7 +101,9 @@ Services in the backend interact with particular tables. Updating services or
 tables should keep this mapping aligned.
 
 - **AccountService** – operates on `accounts`.
-- **JournalService** – writes to `journal_entries` and `journal_lines`.
+ - **JournalService** – writes to `journal_entries` and `journal_lines`.
+   Duplicate entries with the same `source_type` and `source_id` are removed
+   before inserting new records.
 - **DropshipService** – manages `dropship_purchases` and
   `dropship_purchase_details`, creating journal entries for pending sales.
 - **ShopeeService** – imports `shopee_settled_orders`, `shopee_settled` and

@@ -30,6 +30,14 @@ func NewJournalRepo(db DBTX) *JournalRepo {
 // CreateJournalEntry inserts a row into journal_entries and returns the new journal_id.
 // We need this so we can capture the returned primary key for inserting lines.
 func (r *JournalRepo) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
+	if e.SourceType != "" && e.SourceID != "" {
+		old, err := r.GetJournalEntryBySource(ctx, e.SourceType, e.SourceID)
+		if err == nil && old != nil {
+			if err := r.DeleteJournalEntry(ctx, old.JournalID); err != nil {
+				return 0, err
+			}
+		}
+	}
 	rows, err := sqlx.NamedQueryContext(ctx, r.db, insertJournalSQL, e)
 	if err != nil {
 		return 0, err
