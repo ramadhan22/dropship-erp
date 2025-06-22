@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,6 +61,33 @@ func (c *ShopeeClient) sign(path string, ts int64) string {
 type orderDetailResp struct {
 	Response struct {
 		OrderStatus string `json:"order_status"`
+	} `json:"response"`
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
+
+// orderDetailExtResp captures additional fields needed for pending balance.
+type orderDetailExtResp struct {
+	Response struct {
+		OrderList []struct {
+			OrderSN          string  `json:"order_sn"`
+			OrderStatus      string  `json:"order_status"`
+			DeliveryTime     int64   `json:"delivery_time"`
+			ActualIncome     float64 `json:"actual_income"`
+			BuyerTotalAmount float64 `json:"buyer_total_amount"`
+		} `json:"order_list"`
+	} `json:"response"`
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
+
+// orderListResp is the response for get_order_list.
+type orderListResp struct {
+	Response struct {
+		OrderList []struct {
+			OrderSN string `json:"order_sn"`
+		} `json:"order_list"`
+		More bool `json:"more"`
 	} `json:"response"`
 	Error   string `json:"error"`
 	Message string `json:"message"`
@@ -159,4 +187,132 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 		return "", fmt.Errorf("shopee error: %s", out.Error)
 	}
 	return out.Response.OrderStatus, nil
+}
+
+// getOrderDetailExt fetches additional order fields for pending balance.
+func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*orderDetailExtResp, error) {
+	if err := c.RefreshAccessToken(ctx); err != nil {
+		return nil, err
+	}
+	path := "/api/v2/order/get_order_detail"
+	ts := time.Now().Unix()
+	sign := c.sign(path, ts)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", c.ShopID)
+	q.Set("access_token", c.AccessToken)
+	q.Set("order_sn_list", orderSn)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		log.Printf("getOrderDetailExt request error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("getOrderDetailExt unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+	var out orderDetailExtResp
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		log.Printf("getOrderDetailExt API error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+	if len(out.Response.OrderList) == 0 {
+		return nil, fmt.Errorf("empty response")
+	}
+	return &out, nil
+}
+
+// GetPendingBalance sums actual income for pending orders.
+func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (float64, error) {
+	const settlementDelay = 5 * 24 * time.Hour
+	const pageSize = 50
+	offset := 0
+	var total float64
+
+	for {
+		if err := c.RefreshAccessToken(ctx); err != nil {
+			return 0, err
+		}
+		path := "/api/v2/order/get_order_list"
+		ts := time.Now().Unix()
+		sign := c.sign(path, ts)
+
+		q := url.Values{}
+		q.Set("partner_id", c.PartnerID)
+		q.Set("timestamp", fmt.Sprintf("%d", ts))
+		q.Set("sign", sign)
+		q.Set("shopid", c.ShopID)
+		q.Set("access_token", c.AccessToken)
+		q.Set("order_statuses", "[\"READY_TO_SHIP\",\"SHIPPED\",\"COMPLETED\"]")
+		q.Set("pagination_offset", strconv.Itoa(offset))
+		q.Set("pagination_entries_per_page", strconv.Itoa(pageSize))
+
+		req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+		if err != nil {
+			return 0, err
+		}
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			log.Printf("GetOrderList request error: %v", err)
+			return 0, err
+		}
+		var more bool
+		func() {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				body, _ := io.ReadAll(resp.Body)
+				log.Printf("GetOrderList unexpected status %d: %s", resp.StatusCode, string(body))
+				err = fmt.Errorf("unexpected status %d", resp.StatusCode)
+				return
+			}
+			var out orderListResp
+			if e := json.NewDecoder(resp.Body).Decode(&out); e != nil {
+				err = e
+				return
+			}
+			if out.Error != "" {
+				err = fmt.Errorf("shopee error: %s", out.Error)
+				return
+			}
+			for _, o := range out.Response.OrderList {
+				det, e := c.getOrderDetailExt(ctx, o.OrderSN)
+				if e != nil {
+					err = e
+					return
+				}
+				d := det.Response.OrderList[0]
+				inc := d.ActualIncome
+				if inc == 0 {
+					inc = d.BuyerTotalAmount
+				}
+				pending := d.OrderStatus == "READY_TO_SHIP" || d.OrderStatus == "SHIPPED" ||
+					(d.OrderStatus == "COMPLETED" && time.Unix(d.DeliveryTime, 0).Add(settlementDelay).After(time.Now()))
+				if pending {
+					total += inc
+				}
+			}
+			more = out.Response.More
+		}()
+		if err != nil {
+			return 0, err
+		}
+		if !more {
+			break
+		}
+		offset += pageSize
+	}
+	return total, nil
 }

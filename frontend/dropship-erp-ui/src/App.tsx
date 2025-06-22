@@ -17,6 +17,7 @@ import GLPage from "./components/GLPage";
 import SalesSummaryPage from "./components/SalesSummaryPage";
 import SalesProfitPage from "./components/SalesProfitPage";
 import KasAccountPage from "./components/KasAccountPage";
+import PendingBalancePage from "./components/PendingBalancePage";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Link to="/expenses">Expenses</Link> |{" "}
         <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
         | <Link to="/kas">Kas</Link> |{" "}
+        <Link to="/pending-balance">Pending Balance</Link> |{" "}
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
@@ -55,6 +57,7 @@ export default function App() {
           <Route path="/ads" element={<AdInvoicePage />} />
           <Route path="/journal" element={<JournalPage />} />
           <Route path="/kas" element={<KasAccountPage />} />
+          <Route path="/pending-balance" element={<PendingBalancePage />} />
         </Routes>
       </div>
     </BrowserRouter>
