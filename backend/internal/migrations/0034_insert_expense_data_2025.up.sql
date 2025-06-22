@@ -1,7 +1,7 @@
 -- Insert 2025 expense data and related journal entries
 DO $$
 DECLARE
-    kas INT := (SELECT account_id FROM accounts WHERE account_code='1.1.1');
+    kas INT := (SELECT account_id FROM accounts WHERE account_code='1.1.14');
     mitra INT := (SELECT account_id FROM accounts WHERE account_code='5.2.7');
     voucher_acc INT := (SELECT account_id FROM accounts WHERE account_code='5.2.3');
     iklan INT := (SELECT account_id FROM accounts WHERE account_code='5.2.9');
