@@ -12,13 +12,14 @@ import (
 
 // ShopeeServiceInterface defines only the method the handler needs.
 type ShopeeServiceInterface interface {
-	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error)
+	ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, []string, error)
 	ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error)
 	ListSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ListAffiliate(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumAffiliate(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
+	ConfirmSettle(ctx context.Context, orderSN string) error
 }
 
 type ShopeeHandler struct {
@@ -44,21 +45,32 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	total := 0
+	mismatches := []string{}
 	for _, fh := range files {
 		f, err := fh.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		count, err := h.svc.ImportSettledOrdersXLSX(ctx, f)
+		count, mis, err := h.svc.ImportSettledOrdersXLSX(ctx, f)
 		f.Close()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		total += count
+		mismatches = append(mismatches, mis...)
 	}
-	c.JSON(http.StatusOK, gin.H{"inserted": total})
+	c.JSON(http.StatusOK, gin.H{"inserted": total, "mismatches": mismatches})
+}
+
+func (h *ShopeeHandler) HandleConfirmSettle(c *gin.Context) {
+	sn := c.Param("order_sn")
+	if err := h.svc.ConfirmSettle(c.Request.Context(), sn); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
