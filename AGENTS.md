@@ -15,6 +15,9 @@ If a command cannot be executed in the environment, mention this in the pull req
 ## Documentation
 - Update `README.md` when adding new commands, dependencies or features.
 - Keep this `AGENTS.md` up to date with any workflow changes.
+- Prefer passing configuration into services rather than calling
+  `config.MustLoadConfig` from within business logic. This keeps tests
+  independent from external files.
 
 ## UI Patterns
 - Use the `SortableTable` component for displaying tabular data.

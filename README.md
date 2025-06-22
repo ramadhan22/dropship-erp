@@ -35,6 +35,9 @@ request using this value.
 Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
 `SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
 signing API calls.
+As of this version, `ShopeeClient` no longer loads configuration inside
+`RefreshAccessToken`; all required values are taken from the struct fields
+initialized in `NewShopeeClient`.
 
 To start the backend:
 
