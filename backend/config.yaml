@@ -13,8 +13,8 @@ jwt:
   secret: "cuancuan88"
 
 auth:
-  username: "admin"
-  password: "password"
+  username: "rama"
+  password: "R@hasi@"
 
 # Credentials for calling Shopee Partner API
 shopee_api:
