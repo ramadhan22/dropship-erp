@@ -58,6 +58,7 @@ func main() {
 	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	plReportSvc := service.NewProfitLossReportService(repo.JournalRepo)
 	glSvc := service.NewGLService(repo.JournalRepo)
+	pbSvc := service.NewPendingBalanceService(shClient)
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
@@ -115,6 +116,7 @@ func main() {
 		handlers.NewProfitLossReportHandler(plReportSvc).RegisterRoutes(apiGroup)
 		handlers.NewGLHandler(glSvc).RegisterRoutes(apiGroup)
 		handlers.NewReconcileExtraHandler(reconSvc).RegisterRoutes(apiGroup)
+		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 	}
 

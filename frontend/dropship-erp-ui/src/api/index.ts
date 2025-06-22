@@ -344,3 +344,6 @@ export function deleteAccount(id: number) {
 export function getDropshipPurchaseDetails(id: string) {
   return api.get<DropshipPurchaseDetail[]>(`/dropship/purchases/${id}/details`);
 }
+
+export const fetchPendingBalance = (store: string) =>
+  api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
