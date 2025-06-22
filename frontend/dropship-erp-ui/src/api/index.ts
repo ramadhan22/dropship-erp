@@ -44,6 +44,10 @@ export const api = axios.create({
 
 // Global loading indicator hooks into axios requests
 api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+  }
   loadingEmitter.start();
   return config;
 });
@@ -55,6 +59,10 @@ api.interceptors.response.use(
   },
   (err) => {
     loadingEmitter.end();
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      window.location.reload();
+    }
     return Promise.reject(err);
   },
 );

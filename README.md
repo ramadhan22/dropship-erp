@@ -52,6 +52,15 @@ Run tests with:
 go test ./...
 ```
 
+### Authentication
+
+The backend exposes a `/api/login` endpoint which issues a JWT token. Default
+credentials are defined in `backend/config.yaml` under the `auth` section
+("admin"/"password"). The React application prompts for these credentials on
+initial load and sends the returned token with API requests. If any API call
+responds with `401 Unauthorized`, the app automatically clears the token and
+returns to the login screen.
+
 ## Frontend
 
 The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is

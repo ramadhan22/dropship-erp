@@ -12,6 +12,10 @@ database:
 jwt:
   secret: "cuancuan88"
 
+auth:
+  username: "admin"
+  password: "password"
+
 # Credentials for calling Shopee Partner API
 shopee_api:
   partner_id: "1280459"

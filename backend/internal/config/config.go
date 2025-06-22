@@ -14,6 +14,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	JWT      JWTConfig
+	Auth     AuthConfig
 	Shopee   ShopeeAPIConfig `mapstructure:"shopee_api"`
 }
 
@@ -32,6 +33,12 @@ type DatabaseConfig struct {
 // JWTConfig contains settings for JWT authentication.
 type JWTConfig struct {
 	Secret string
+}
+
+// AuthConfig contains static credentials for login.
+type AuthConfig struct {
+	Username string
+	Password string
 }
 
 // ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
@@ -81,6 +88,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.JWT.Secret == "" {
 		return nil, fmt.Errorf("jwt.secret must be set in config or via JWT_SECRET")
+	}
+	if cfg.Auth.Username == "" || cfg.Auth.Password == "" {
+		return nil, fmt.Errorf("auth.username and auth.password must be set in config or via AUTH_USERNAME/AUTH_PASSWORD")
 	}
 	if cfg.Server.Port == "" {
 		return nil, fmt.Errorf("server.port must be set in config or via SERVER_PORT")

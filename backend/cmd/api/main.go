@@ -61,6 +61,9 @@ func main() {
 	pbSvc := service.NewPendingBalanceService(shClient)
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 
+	authSvc := service.NewAuthService(cfg.Auth.Username, cfg.Auth.Password, cfg.JWT.Secret)
+	authHandler := handlers.NewAuthHandler(authSvc)
+
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
 	// CORS configuration – origins can be configured via config.yaml
@@ -72,7 +75,9 @@ func main() {
 		AllowOriginFunc:  func(origin string) bool { return true },
 	}))
 
-	apiGroup := router.Group("/api")
+	router.POST("/api/login", authHandler.HandleLogin)
+
+	apiGroup := router.Group("/api", handlers.AuthMiddleware(authSvc))
 	{
 		apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
 		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
