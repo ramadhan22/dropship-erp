@@ -22,18 +22,6 @@ type fakeShopeeRepo struct {
 	affExpense        float64
 }
 
-func (f *fakeShopeeRepo) MarkMismatch(ctx context.Context, orderSN string, mismatch bool) error {
-	return nil
-}
-
-func (f *fakeShopeeRepo) ConfirmSettle(ctx context.Context, orderSN string) error {
-	return nil
-}
-
-func (f *fakeShopeeRepo) GetBySN(ctx context.Context, orderSN string) (*models.ShopeeSettled, error) {
-	return &models.ShopeeSettled{NamaToko: "TOKO", NoPesanan: orderSN, HargaAsliProduk: 1}, nil
-}
-
 type fakeJournalRepoS struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine
@@ -195,7 +183,7 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
-	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
 	}
@@ -217,7 +205,7 @@ func TestImportSettledOrdersXLSX_HeaderMismatch(t *testing.T) {
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
-	_, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	_, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err == nil {
 		t.Fatalf("expected error due to header mismatch")
 	}
@@ -253,7 +241,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO-1": true}}
 	svc := NewShopeeService(nil, repo, nil, nil)
-	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
 	}
@@ -295,7 +283,7 @@ func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
 		"TRX-1": {KodePesanan: "DP1", StatusPesananTerakhir: "Diproses"},
 	}}
 	svc := NewShopeeService(nil, repo, drop, nil)
-	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	inserted, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
 	}
