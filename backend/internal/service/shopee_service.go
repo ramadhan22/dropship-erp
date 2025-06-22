@@ -76,6 +76,9 @@ type ShopeeRepoInterface interface {
 	ListShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error)
+	MarkMismatch(ctx context.Context, orderSN string, mismatch bool) error
+	ConfirmSettle(ctx context.Context, orderSN string) error
+	GetBySN(ctx context.Context, orderSN string) (*models.ShopeeSettled, error)
 	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
 }
 
@@ -110,20 +113,20 @@ func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo,
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
 // It returns the count of successfully inserted rows.
-func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error) {
+func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, []string, error) {
 	f, err := excelize.OpenReader(r)
 	if err != nil {
-		return 0, fmt.Errorf("open xlsx: %w", err)
+		return 0, nil, fmt.Errorf("open xlsx: %w", err)
 	}
 	sheets := f.GetSheetList()
 	if len(sheets) < 2 {
-		return 0, fmt.Errorf("second sheet not found")
+		return 0, nil, fmt.Errorf("second sheet not found")
 	}
 	sheet := sheets[1]
 
 	rows, err := f.GetRows(sheet)
 	if err != nil {
-		return 0, fmt.Errorf("read rows: %w", err)
+		return 0, nil, fmt.Errorf("read rows: %w", err)
 	}
 
 	storeUsername, _ := f.GetCellValue(sheet, "A2")
@@ -137,19 +140,20 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 	}
 	if headerIndex == -1 {
-		return 0, fmt.Errorf("header row not found")
+		return 0, nil, fmt.Errorf("header row not found")
 	}
 	header := rows[headerIndex]
 	if len(header) < len(expectedHeaders)+1 { // +1 for the \"No.\" column
-		return 0, fmt.Errorf("invalid header length")
+		return 0, nil, fmt.Errorf("invalid header length")
 	}
 	for i, name := range expectedHeaders {
 		if strings.TrimSpace(header[i+1]) != name {
-			return 0, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
+			return 0, nil, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
 		}
 	}
 
 	inserted := 0
+	mismatches := []string{}
 	for i := headerIndex + 1; i < len(rows); i++ {
 		row := rows[i]
 		if len(row) < 37 {
@@ -165,16 +169,24 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 		exists, err := s.repo.ExistsShopeeSettled(ctx, entry.NoPesanan)
 		if err != nil {
-			return inserted, fmt.Errorf("check existing row %d: %w", i+1, err)
+			return inserted, mismatches, fmt.Errorf("check existing row %d: %w", i+1, err)
 		}
 		if exists {
 			continue
 		}
 		if err := s.repo.InsertShopeeSettled(ctx, entry); err != nil {
-			return inserted, fmt.Errorf("insert row %d: %w", i+1, err)
+			return inserted, mismatches, fmt.Errorf("insert row %d: %w", i+1, err)
 		}
-		if err := s.createSettlementJournal(ctx, s.journalRepo, s.repo, entry); err != nil {
-			return inserted, fmt.Errorf("journal row %d: %w", i+1, err)
+		var sum float64
+		if s.db != nil {
+			_ = s.db.GetContext(ctx, &sum,
+				`SELECT COALESCE(SUM(total_transaksi),0) FROM dropship_purchases WHERE kode_invoice_channel=$1`,
+				entry.NoPesanan)
+		}
+		mismatch := sum != entry.HargaAsliProduk
+		_ = s.repo.MarkMismatch(ctx, entry.NoPesanan, mismatch)
+		if mismatch {
+			mismatches = append(mismatches, entry.NoPesanan)
 		}
 		// Update related dropship purchase status if applicable
 		if s.dropshipRepo != nil && entry.NoPengajuan != "" {
@@ -186,7 +198,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 		inserted++
 	}
-	return inserted, nil
+	return inserted, mismatches, nil
 }
 
 // ImportAffiliateCSV reads a CSV file of affiliate sales and inserts rows.
@@ -647,6 +659,53 @@ func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.
 		newAmt = 0
 	}
 	return s.journalRepo.UpdateJournalLineAmount(ctx, saldoLine.LineID, newAmt)
+}
+
+// ConfirmSettle posts journal entries for the given order if data is valid.
+func (s *ShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error {
+	o, err := s.repo.GetBySN(ctx, orderSN)
+	if err != nil {
+		return err
+	}
+	if o.IsDataMismatch || o.IsSettledConfirmed {
+		return fmt.Errorf("cannot settle")
+	}
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	jr := repository.NewJournalRepo(tx)
+	amount := o.HargaAsliProduk
+	je := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("Settle " + orderSN),
+		SourceType:   "shopee_settled",
+		SourceID:     orderSN,
+		ShopUsername: o.NamaToko,
+		Store:        o.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	balanceAcc := saldoShopeeAccountID(o.NamaToko)
+	revenueAcc := int64(4001)
+	lines := []models.JournalLine{
+		{JournalID: jid, AccountID: balanceAcc, IsDebit: true, Amount: amount, Memo: ptrString("Settle " + orderSN)},
+		{JournalID: jid, AccountID: revenueAcc, IsDebit: false, Amount: amount, Memo: ptrString("Settle " + orderSN)},
+	}
+	for i := range lines {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	if err := s.repo.ConfirmSettle(ctx, orderSN); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func CapitalizeWords(s string) string {
