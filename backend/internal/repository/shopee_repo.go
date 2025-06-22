@@ -74,9 +74,7 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             pro_rata_voucher_shopee_untuk_pengembalian_barang,
             pro_rated_bank_payment_channel_promotion_for_returns,
-            pro_rated_shopee_payment_channel_promotion_for_returns,
-            is_data_mismatch,
-            is_settled_confirmed
+            pro_rated_shopee_payment_channel_promotion_for_returns
         ) VALUES (
             :nama_toko, :no_pesanan, :no_pengajuan, :username_pembeli, :waktu_pesanan_dibuat,
             :metode_pembayaran_pembeli, :tanggal_dana_dilepaskan, :harga_asli_produk,
@@ -91,9 +89,7 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             :pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             :pro_rata_voucher_shopee_untuk_pengembalian_barang,
             :pro_rated_bank_payment_channel_promotion_for_returns,
-            :pro_rated_shopee_payment_channel_promotion_for_returns,
-            :is_data_mismatch,
-            :is_settled_confirmed
+            :pro_rated_shopee_payment_channel_promotion_for_returns
         )`
 	_, err := r.db.NamedExecContext(ctx, query, s)
 	return err
@@ -105,32 +101,6 @@ func (r *ShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) 
 	err := r.db.GetContext(ctx, &exists,
 		"SELECT EXISTS(SELECT 1 FROM shopee_settled WHERE no_pesanan=$1)", noPesanan)
 	return exists, err
-}
-
-// MarkMismatch updates the is_data_mismatch flag for a given order number.
-func (r *ShopeeRepo) MarkMismatch(ctx context.Context, orderSN string, mismatch bool) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE shopee_settled SET is_data_mismatch=$2 WHERE no_pesanan=$1`,
-		orderSN, mismatch)
-	return err
-}
-
-// ConfirmSettle sets the is_settled_confirmed flag to true for the given order number.
-func (r *ShopeeRepo) ConfirmSettle(ctx context.Context, orderSN string) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE shopee_settled SET is_settled_confirmed=TRUE WHERE no_pesanan=$1`,
-		orderSN)
-	return err
-}
-
-// GetBySN retrieves a single shopee_settled row by order number.
-func (r *ShopeeRepo) GetBySN(ctx context.Context, orderSN string) (*models.ShopeeSettled, error) {
-	var s models.ShopeeSettled
-	err := r.db.GetContext(ctx, &s, `SELECT * FROM shopee_settled WHERE no_pesanan=$1`, orderSN)
-	if err != nil {
-		return nil, err
-	}
-	return &s, nil
 }
 
 // InsertShopeeAffiliateSale inserts a row into the shopee_affiliate_sales table.
