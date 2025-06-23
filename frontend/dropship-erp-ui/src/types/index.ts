@@ -78,6 +78,8 @@ export interface ShopeeSettled {
   pro_rata_voucher_shopee_untuk_pengembalian_barang: number;
   pro_rated_bank_payment_channel_promotion_for_returns: number;
   pro_rated_shopee_payment_channel_promotion_for_returns: number;
+  is_data_mismatch: boolean;
+  is_settled_confirmed: boolean;
 }
 
 export interface ShopeeSettledSummary {

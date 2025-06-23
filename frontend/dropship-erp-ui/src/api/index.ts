@@ -89,6 +89,9 @@ export function importShopeeAffiliate(files: File[]) {
   });
 }
 
+export const confirmShopeeSettle = (orderSN: string) =>
+  api.post<{ success: boolean }>(`/shopee/settle/${orderSN}`);
+
 // Reconcile
 export function reconcile(purchaseId: string, orderId: string, shop: string) {
   return api.post("/reconcile", {
@@ -345,10 +348,8 @@ export function getDropshipPurchaseDetails(id: string) {
   return api.get<DropshipPurchaseDetail[]>(`/dropship/purchases/${id}/details`);
 }
 
-
 export const withdrawShopeeBalance = (store: string, amount: number) =>
   api.post("/withdraw", { store, amount });
 
 export const fetchPendingBalance = (store: string) =>
   api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
-
