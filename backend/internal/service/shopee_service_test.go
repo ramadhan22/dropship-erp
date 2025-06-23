@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/xuri/excelize/v2"
 
@@ -20,6 +21,8 @@ type fakeShopeeRepo struct {
 	existingSettled   map[string]bool
 	existingAffiliate map[string]bool
 	affExpense        float64
+	order             *models.ShopeeSettled
+	confirmed         []string
 }
 
 func (f *fakeShopeeRepo) MarkMismatch(ctx context.Context, orderSN string, mismatch bool) error {
@@ -27,10 +30,14 @@ func (f *fakeShopeeRepo) MarkMismatch(ctx context.Context, orderSN string, misma
 }
 
 func (f *fakeShopeeRepo) ConfirmSettle(ctx context.Context, orderSN string) error {
+	f.confirmed = append(f.confirmed, orderSN)
 	return nil
 }
 
 func (f *fakeShopeeRepo) GetBySN(ctx context.Context, orderSN string) (*models.ShopeeSettled, error) {
+	if f.order != nil {
+		return f.order, nil
+	}
 	return &models.ShopeeSettled{NamaToko: "TOKO", NoPesanan: orderSN, HargaAsliProduk: 1}, nil
 }
 
@@ -370,5 +377,36 @@ func TestImportAffiliateCSV_FilterStatus(t *testing.T) {
 	}
 	if inserted != 0 || repo.count != 0 {
 		t.Fatalf("expected 0 insert, got svc %d repo %d", inserted, repo.count)
+	}
+}
+
+func TestConfirmSettleCreatesFeeLines(t *testing.T) {
+	repo := &fakeShopeeRepo{
+		order: &models.ShopeeSettled{
+			NamaToko:                 "MR eStore Shopee",
+			NoPesanan:                "SO1",
+			WaktuPesananDibuat:       time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC),
+			HargaAsliProduk:          100,
+			TotalDiskonProduk:        10,
+			BiayaAdminShopee:         -5,
+			PromoGratisOngkirPenjual: -2,
+			PromoDiskonShopee:        -3,
+		},
+		affExpense: 1,
+	}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, nil, jr)
+
+	if err := svc.ConfirmSettle(context.Background(), "SO1"); err != nil {
+		t.Fatalf("confirm error: %v", err)
+	}
+	if len(jr.entries) != 1 {
+		t.Fatalf("expected 1 journal entry, got %d", len(jr.entries))
+	}
+	if len(jr.lines) != 6 {
+		t.Fatalf("expected 6 journal lines, got %d", len(jr.lines))
+	}
+	if len(repo.confirmed) != 1 || repo.confirmed[0] != "SO1" {
+		t.Fatalf("confirm not recorded: %v", repo.confirmed)
 	}
 }
