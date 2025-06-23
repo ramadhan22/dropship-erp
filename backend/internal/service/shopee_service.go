@@ -673,42 +673,31 @@ func (s *ShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error
 	if o.IsDataMismatch || o.IsSettledConfirmed {
 		return fmt.Errorf("cannot settle")
 	}
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
-	jr := repository.NewJournalRepo(tx)
-	amount := o.HargaAsliProduk
-	je := &models.JournalEntry{
-		EntryDate:    time.Now(),
-		Description:  ptrString("Settle " + orderSN),
-		SourceType:   "shopee_settled",
-		SourceID:     orderSN,
-		ShopUsername: o.NamaToko,
-		Store:        o.NamaToko,
-		CreatedAt:    time.Now(),
+	jr := s.journalRepo
+	if s.db != nil {
+		tx, err := s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		jr = repository.NewJournalRepo(tx)
+
+		if err := s.createSettlementJournal(ctx, jr, s.repo, o); err != nil {
+			return err
+		}
+		if err := s.repo.ConfirmSettle(ctx, orderSN); err != nil {
+			return err
+		}
+		return tx.Commit()
 	}
-	jid, err := jr.CreateJournalEntry(ctx, je)
-	if err != nil {
-		return err
-	}
-	balanceAcc := saldoShopeeAccountID(o.NamaToko)
-	revenueAcc := int64(4001)
-	lines := []models.JournalLine{
-		{JournalID: jid, AccountID: balanceAcc, IsDebit: true, Amount: amount, Memo: ptrString("Settle " + orderSN)},
-		{JournalID: jid, AccountID: revenueAcc, IsDebit: false, Amount: amount, Memo: ptrString("Settle " + orderSN)},
-	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+
+	if jr != nil {
+		if err := s.createSettlementJournal(ctx, jr, s.repo, o); err != nil {
 			return err
 		}
 	}
-	if err := s.repo.ConfirmSettle(ctx, orderSN); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return s.repo.ConfirmSettle(ctx, orderSN)
 }
 
 func CapitalizeWords(s string) string {
