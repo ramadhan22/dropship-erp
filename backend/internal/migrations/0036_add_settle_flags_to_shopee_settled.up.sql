@@ -1,0 +1,3 @@
+ALTER TABLE shopee_settled
+  ADD COLUMN is_data_mismatch BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN is_settled_confirmed BOOLEAN NOT NULL DEFAULT FALSE;
