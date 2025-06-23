@@ -74,6 +74,13 @@ func (f *fakeDropRepoA) GetDropshipPurchaseByTransaction(ctx context.Context, tr
 	return nil, nil
 }
 
+func (f *fakeDropRepoA) SumDetailByInvoice(ctx context.Context, inv string) (float64, error) {
+	if dp, ok := f.byInvoice[inv]; ok {
+		return dp.TotalTransaksi, nil
+	}
+	return 0, nil
+}
+
 func (f *fakeDropRepoA) UpdateDropshipStatus(ctx context.Context, kode, status string) error {
 	if f.updated == nil {
 		f.updated = map[string]string{}
@@ -386,8 +393,9 @@ func TestConfirmSettleCreatesFeeLines(t *testing.T) {
 			NamaToko:                 "MR eStore Shopee",
 			NoPesanan:                "SO1",
 			WaktuPesananDibuat:       time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC),
+			TanggalDanaDilepaskan:    time.Date(2025, 6, 2, 0, 0, 0, 0, time.UTC),
 			HargaAsliProduk:          100,
-			TotalDiskonProduk:        10,
+			TotalDiskonProduk:        -10,
 			BiayaAdminShopee:         -5,
 			PromoGratisOngkirPenjual: -2,
 			PromoDiskonShopee:        -3,
@@ -403,8 +411,11 @@ func TestConfirmSettleCreatesFeeLines(t *testing.T) {
 	if len(jr.entries) != 1 {
 		t.Fatalf("expected 1 journal entry, got %d", len(jr.entries))
 	}
-	if len(jr.lines) != 6 {
-		t.Fatalf("expected 6 journal lines, got %d", len(jr.lines))
+	if jr.entries[0].EntryDate != repo.order.TanggalDanaDilepaskan {
+		t.Fatalf("wrong entry date")
+	}
+	if len(jr.lines) != 7 {
+		t.Fatalf("expected 7 journal lines, got %d", len(jr.lines))
 	}
 	if len(repo.confirmed) != 1 || repo.confirmed[0] != "SO1" {
 		t.Fatalf("confirm not recorded: %v", repo.confirmed)

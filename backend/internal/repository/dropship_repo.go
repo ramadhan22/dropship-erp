@@ -100,6 +100,17 @@ func (r *DropshipRepo) GetDropshipPurchaseByTransaction(ctx context.Context, kod
 	return &p, nil
 }
 
+// SumDetailByInvoice sums total_harga_produk_channel for a given invoice.
+func (r *DropshipRepo) SumDetailByInvoice(ctx context.Context, kodeInvoice string) (float64, error) {
+	var sum float64
+	err := r.db.GetContext(ctx, &sum,
+		`SELECT COALESCE(SUM(d.total_harga_produk_channel),0)
+                FROM dropship_purchase_details d
+                JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                WHERE p.kode_invoice_channel=$1`, kodeInvoice)
+	return sum, err
+}
+
 // UpdatePurchaseStatus sets status_pesanan_terakhir for the given kode_pesanan.
 func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error {
 	_, err := r.db.ExecContext(ctx,
