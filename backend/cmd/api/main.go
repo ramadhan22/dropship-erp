@@ -86,6 +86,7 @@ func main() {
 		apiGroup.GET("/shopee/affiliate", shHandler.HandleListAffiliate)
 		apiGroup.GET("/shopee/affiliate/summary", shHandler.HandleSumAffiliate)
 		apiGroup.GET("/shopee/settled", shHandler.HandleListSettled)
+		apiGroup.GET("/shopee/settled/:order_sn", shHandler.HandleGetSettleDetail)
 		apiGroup.GET("/shopee/settled/summary", shHandler.HandleSumSettled)
 		apiGroup.GET("/sales", shHandler.HandleListSalesProfit)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)

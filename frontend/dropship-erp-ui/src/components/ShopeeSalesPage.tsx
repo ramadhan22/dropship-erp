@@ -22,6 +22,7 @@ import { getCurrentMonthRange } from "../utils/date";
 import {
   importShopee,
   confirmShopeeSettle,
+  getShopeeSettleDetail,
   listJenisChannels,
   listStoresByChannelName,
   listShopeeSettled,
@@ -59,6 +60,10 @@ export default function ShopeeSalesPage() {
     null,
   );
   const [settling, setSettling] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{
+    data: ShopeeSettled;
+    dropship_total: number;
+  } | null>(null);
   const pageSize = 10;
   const navigate = useNavigate();
 
@@ -382,7 +387,12 @@ export default function ShopeeSalesPage() {
       key: "actions",
       render: (_, row) => {
         if (row.is_settled_confirmed) return "✔️";
-        if (row.is_data_mismatch) return "";
+        if (row.is_data_mismatch)
+          return (
+            <Button size="small" onClick={() => openDetail(row.no_pesanan)}>
+              Adjust
+            </Button>
+          );
         return (
           <Button
             size="small"
@@ -480,6 +490,21 @@ export default function ShopeeSalesPage() {
     } finally {
       setSettling(null);
     }
+  };
+
+  const openDetail = async (sn: string) => {
+    try {
+      const res = await getShopeeSettleDetail(sn);
+      setDetail(res.data);
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    }
+  };
+
+  const confirmDetail = async () => {
+    if (!detail) return;
+    await handleConfirm(detail.data.no_pesanan);
+    setDetail(null);
   };
 
   useEffect(() => {
@@ -786,6 +811,26 @@ export default function ShopeeSalesPage() {
           <Button onClick={() => setImportOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleImport}>
             Import
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={!!detail} onClose={() => setDetail(null)}>
+        <DialogTitle>Adjust Settlement</DialogTitle>
+        {detail && (
+          <DialogContent>
+            <p>Drop total: {detail.dropship_total.toLocaleString("id-ID")}</p>
+            <p>Harga asli: {detail.data.harga_asli_produk}</p>
+            <p>Diskon produk: {detail.data.total_diskon_produk}</p>
+          </DialogContent>
+        )}
+        <DialogActions>
+          <Button onClick={() => setDetail(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={confirmDetail}
+            disabled={settling === detail?.data.no_pesanan}
+          >
+            Settle
           </Button>
         </DialogActions>
       </Dialog>

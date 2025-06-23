@@ -20,6 +20,7 @@ type ShopeeServiceInterface interface {
 	SumAffiliate(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
 	ConfirmSettle(ctx context.Context, orderSN string) error
+	GetSettleDetail(ctx context.Context, orderSN string) (*models.ShopeeSettled, float64, error)
 }
 
 type ShopeeHandler struct {
@@ -71,6 +72,16 @@ func (h *ShopeeHandler) HandleConfirmSettle(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func (h *ShopeeHandler) HandleGetSettleDetail(c *gin.Context) {
+	sn := c.Param("order_sn")
+	data, sum, err := h.svc.GetSettleDetail(c.Request.Context(), sn)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": data, "dropship_total": sum})
 }
 
 func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {

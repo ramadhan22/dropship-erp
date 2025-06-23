@@ -95,6 +95,11 @@ export function importShopeeAffiliate(files: File[]) {
 export const confirmShopeeSettle = (orderSN: string) =>
   api.post<{ success: boolean }>(`/shopee/settle/${orderSN}`);
 
+export const getShopeeSettleDetail = (orderSN: string) =>
+  api.get<{ data: ShopeeSettled; dropship_total: number }>(
+    `/shopee/settled/${orderSN}`,
+  );
+
 // Reconcile
 export function reconcile(purchaseId: string, orderId: string, shop: string) {
   return api.post("/reconcile", {

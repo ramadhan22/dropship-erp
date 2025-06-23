@@ -61,6 +61,10 @@ func (f *fakeShopeeService) ListSalesProfit(ctx context.Context, channel, store,
 	return nil, 0, nil
 }
 
+func (f *fakeShopeeService) GetSettleDetail(ctx context.Context, orderSN string) (*models.ShopeeSettled, float64, error) {
+	return &models.ShopeeSettled{NoPesanan: orderSN}, 0, nil
+}
+
 func TestShopeeHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeShopeeService{}

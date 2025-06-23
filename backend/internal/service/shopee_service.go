@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -86,6 +87,7 @@ type ShopeeDropshipRepo interface {
 	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	GetDropshipPurchaseByTransaction(ctx context.Context, kodeTransaksi string) (*models.DropshipPurchase, error)
+	SumDetailByInvoice(ctx context.Context, kodeInvoice string) (float64, error)
 	UpdateDropshipStatus(ctx context.Context, kodePesanan, status string) error
 }
 
@@ -571,20 +573,33 @@ func (s *ShopeeService) ListSalesProfit(
 	return list, total, nil
 }
 
+func (s *ShopeeService) GetSettleDetail(ctx context.Context, orderSN string) (*models.ShopeeSettled, float64, error) {
+	o, err := s.repo.GetBySN(ctx, orderSN)
+	if err != nil {
+		return nil, 0, err
+	}
+	var sum float64
+	if s.dropshipRepo != nil {
+		sum, _ = s.dropshipRepo.SumDetailByInvoice(ctx, orderSN)
+	}
+	return o, sum, nil
+}
+
 func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJournalRepo, repo ShopeeRepoInterface, entry *models.ShopeeSettled) error {
 	if jr == nil {
 		return nil
 	}
 	affiliate, _ := repo.GetAffiliateExpenseByOrder(ctx, entry.NoPesanan)
 	netSale := entry.HargaAsliProduk + entry.TotalDiskonProduk
+	disc := abs(entry.TotalDiskonProduk)
 	voucher := abs(entry.BiayaAdminShopee)
 	admin := abs(entry.PromoGratisOngkirPenjual)
 	layanan := abs(entry.PromoDiskonShopee)
 	affiliateAmt := abs(affiliate)
-	saldo := netSale - voucher - admin - layanan - affiliateAmt
+	saldo := netSale - disc - voucher - admin - layanan - affiliateAmt
 
 	je := &models.JournalEntry{
-		EntryDate:    entry.WaktuPesananDibuat,
+		EntryDate:    entry.TanggalDanaDilepaskan,
 		Description:  ptrString("Shopee settled " + entry.NoPesanan),
 		SourceType:   "shopee_settled",
 		SourceID:     entry.NoPesanan,
@@ -598,6 +613,7 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	}
 	lines := []models.JournalLine{
 		{JournalID: id, AccountID: pendingAccountID(entry.NamaToko), IsDebit: false, Amount: netSale, Memo: ptrString("Pending " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc, Memo: ptrString("Discount " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52006, IsDebit: true, Amount: admin, Memo: ptrString("Biaya Administrasi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52004, IsDebit: true, Amount: layanan, Memo: ptrString("Biaya Layanan " + entry.NoPesanan)},
@@ -664,13 +680,90 @@ func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.
 	return s.journalRepo.UpdateJournalLineAmount(ctx, saldoLine.LineID, newAmt)
 }
 
+func (s *ShopeeService) handleMismatch(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled) error {
+	if s.dropshipRepo == nil {
+		return fmt.Errorf("dropship repo nil")
+	}
+	sum, err := s.dropshipRepo.SumDetailByInvoice(ctx, o.NoPesanan)
+	if err != nil {
+		return err
+	}
+	if math.Abs((o.HargaAsliProduk+o.TotalDiskonProduk)-sum) > 0.01 {
+		return fmt.Errorf("amount mismatch")
+	}
+	diff := o.HargaAsliProduk - sum
+	if diff != 0 {
+		if err := s.createGrossUpJournal(ctx, jr, o, diff); err != nil {
+			return err
+		}
+	}
+	if o.TotalDiskonProduk != 0 {
+		if err := s.createDiscountJournal(ctx, jr, o, abs(o.TotalDiskonProduk)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopeeService) createGrossUpJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, amt float64) error {
+	je := &models.JournalEntry{
+		EntryDate:    o.TanggalDanaDilepaskan,
+		Description:  ptrString("Gross-up " + o.NoPesanan),
+		SourceType:   "shopee_adjust",
+		SourceID:     o.NoPesanan + "-gross",
+		ShopUsername: o.NamaToko,
+		Store:        o.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: amt},
+		{JournalID: id, AccountID: 4001, IsDebit: false, Amount: amt},
+	}
+	for i := range lines {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopeeService) createDiscountJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, amt float64) error {
+	je := &models.JournalEntry{
+		EntryDate:    o.TanggalDanaDilepaskan,
+		Description:  ptrString("Discount " + o.NoPesanan),
+		SourceType:   "shopee_discount",
+		SourceID:     o.NoPesanan + "-discount",
+		ShopUsername: o.NamaToko,
+		Store:        o.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: amt},
+		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: amt},
+	}
+	for i := range lines {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ConfirmSettle posts journal entries for the given order if data is valid.
 func (s *ShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error {
 	o, err := s.repo.GetBySN(ctx, orderSN)
 	if err != nil {
 		return err
 	}
-	if o.IsDataMismatch || o.IsSettledConfirmed {
+	if o.IsSettledConfirmed {
 		return fmt.Errorf("cannot settle")
 	}
 
@@ -683,6 +776,12 @@ func (s *ShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error
 		defer tx.Rollback()
 		jr = repository.NewJournalRepo(tx)
 
+		if o.IsDataMismatch {
+			if err := s.handleMismatch(ctx, jr, o); err != nil {
+				return err
+			}
+		}
+
 		if err := s.createSettlementJournal(ctx, jr, s.repo, o); err != nil {
 			return err
 		}
@@ -693,6 +792,11 @@ func (s *ShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error
 	}
 
 	if jr != nil {
+		if o.IsDataMismatch {
+			if err := s.handleMismatch(ctx, jr, o); err != nil {
+				return err
+			}
+		}
 		if err := s.createSettlementJournal(ctx, jr, s.repo, o); err != nil {
 			return err
 		}
