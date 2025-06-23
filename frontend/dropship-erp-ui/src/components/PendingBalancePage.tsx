@@ -14,7 +14,12 @@ export default function PendingBalancePage() {
     listAllStores().then((s) => setStores(s));
   }, []);
 
-  const handleFetch = async () => {
+  useEffect(() => {
+    handleFetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
+
+  async function handleFetch() {
     setLoading(true);
     setError(null);
     try {
@@ -26,7 +31,7 @@ export default function PendingBalancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const money = (v: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(v);
@@ -43,6 +48,7 @@ export default function PendingBalancePage() {
             label="Store"
             onChange={(e) => setStore(e.target.value)}
           >
+            <MenuItem value="">All Stores</MenuItem>
             {stores.map((s) => (
               <MenuItem key={s.store_id} value={s.nama_toko}>
                 {s.nama_toko}
@@ -50,7 +56,7 @@ export default function PendingBalancePage() {
             ))}
           </Select>
         </FormControl>
-        <Button variant="contained" onClick={handleFetch} disabled={!store || loading}>
+        <Button variant="contained" onClick={handleFetch} disabled={loading}>
           Fetch
         </Button>
         {loading && <CircularProgress size={24} />}
