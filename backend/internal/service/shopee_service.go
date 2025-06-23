@@ -180,7 +180,10 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		var sum float64
 		if s.db != nil {
 			_ = s.db.GetContext(ctx, &sum,
-				`SELECT COALESCE(SUM(total_transaksi),0) FROM dropship_purchases WHERE kode_invoice_channel=$1`,
+				`SELECT COALESCE(SUM(d.total_harga_produk_channel),0)
+                                 FROM dropship_purchase_details d
+                                 JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                                 WHERE p.kode_invoice_channel=$1`,
 				entry.NoPesanan)
 		}
 		mismatch := sum != entry.HargaAsliProduk
