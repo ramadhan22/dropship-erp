@@ -18,10 +18,12 @@ import (
 
 // fakeDropshipService implements the DropshipServiceInterface for testing.
 type fakeDropshipService struct {
-	fail bool
+	fail     bool
+	lastChan string
 }
 
-func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, error) {
+func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
+	f.lastChan = channel
 	if f.fail {
 		return 0, errors.New("fail import")
 	}
@@ -62,6 +64,7 @@ func TestHandleImport_Success(t *testing.T) {
 	writer := multipart.NewWriter(&body)
 	part, _ := writer.CreateFormFile("file", "good.csv")
 	part.Write([]byte("csv"))
+	writer.WriteField("channel", "Shopee")
 	writer.Close()
 
 	req := httptest.NewRequest("POST", "/api/dropship/import", &body)
@@ -70,6 +73,9 @@ func TestHandleImport_Success(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if svc.lastChan != "Shopee" {
+		t.Fatalf("expected channel passed to service")
 	}
 }
 

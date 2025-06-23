@@ -60,9 +60,12 @@ api.interceptors.response.use(
 );
 
 // Dropship import
-export function importDropship(file: File) {
+export function importDropship(file: File, channel?: string) {
   const data = new FormData();
   data.append("file", file);
+  if (channel) {
+    data.append("channel", channel);
+  }
   return api.post<ImportResponse>("/dropship/import", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });
