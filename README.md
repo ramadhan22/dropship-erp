@@ -16,7 +16,7 @@ The backend lives under [`backend`](backend) and exposes a REST API using [Gin](
 
 Main features:
 
-- Import dropship purchases from CSV files.
+- Import dropship purchases from CSV files with optional channel filter.
 - Import settled Shopee orders from XLSX files.
 - Import Shopee affiliate conversions from CSV.
 - Reconcile purchases with marketplace orders which creates journal entries and

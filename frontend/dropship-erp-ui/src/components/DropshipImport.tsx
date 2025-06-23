@@ -41,6 +41,7 @@ export default function DropshipImport() {
     text: string;
   } | null>(null);
   const [open, setOpen] = useState(false);
+  const [importChannel, setImportChannel] = useState("");
   const [searchParams] = useSearchParams();
 
   const [channel, setChannel] = useState("");
@@ -196,7 +197,10 @@ export default function DropshipImport() {
       if (!files || files.length === 0) return;
       let inserted = 0;
       for (const f of Array.from(files)) {
-        const res = await importDropship(f);
+        const res = await importDropship(
+          f,
+          importChannel || undefined,
+        );
         inserted += res.data.inserted;
       }
       setMsg({
@@ -394,6 +398,17 @@ export default function DropshipImport() {
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Import Dropship CSV</DialogTitle>
         <DialogContent>
+          <select
+            aria-label="Import Channel"
+            value={importChannel}
+            onChange={(e) => setImportChannel(e.target.value)}
+            style={{ display: "block", marginBottom: "0.5rem" }}
+          >
+            <option value="">All</option>
+            <option value="Shopee">Shopee</option>
+            <option value="Tokopedia">Tokopedia</option>
+            <option value="Tiktok Seller Center">Tiktok Seller Center</option>
+          </select>
           <input
             type="file"
             multiple

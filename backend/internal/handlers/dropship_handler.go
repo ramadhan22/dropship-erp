@@ -12,7 +12,7 @@ import (
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
-	ImportFromCSV(ctx context.Context, r io.Reader) (int, error)
+	ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error)
 	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
@@ -35,6 +35,7 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
+	channel := c.PostForm("channel")
 	f, err := fileHeader.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -42,7 +43,7 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 	}
 	defer f.Close()
 
-	count, err := h.svc.ImportFromCSV(context.Background(), f)
+	count, err := h.svc.ImportFromCSV(context.Background(), f, channel)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

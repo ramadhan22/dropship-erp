@@ -62,7 +62,7 @@ func NewDropshipService(db *sqlx.DB, repo DropshipRepoInterface, jr DropshipJour
 //
 // Any parse error aborts the import and returns it.
 // ImportFromCSV inserts rows from a CSV reader and returns how many rows were inserted.
-func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, error) {
+func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
 	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
 		return 0, fmt.Errorf("read header: %w", err)
@@ -141,6 +141,10 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader) (int, 
 			WaktuPengiriman:       waktuKirim,
 			Provinsi:              record[25],
 			Kota:                  record[26],
+		}
+
+		if channel != "" && header.JenisChannel != channel {
+			continue
 		}
 
 		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {

@@ -30,7 +30,7 @@ describe("API layer", () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { inserted: 2 } });
 
     const file = new File(["data"], "file.csv", { type: "text/csv" });
-    const result = await importDropship(file);
+    const result = await importDropship(file, "Shopee");
     expect(api.post).toHaveBeenCalledWith(
       "/dropship/import",
       expect.any(FormData),
