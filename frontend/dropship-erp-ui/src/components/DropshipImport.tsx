@@ -337,29 +337,57 @@ export default function DropshipImport() {
             </div>
           )}
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>SKU</TableCell>
-                <TableCell>Nama Produk</TableCell>
-                <TableCell>Qty</TableCell>
-                <TableCell>Harga</TableCell>
+          <TableHead>
+            <TableRow>
+              <TableCell>SKU</TableCell>
+              <TableCell>Nama Produk</TableCell>
+              <TableCell>Qty</TableCell>
+              <TableCell>Harga</TableCell>
+              <TableCell>Harga Channel</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {details.map((dt) => (
+              <TableRow key={dt.id}>
+                <TableCell>{dt.sku}</TableCell>
+                <TableCell>{dt.nama_produk}</TableCell>
+                <TableCell>{dt.qty}</TableCell>
+                <TableCell>
+                  {dt.total_harga_produk.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+                </TableCell>
+                <TableCell>
+                  {dt.total_harga_produk_channel.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {details.map((dt) => (
-                <TableRow key={dt.id}>
-                  <TableCell>{dt.sku}</TableCell>
-                  <TableCell>{dt.nama_produk}</TableCell>
-                  <TableCell>{dt.qty}</TableCell>
-                  <TableCell>
-                    {dt.total_harga_produk.toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+            ))}
+            <TableRow>
+              <TableCell colSpan={3} sx={{ textAlign: "right", fontWeight: "bold" }}>
+                Total
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                {details
+                  .reduce((acc, cur) => acc + cur.total_harga_produk, 0)
+                  .toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                {details
+                  .reduce((acc, cur) => acc + cur.total_harga_produk_channel, 0)
+                  .toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+              </TableCell>
+            </TableRow>
+          </TableBody>
           </Table>
         </DialogContent>
         <DialogActions>
