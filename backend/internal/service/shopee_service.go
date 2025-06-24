@@ -600,6 +600,9 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	affiliate, _ := repo.GetAffiliateExpenseByOrder(ctx, entry.NoPesanan)
 	netSale := entry.HargaAsliProduk + entry.TotalDiskonProduk
 	disc := abs(entry.TotalDiskonProduk)
+	if je, err := jr.GetJournalEntryBySource(ctx, "shopee_discount", entry.NoPesanan+"-discount"); err == nil && je != nil {
+		disc = 0
+	}
 	voucher := abs(entry.BiayaAdminShopee)
 	admin := abs(entry.PromoGratisOngkirPenjual)
 	layanan := abs(entry.PromoDiskonShopee)
