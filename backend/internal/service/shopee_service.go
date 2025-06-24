@@ -192,12 +192,14 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 		mismatch := sum != entry.HargaAsliProduk
 		_ = s.repo.MarkMismatch(ctx, entry.NoPesanan, mismatch)
-		if mismatch {
-			mismatches = append(mismatches, entry.NoPesanan)
-		} else {
-			if err := s.ConfirmSettle(ctx, entry.NoPesanan); err != nil {
+		if err := s.ConfirmSettle(ctx, entry.NoPesanan); err != nil {
+			if mismatch {
+				mismatches = append(mismatches, entry.NoPesanan)
+			} else {
 				return inserted, mismatches, fmt.Errorf("auto settle %s: %w", entry.NoPesanan, err)
 			}
+		} else if mismatch {
+			_ = s.repo.MarkMismatch(ctx, entry.NoPesanan, false)
 		}
 		// Update related dropship purchase status if applicable
 		if s.dropshipRepo != nil && entry.NoPengajuan != "" {
