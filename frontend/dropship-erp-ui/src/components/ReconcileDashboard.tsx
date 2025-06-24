@@ -7,6 +7,7 @@ import {
   listCandidates,
   reconcileCheck,
   fetchShopeeStatus,
+  cancelPurchase,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store } from "../types";
@@ -55,6 +56,16 @@ export default function ReconcileDashboard() {
     }
   };
 
+  const handleCancel = async (kode: string) => {
+    try {
+      await cancelPurchase(kode);
+      setMsg({ type: "success", text: "Canceled" });
+      fetchData();
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    }
+  };
+
   const handleReconcileAll = async () => {
     for (const row of data) {
       try {
@@ -90,6 +101,14 @@ export default function ReconcileDashboard() {
       render: (_, row) => (
         <Button size="small" onClick={() => handleReconcile(row.kode_pesanan)}>
           Reconcile
+        </Button>
+      ),
+    },
+    {
+      label: "Cancel",
+      render: (_, row) => (
+        <Button size="small" onClick={() => handleCancel(row.kode_pesanan)}>
+          Cancel
         </Button>
       ),
     },
