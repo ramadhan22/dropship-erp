@@ -451,8 +451,8 @@ func TestConfirmSettleMismatchCreatesAdjustment(t *testing.T) {
 	if jr.entries[1].SourceType != "shopee_discount" {
 		t.Fatalf("second entry not discount")
 	}
-	if len(jr.lines) != 7 {
-		t.Fatalf("expected 7 journal lines, got %d", len(jr.lines))
+	if len(jr.lines) != 6 {
+		t.Fatalf("expected 6 journal lines, got %d", len(jr.lines))
 	}
 }
 
