@@ -442,11 +442,14 @@ func TestConfirmSettleMismatchCreatesAdjustment(t *testing.T) {
 	if err := svc.ConfirmSettle(context.Background(), "SO2"); err != nil {
 		t.Fatalf("confirm error: %v", err)
 	}
-	if len(jr.entries) != 2 {
-		t.Fatalf("expected 2 journal entries, got %d", len(jr.entries))
+	if len(jr.entries) != 3 {
+		t.Fatalf("expected 3 journal entries, got %d", len(jr.entries))
 	}
-	if jr.entries[0].SourceType != "shopee_adjust" {
-		t.Fatalf("first entry not adjustment")
+	if jr.entries[0].SourceType != "shopee_grossup" {
+		t.Fatalf("first entry not gross up")
+	}
+	if jr.entries[1].SourceType != "shopee_discount" {
+		t.Fatalf("second entry not discount")
 	}
 	if len(jr.lines) != 7 {
 		t.Fatalf("expected 7 journal lines, got %d", len(jr.lines))
