@@ -411,34 +411,44 @@ func (r *ShopeeRepo) ListSalesProfit(
 	limit, offset int,
 ) ([]models.SalesProfit, int, error) {
 	base := `SELECT
-                je.source_id AS kode_pesanan,
-                dp.waktu_pesanan_terbuat AS tanggal_pesanan,
-                SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END) AS modal_purchase,
-                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) AS amount_sales,
-                SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
-                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
-                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
-                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
-                SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
-                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                  - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)) AS profit,
-                CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
-                     ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                          - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END))
-                     ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
+               je.source_id AS kode_pesanan,
+               dp.waktu_pesanan_terbuat AS tanggal_pesanan,
+               SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END) AS modal_purchase,
+               SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) AS amount_sales,
+               SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
+               SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
+               SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
+               SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
+               SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
+               COALESCE(disc.discount,0) AS discount,
+               SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                 - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                    + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                    + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                    + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                    + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                    + COALESCE(disc.discount,0)) AS profit,
+               CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
+                    ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                         - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                            + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                            + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                            + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                            + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                            + COALESCE(disc.discount,0))
+                    ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
                FROM journal_entries je
                JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
                JOIN journal_lines jl ON jl.journal_id = je.journal_id
+               LEFT JOIN (
+                       SELECT REPLACE(jes.source_id,'-discount','') AS kode_pesanan, SUM(jls.amount) AS discount
+                       FROM journal_entries jes
+                       JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                       WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 52002
+                       GROUP BY kode_pesanan
+               ) disc ON disc.kode_pesanan = je.source_id
                JOIN stores st ON dp.nama_toko = st.nama_toko
                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
                JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
@@ -491,6 +501,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 		"biaya_layanan":       "biaya_layanan",
 		"biaya_voucher":       "biaya_voucher",
 		"biaya_affiliate":     "biaya_affiliate",
+		"discount":            "discount",
 		"profit":              "profit",
 		"profit_percent":      "profit_percent",
 	}[sortBy]
@@ -513,6 +524,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 		BiayaLayanan      float64   `db:"biaya_layanan"`
 		BiayaVoucher      float64   `db:"biaya_voucher"`
 		BiayaAffiliate    float64   `db:"biaya_affiliate"`
+		Discount          float64   `db:"discount"`
 		Profit            float64   `db:"profit"`
 		ProfitPercent     float64   `db:"profit_percent"`
 	}
@@ -531,6 +543,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 			BiayaLayanan:      r.BiayaLayanan,
 			BiayaVoucher:      r.BiayaVoucher,
 			BiayaAffiliate:    r.BiayaAffiliate,
+			Discount:          r.Discount,
 			Profit:            r.Profit,
 			ProfitPercent:     r.ProfitPercent,
 		}

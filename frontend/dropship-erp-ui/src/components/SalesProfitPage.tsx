@@ -121,6 +121,7 @@ export default function SalesProfitPage() {
       align: "right",
       render: money,
     },
+    { label: "Discount", key: "discount", align: "right", render: money },
     { label: "Profit", key: "profit", align: "right", render: money },
     {
       label: "% Profit",

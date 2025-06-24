@@ -258,6 +258,7 @@ type SalesProfit struct {
 	BiayaLayanan      float64   `db:"biaya_layanan" json:"biaya_layanan"`
 	BiayaVoucher      float64   `db:"biaya_voucher" json:"biaya_voucher"`
 	BiayaAffiliate    float64   `db:"biaya_affiliate" json:"biaya_affiliate"`
+	Discount          float64   `db:"discount" json:"discount"`
 	Profit            float64   `db:"profit" json:"profit"`
 	ProfitPercent     float64   `db:"profit_percent" json:"profit_percent"`
 }

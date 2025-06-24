@@ -22,6 +22,7 @@ Main features:
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.
+- Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses.
 
