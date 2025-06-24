@@ -1,4 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { useState } from "react";
 import BalanceSheetPage from "./components/BalanceSheetPage";
 import ChannelPage from "./components/ChannelPage";
 import DropshipImport from "./components/DropshipImport";
@@ -17,8 +18,27 @@ import SalesSummaryPage from "./components/SalesSummaryPage";
 import SalesProfitPage from "./components/SalesProfitPage";
 import KasAccountPage from "./components/KasAccountPage";
 import PendingBalancePage from "./components/PendingBalancePage";
+import LoginPage from "./components/LoginPage";
 
 export default function App() {
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("token"),
+  );
+
+  const handleLogin = (t: string) => {
+    localStorage.setItem("token", t);
+    setToken(t);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+  };
+
+  if (!token) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <BrowserRouter>
       <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
@@ -35,7 +55,8 @@ export default function App() {
         <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
         | <Link to="/kas">Kas</Link> |{" "}
         <Link to="/pending-balance">Pending Balance</Link> |{" "}
-        <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
+        <Link to="/reconcile/dashboard">Reconcile Dashboard</Link> |{" "}
+        <button onClick={handleLogout}>Logout</button>
       </nav>
       <div style={{ padding: "1rem" }}>
         <Routes>
