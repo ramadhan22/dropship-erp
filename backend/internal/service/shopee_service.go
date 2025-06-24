@@ -702,18 +702,25 @@ func (s *ShopeeService) handleMismatch(ctx context.Context, jr ShopeeJournalRepo
 	if diff == 0 && disc == 0 {
 		return nil
 	}
-	if err := s.createAdjustmentJournal(ctx, jr, o, diff, disc); err != nil {
-		return err
+	if diff != 0 {
+		if err := s.createGrossUpJournal(ctx, jr, o, diff); err != nil {
+			return err
+		}
+	}
+	if disc != 0 {
+		if err := s.createDiscountJournal(ctx, jr, o, disc); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, diff, disc float64) error {
+func (s *ShopeeService) createGrossUpJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, diff float64) error {
 	je := &models.JournalEntry{
 		EntryDate:    o.TanggalDanaDilepaskan,
-		Description:  ptrString("Adjustment " + o.NoPesanan),
-		SourceType:   "shopee_adjust",
-		SourceID:     o.NoPesanan + "-adjust",
+		Description:  ptrString("Gross Up " + o.NoPesanan),
+		SourceType:   "shopee_grossup",
+		SourceID:     o.NoPesanan + "-grossup",
 		ShopUsername: o.NamaToko,
 		Store:        o.NamaToko,
 		CreatedAt:    time.Now(),
@@ -722,18 +729,35 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 	if err != nil {
 		return err
 	}
-	lines := []models.JournalLine{}
-	if diff != 0 {
-		lines = append(lines,
-			models.JournalLine{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: diff},
-			models.JournalLine{JournalID: id, AccountID: 4001, IsDebit: false, Amount: diff},
-		)
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: diff},
+		{JournalID: id, AccountID: 4001, IsDebit: false, Amount: diff},
 	}
-	if disc != 0 {
-		lines = append(lines,
-			models.JournalLine{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: disc},
-			models.JournalLine{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc},
-		)
+	for i := range lines {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ShopeeService) createDiscountJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, disc float64) error {
+	je := &models.JournalEntry{
+		EntryDate:    o.TanggalDanaDilepaskan,
+		Description:  ptrString("Discount " + o.NoPesanan),
+		SourceType:   "shopee_discount",
+		SourceID:     o.NoPesanan + "-discount",
+		ShopUsername: o.NamaToko,
+		Store:        o.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: disc},
+		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc},
 	}
 	for i := range lines {
 		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
