@@ -75,8 +75,11 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		return nil, err
 	}
 
-	var revRows, hppRows, opRows, adminRows, taxRows []ProfitLossRow
+	var revRows, hppRows, opRows []ProfitLossRow
+	var adminRows, taxRows []ProfitLossRow
+	var marketingRows []ProfitLossRow
 	var totalRev, totalHPP, totalOp, totalAdmin, totalTax float64
+	var totalMarketing float64
 
 	for _, ab := range balances {
 		code := ab.AccountCode
@@ -88,6 +91,10 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		case strings.HasPrefix(code, "5.1"):
 			hppRows = append(hppRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalHPP += ab.Balance
+		case strings.HasPrefix(code, "5.2.3"):
+			marketingRows = append(marketingRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
+			totalMarketing += ab.Balance
+			totalOp += ab.Balance
 		case strings.HasPrefix(code, "5.2"):
 			opRows = append(opRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalOp += ab.Balance
@@ -98,6 +105,10 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 			taxRows = append(taxRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalTax += ab.Balance
 		}
+	}
+
+	if totalMarketing != 0 || len(marketingRows) > 0 {
+		opRows = append([]ProfitLossRow{{Label: "Beban Pemasaran", Amount: totalMarketing}}, append(marketingRows, opRows...)...)
 	}
 
 	labaKotor := totalRev - totalHPP
