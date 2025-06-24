@@ -87,6 +87,11 @@ export default function ExpensePage() {
   };
 
   const columns: Column<Expense>[] = [
+    {
+      label: "Date",
+      key: "date",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
     { label: "Description", key: "description" },
     {
       label: "Amount",
@@ -157,7 +162,11 @@ export default function ExpensePage() {
         Add Expense
       </Button>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
-      <SortableTable columns={columns} data={paginated} />
+      <SortableTable
+        columns={columns}
+        data={paginated}
+        defaultSort={{ key: "date", direction: "desc" }}
+      />
       {controls}
       <Dialog
         open={open}

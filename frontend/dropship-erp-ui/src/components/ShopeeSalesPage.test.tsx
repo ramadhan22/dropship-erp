@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api";
 import ShopeeSalesPage from "./ShopeeSalesPage";
@@ -36,7 +37,11 @@ jest.mock("../api", () => ({
 }));
 
 test("confirm settle button calls API", async () => {
-  render(<ShopeeSalesPage />);
+  render(
+    <MemoryRouter>
+      <ShopeeSalesPage />
+    </MemoryRouter>,
+  );
 
   await waitFor(() => expect(api.listShopeeSettled).toHaveBeenCalled());
 
