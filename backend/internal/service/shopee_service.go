@@ -183,15 +183,21 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		if s.db != nil {
 			_ = s.db.GetContext(ctx, &sum,
 				`SELECT COALESCE(SUM(d.total_harga_produk_channel),0)
-                                 FROM dropship_purchase_details d
-                                 JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
-                                 WHERE p.kode_invoice_channel=$1`,
+                                FROM dropship_purchase_details d
+                                JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                                WHERE p.kode_invoice_channel=$1`,
 				entry.NoPesanan)
+		} else if s.dropshipRepo != nil {
+			sum, _ = s.dropshipRepo.SumDetailByInvoice(ctx, entry.NoPesanan)
 		}
 		mismatch := sum != entry.HargaAsliProduk
 		_ = s.repo.MarkMismatch(ctx, entry.NoPesanan, mismatch)
 		if mismatch {
 			mismatches = append(mismatches, entry.NoPesanan)
+		} else {
+			if err := s.ConfirmSettle(ctx, entry.NoPesanan); err != nil {
+				return inserted, mismatches, fmt.Errorf("auto settle %s: %w", entry.NoPesanan, err)
+			}
 		}
 		// Update related dropship purchase status if applicable
 		if s.dropshipRepo != nil && entry.NoPengajuan != "" {
@@ -692,25 +698,22 @@ func (s *ShopeeService) handleMismatch(ctx context.Context, jr ShopeeJournalRepo
 		return fmt.Errorf("amount mismatch")
 	}
 	diff := o.HargaAsliProduk - sum
-	if diff != 0 {
-		if err := s.createGrossUpJournal(ctx, jr, o, diff); err != nil {
-			return err
-		}
+	disc := abs(o.TotalDiskonProduk)
+	if diff == 0 && disc == 0 {
+		return nil
 	}
-	if o.TotalDiskonProduk != 0 {
-		if err := s.createDiscountJournal(ctx, jr, o, abs(o.TotalDiskonProduk)); err != nil {
-			return err
-		}
+	if err := s.createAdjustmentJournal(ctx, jr, o, diff, disc); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (s *ShopeeService) createGrossUpJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, amt float64) error {
+func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, diff, disc float64) error {
 	je := &models.JournalEntry{
 		EntryDate:    o.TanggalDanaDilepaskan,
-		Description:  ptrString("Gross-up " + o.NoPesanan),
+		Description:  ptrString("Adjustment " + o.NoPesanan),
 		SourceType:   "shopee_adjust",
-		SourceID:     o.NoPesanan + "-gross",
+		SourceID:     o.NoPesanan + "-adjust",
 		ShopUsername: o.NamaToko,
 		Store:        o.NamaToko,
 		CreatedAt:    time.Now(),
@@ -719,35 +722,18 @@ func (s *ShopeeService) createGrossUpJournal(ctx context.Context, jr ShopeeJourn
 	if err != nil {
 		return err
 	}
-	lines := []models.JournalLine{
-		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: amt},
-		{JournalID: id, AccountID: 4001, IsDebit: false, Amount: amt},
+	lines := []models.JournalLine{}
+	if diff != 0 {
+		lines = append(lines,
+			models.JournalLine{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: diff},
+			models.JournalLine{JournalID: id, AccountID: 4001, IsDebit: false, Amount: diff},
+		)
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *ShopeeService) createDiscountJournal(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled, amt float64) error {
-	je := &models.JournalEntry{
-		EntryDate:    o.TanggalDanaDilepaskan,
-		Description:  ptrString("Discount " + o.NoPesanan),
-		SourceType:   "shopee_discount",
-		SourceID:     o.NoPesanan + "-discount",
-		ShopUsername: o.NamaToko,
-		Store:        o.NamaToko,
-		CreatedAt:    time.Now(),
-	}
-	id, err := jr.CreateJournalEntry(ctx, je)
-	if err != nil {
-		return err
-	}
-	lines := []models.JournalLine{
-		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: amt},
-		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: amt},
+	if disc != 0 {
+		lines = append(lines,
+			models.JournalLine{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: disc},
+			models.JournalLine{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc},
+		)
 	}
 	for i := range lines {
 		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {

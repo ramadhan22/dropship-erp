@@ -421,3 +421,83 @@ func TestConfirmSettleCreatesFeeLines(t *testing.T) {
 		t.Fatalf("confirm not recorded: %v", repo.confirmed)
 	}
 }
+
+func TestConfirmSettleMismatchCreatesAdjustment(t *testing.T) {
+	repo := &fakeShopeeRepo{
+		order: &models.ShopeeSettled{
+			NamaToko:              "TOKO",
+			NoPesanan:             "SO2",
+			TanggalDanaDilepaskan: time.Date(2025, 6, 2, 0, 0, 0, 0, time.UTC),
+			HargaAsliProduk:       110,
+			TotalDiskonProduk:     -10,
+			IsDataMismatch:        true,
+		},
+	}
+	drop := &fakeDropRepoA{byInvoice: map[string]*models.DropshipPurchase{
+		"SO2": {TotalTransaksi: 100},
+	}}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, drop, jr)
+
+	if err := svc.ConfirmSettle(context.Background(), "SO2"); err != nil {
+		t.Fatalf("confirm error: %v", err)
+	}
+	if len(jr.entries) != 2 {
+		t.Fatalf("expected 2 journal entries, got %d", len(jr.entries))
+	}
+	if jr.entries[0].SourceType != "shopee_adjust" {
+		t.Fatalf("first entry not adjustment")
+	}
+	if len(jr.lines) != 7 {
+		t.Fatalf("expected 7 journal lines, got %d", len(jr.lines))
+	}
+}
+
+func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Data")
+	headers := append([]string{"No."}, expectedHeaders...)
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		f.SetCellValue("Data", cell, h)
+	}
+	data := []interface{}{
+		1, "SO-3", "TRX", "user", "2025-01-01", "COD", "2025-01-02",
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1,
+		1,
+		1,
+		1,
+		"jne", "kurir", "",
+		1, 1, 1, 1, 1,
+	}
+	for i, v := range data {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		f.SetCellValue("Data", cell, v)
+	}
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeShopeeRepo{}
+	drop := &fakeDropRepoA{byInvoice: map[string]*models.DropshipPurchase{
+		"SO-3": {TotalTransaksi: 1},
+	}}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, drop, jr)
+	inserted, mis, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 1 || len(mis) != 0 {
+		t.Fatalf("unexpected insert %d mismatches %v", inserted, mis)
+	}
+	if len(repo.confirmed) != 1 {
+		t.Fatalf("auto settle not confirmed")
+	}
+	if len(jr.entries) != 1 {
+		t.Fatalf("expected 1 journal entry, got %d", len(jr.entries))
+	}
+}
