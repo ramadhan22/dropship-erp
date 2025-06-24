@@ -14,6 +14,7 @@ type ReconcileExtraService interface {
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
+	CancelPurchase(ctx context.Context, kodePesanan string) error
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -28,6 +29,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/candidates", h.candidates)
 	grp.POST("/bulk", h.bulk)
 	grp.POST("/check", h.check)
+	grp.POST("/cancel", h.cancel)
 	grp.GET("/status", h.status)
 }
 
@@ -82,6 +84,21 @@ func (h *ReconcileExtraHandler) check(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "status updated"})
+}
+
+func (h *ReconcileExtraHandler) cancel(c *gin.Context) {
+	var req struct {
+		KodePesanan string `json:"kode_pesanan" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.CancelPurchase(context.Background(), req.KodePesanan); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
 func (h *ReconcileExtraHandler) status(c *gin.Context) {

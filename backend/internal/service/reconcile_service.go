@@ -17,6 +17,8 @@ type ReconcileServiceDropshipRepo interface {
 	GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error
+	SumDetailByInvoice(ctx context.Context, kodeInvoice string) (float64, error)
+	SumProductCostByInvoice(ctx context.Context, kodeInvoice string) (float64, error)
 }
 type ReconcileServiceShopeeRepo interface {
 	// We only need to fetch the settled order.
@@ -214,6 +216,71 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 		return fmt.Errorf("shopee settled order not found")
 	}
 	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CancelPurchase reverses pending sales journals for the given purchase except
+// for the Biaya Mitra amount which remains recorded.
+func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan string) error {
+	var tx *sqlx.Tx
+	dropRepo := s.dropRepo
+	jrRepo := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		dropRepo = repository.NewDropshipRepo(tx)
+		jrRepo = repository.NewJournalRepo(tx)
+	}
+
+	dp, err := dropRepo.GetDropshipPurchaseByID(ctx, kodePesanan)
+	if err != nil || dp == nil {
+		return fmt.Errorf("fetch DropshipPurchase %s: %w", kodePesanan, err)
+	}
+
+	prodCh, _ := dropRepo.SumDetailByInvoice(ctx, dp.KodeInvoiceChannel)
+	prod, _ := dropRepo.SumProductCostByInvoice(ctx, dp.KodeInvoiceChannel)
+
+	je := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("Cancel " + dp.KodeInvoiceChannel),
+		SourceType:   "reconcile_cancel",
+		SourceID:     dp.KodeInvoiceChannel,
+		ShopUsername: dp.NamaToko,
+		Store:        dp.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jrRepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+
+	lines := []models.JournalLine{
+		{JournalID: jid, AccountID: 11009, IsDebit: true, Amount: prod, Memo: ptrString("Saldo Jakmall " + dp.KodeInvoiceChannel)},
+		{JournalID: jid, AccountID: 5001, IsDebit: false, Amount: prod, Memo: ptrString("HPP " + dp.KodeInvoiceChannel)},
+		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: prodCh, Memo: ptrString("Pending receivable " + dp.KodeInvoiceChannel)},
+		{JournalID: jid, AccountID: 4001, IsDebit: true, Amount: prodCh, Memo: ptrString("Sales " + dp.KodeInvoiceChannel)},
+	}
+	for i := range lines {
+		if lines[i].Amount == 0 {
+			continue
+		}
+		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+
+	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan dibatalkan"); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
 	if tx != nil {
