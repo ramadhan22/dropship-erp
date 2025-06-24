@@ -44,8 +44,14 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
 		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
 	}
+	if !pl.BebanOperasional[0].Group {
+		t.Errorf("expected marketing header to be group")
+	}
 	if pl.BebanOperasional[1].Label != "Voucher" {
 		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
+	}
+	if pl.BebanOperasional[1].Indent != 1 {
+		t.Errorf("expected voucher indent 1, got %d", pl.BebanOperasional[1].Indent)
 	}
 }
 
@@ -69,8 +75,14 @@ func TestProfitLossReportService_SkipMarketingParentAccount(t *testing.T) {
 	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
 		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
 	}
+	if !pl.BebanOperasional[0].Group {
+		t.Errorf("expected marketing header to be group")
+	}
 	if pl.BebanOperasional[1].Label != "Voucher" {
 		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
+	}
+	if pl.BebanOperasional[1].Indent != 1 {
+		t.Errorf("expected voucher indent 1, got %d", pl.BebanOperasional[1].Indent)
 	}
 }
 

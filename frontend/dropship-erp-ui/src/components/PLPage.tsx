@@ -24,6 +24,8 @@ interface PLRow {
   amount: number;
   percent?: number;
   manual?: boolean;
+  indent?: number;
+  group?: boolean;
 }
 
 interface ProfitLoss {
@@ -68,10 +70,10 @@ function renderRows(
   if (!rows) return null;
   return rows.map((r) => (
     <TableRow key={r.label} sx={r.manual ? { bgcolor: "#fdecea" } : undefined}>
-      <TableCell sx={{ pl: 4 * indent }}>{r.label}</TableCell>
-      <TableCell align="right">{fmt.format(r.amount)}</TableCell>
+      <TableCell sx={{ pl: 4 * (indent + (r.indent ?? 0)) }}>{r.label}</TableCell>
+      <TableCell align="right">{r.group ? "" : fmt.format(r.amount)}</TableCell>
       <TableCell align="right">
-        {r.percent != null ? fmt.format(r.percent) : ""}
+        {r.percent != null && !r.group ? fmt.format(r.percent) : ""}
       </TableCell>
     </TableRow>
   ));
