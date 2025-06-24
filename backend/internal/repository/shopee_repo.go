@@ -420,7 +420,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
                SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
-               COALESCE(disc.discount,0) AS discount,
+               COALESCE(MAX(disc.discount),0) AS discount,
                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
                  - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
                     + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
@@ -428,7 +428,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                     + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                     + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                     + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
-                    + COALESCE(disc.discount,0)) AS profit,
+                    + COALESCE(MAX(disc.discount),0)) AS profit,
                CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
                     ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
                          - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
@@ -437,7 +437,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                             + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                             + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                             + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
-                            + COALESCE(disc.discount,0))
+                            + COALESCE(MAX(disc.discount),0))
                     ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
                FROM journal_entries je
                JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
