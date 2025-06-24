@@ -24,7 +24,7 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{
 		{AccountCode: "4.1", AccountName: "Penjualan", Balance: -200},
 		{AccountCode: "5.1", AccountName: "HPP", Balance: 100},
-		{AccountCode: "5.2.3", AccountName: "Voucher", Balance: 5},
+		{AccountCode: "5.2.3.1", AccountName: "Voucher", Balance: 5},
 	}}
 	svc := NewProfitLossReportService(repo)
 
