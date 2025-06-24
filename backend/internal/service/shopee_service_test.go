@@ -504,3 +504,59 @@ func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 		t.Fatalf("expected 1 journal entry, got %d", len(jr.entries))
 	}
 }
+
+func TestImportSettledOrdersXLSX_AutoAdjustMismatch(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Data")
+	headers := append([]string{"No."}, expectedHeaders...)
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		f.SetCellValue("Data", cell, h)
+	}
+	data := []interface{}{
+		1, "SO-4", "TRX", "user", "2025-01-01", "COD", "2025-01-02",
+		110, -10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+		1,
+		1,
+		1,
+		1,
+		"jne", "kurir", "",
+		1, 1, 1, 1, 1,
+	}
+	for i, v := range data {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		f.SetCellValue("Data", cell, v)
+	}
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeShopeeRepo{order: &models.ShopeeSettled{
+		NamaToko:              "TOKO",
+		NoPesanan:             "SO-4",
+		TanggalDanaDilepaskan: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+		HargaAsliProduk:       110,
+		TotalDiskonProduk:     -10,
+		IsDataMismatch:        true,
+	}}
+	drop := &fakeDropRepoA{byInvoice: map[string]*models.DropshipPurchase{
+		"SO-4": {TotalTransaksi: 100},
+	}}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, drop, jr)
+	inserted, mis, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 1 || len(mis) != 0 {
+		t.Fatalf("unexpected insert %d mismatches %v", inserted, mis)
+	}
+	if len(repo.confirmed) != 1 || repo.confirmed[0] != "SO-4" {
+		t.Fatalf("auto settle not confirmed: %v", repo.confirmed)
+	}
+	if len(jr.entries) != 3 {
+		t.Fatalf("expected 3 journal entries, got %d", len(jr.entries))
+	}
+}
