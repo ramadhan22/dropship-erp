@@ -436,12 +436,13 @@ func (r *ShopeeRepo) ListSalesProfit(
                              + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                              + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END))
                      ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
-                FROM journal_entries je
-                JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
-                JOIN journal_lines jl ON jl.journal_id = je.journal_id
-                JOIN stores st ON dp.nama_toko = st.nama_toko
-                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
-                WHERE je.source_type IN ('pending_sales','shopee_settled')`
+               FROM journal_entries je
+               JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
+               JOIN journal_lines jl ON jl.journal_id = je.journal_id
+               JOIN stores st ON dp.nama_toko = st.nama_toko
+               JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
+               JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
+               WHERE je.source_type IN ('pending_sales','shopee_settled')`
 	args := []interface{}{}
 	conds := []string{}
 	arg := 1
