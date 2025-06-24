@@ -24,7 +24,7 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{
 		{AccountCode: "4.1", AccountName: "Penjualan", Balance: -200},
 		{AccountCode: "5.1", AccountName: "HPP", Balance: 100},
-		{AccountCode: "5.2.3.1", AccountName: "Voucher", Balance: 5},
+		{AccountCode: "5.5.1", AccountName: "Voucher", Balance: 5},
 	}}
 	svc := NewProfitLossReportService(repo)
 
@@ -38,20 +38,14 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	if pl.LabaRugiBersih.Amount != 95 {
 		t.Errorf("got %f want 95", pl.LabaRugiBersih.Amount)
 	}
-	if len(pl.BebanOperasional) != 2 {
-		t.Errorf("expected 2 operasional rows, got %d", len(pl.BebanOperasional))
+	if len(pl.BebanPemasaran) != 1 {
+		t.Errorf("expected 1 pemasaran row, got %d", len(pl.BebanPemasaran))
 	}
-	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
-		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
+	if pl.BebanPemasaran[0].Label != "Voucher" {
+		t.Errorf("got label %s want Voucher", pl.BebanPemasaran[0].Label)
 	}
-	if !pl.BebanOperasional[0].Group {
-		t.Errorf("expected marketing header to be group")
-	}
-	if pl.BebanOperasional[1].Label != "Voucher" {
-		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
-	}
-	if pl.BebanOperasional[1].Indent != 1 {
-		t.Errorf("expected voucher indent 1, got %d", pl.BebanOperasional[1].Indent)
+	if pl.BebanPemasaran[0].Indent != 1 {
+		t.Errorf("expected voucher indent 1, got %d", pl.BebanPemasaran[0].Indent)
 	}
 }
 
@@ -59,8 +53,8 @@ func TestProfitLossReportService_SkipMarketingParentAccount(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{
 		{AccountCode: "4.1", AccountName: "Penjualan", Balance: -100},
 		{AccountCode: "5.1", AccountName: "HPP", Balance: 50},
-		{AccountCode: "5.2.3", AccountName: "Beban Pemasaran", Balance: 10},
-		{AccountCode: "5.2.3.1", AccountName: "Voucher", Balance: 5},
+		{AccountCode: "5.5", AccountName: "Beban Pemasaran", Balance: 10},
+		{AccountCode: "5.5.1", AccountName: "Voucher", Balance: 5},
 	}}
 	svc := NewProfitLossReportService(repo)
 
@@ -69,20 +63,14 @@ func TestProfitLossReportService_SkipMarketingParentAccount(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(pl.BebanOperasional) != 2 {
-		t.Fatalf("expected 2 operasional rows, got %d", len(pl.BebanOperasional))
+	if len(pl.BebanPemasaran) != 1 {
+		t.Fatalf("expected 1 pemasaran row, got %d", len(pl.BebanPemasaran))
 	}
-	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
-		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
+	if pl.BebanPemasaran[0].Label != "Voucher" {
+		t.Errorf("got label %s want Voucher", pl.BebanPemasaran[0].Label)
 	}
-	if !pl.BebanOperasional[0].Group {
-		t.Errorf("expected marketing header to be group")
-	}
-	if pl.BebanOperasional[1].Label != "Voucher" {
-		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
-	}
-	if pl.BebanOperasional[1].Indent != 1 {
-		t.Errorf("expected voucher indent 1, got %d", pl.BebanOperasional[1].Indent)
+	if pl.BebanPemasaran[0].Indent != 1 {
+		t.Errorf("expected voucher indent 1, got %d", pl.BebanPemasaran[0].Indent)
 	}
 }
 
