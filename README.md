@@ -24,7 +24,7 @@ Main features:
 - Automatically compute revenue, COGS, fees and net profit metrics.
 - Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
-- Manage channels, accounts and expenses.
+- Manage channels, accounts and expenses. Expenses can now be edited and the previous journal is reversed automatically.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations
