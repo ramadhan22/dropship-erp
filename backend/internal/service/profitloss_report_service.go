@@ -15,6 +15,8 @@ type ProfitLossRow struct {
 	Amount  float64 `json:"amount"`
 	Percent float64 `json:"percent,omitempty"`
 	Manual  bool    `json:"manual,omitempty"`
+	Indent  int     `json:"indent,omitempty"`
+	Group   bool    `json:"group,omitempty"`
 }
 
 // ProfitLoss aggregates profit and loss data for a period.
@@ -79,7 +81,6 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 	var adminRows, taxRows []ProfitLossRow
 	var marketingRows []ProfitLossRow
 	var totalRev, totalHPP, totalOp, totalAdmin, totalTax float64
-	var totalMarketing float64
 
 	for _, ab := range balances {
 		code := ab.AccountCode
@@ -92,11 +93,9 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 			hppRows = append(hppRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalHPP += ab.Balance
 		case code == "5.2.3":
-			totalMarketing += ab.Balance
-			totalOp += ab.Balance
+			// skip parent marketing account balance
 		case strings.HasPrefix(code, "5.2.3."):
-			marketingRows = append(marketingRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
-			totalMarketing += ab.Balance
+			marketingRows = append(marketingRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance, Indent: 1})
 			totalOp += ab.Balance
 		case strings.HasPrefix(code, "5.2"):
 			opRows = append(opRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
@@ -110,8 +109,8 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		}
 	}
 
-	if totalMarketing != 0 || len(marketingRows) > 0 {
-		opRows = append([]ProfitLossRow{{Label: "Beban Pemasaran", Amount: totalMarketing}}, append(marketingRows, opRows...)...)
+	if len(marketingRows) > 0 {
+		opRows = append([]ProfitLossRow{{Label: "Beban Pemasaran", Group: true}}, append(marketingRows, opRows...)...)
 	}
 
 	labaKotor := totalRev - totalHPP
