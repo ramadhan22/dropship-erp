@@ -649,46 +649,44 @@ func abs(f float64) float64 {
 	return f
 }
 
-// addAffiliateToJournal inserts a Biaya Affiliate line into the existing
-// Shopee settled journal entry for the given sale and reduces the Saldo
-// Shopee line amount accordingly.
+// addAffiliateToJournal creates a new journal entry for the given affiliate
+// sale. The entry debits Biaya Affiliate and credits the Saldo Shopee account
+// for the related store.
 func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.ShopeeAffiliateSale) error {
 	if s.journalRepo == nil || sale == nil || sale.Pengeluaran == 0 {
 		return nil
 	}
-	je, err := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_settled", sale.KodePesanan)
-	if err != nil || je == nil {
-		return err
+
+	entryDate := sale.WaktuPemotongan
+	if entryDate.IsZero() {
+		entryDate = time.Now()
 	}
-	lines, err := s.journalRepo.GetLinesByJournalID(ctx, je.JournalID)
+	je := &models.JournalEntry{
+		EntryDate:    entryDate,
+		Description:  ptrString("Shopee affiliate " + sale.KodePesanan),
+		SourceType:   "shopee_affiliate",
+		SourceID:     fmt.Sprintf("%s-%s", sale.KodePesanan, sale.KodeProduk),
+		ShopUsername: sale.NamaToko,
+		Store:        sale.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := s.journalRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
 		return err
 	}
-	var saldoLine *repository.JournalLineDetail
+	lines := []models.JournalLine{
+		{JournalID: jid, AccountID: 52005, IsDebit: true, Amount: sale.Pengeluaran, Memo: ptrString("Biaya Affiliate " + sale.KodePesanan)},
+		{JournalID: jid, AccountID: saldoShopeeAccountID(sale.NamaToko), IsDebit: false, Amount: sale.Pengeluaran, Memo: ptrString("Saldo Shopee " + sale.KodePesanan)},
+	}
 	for i := range lines {
-		if lines[i].AccountID == saldoShopeeAccountID(je.Store) {
-			saldoLine = &lines[i]
-			break
+		if lines[i].Amount == 0 {
+			continue
+		}
+		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
 		}
 	}
-	if saldoLine == nil {
-		return fmt.Errorf("saldo line not found for journal %d", je.JournalID)
-	}
-	jl := &models.JournalLine{
-		JournalID: je.JournalID,
-		AccountID: 52005,
-		IsDebit:   true,
-		Amount:    sale.Pengeluaran,
-		Memo:      ptrString("Biaya Affiliate " + sale.KodePesanan),
-	}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl); err != nil {
-		return err
-	}
-	newAmt := saldoLine.Amount - sale.Pengeluaran
-	if newAmt < 0 {
-		newAmt = 0
-	}
-	return s.journalRepo.UpdateJournalLineAmount(ctx, saldoLine.LineID, newAmt)
+	return nil
 }
 
 func (s *ShopeeService) handleMismatch(ctx context.Context, jr ShopeeJournalRepo, o *models.ShopeeSettled) error {
