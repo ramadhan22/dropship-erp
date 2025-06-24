@@ -263,7 +263,7 @@ func (r *JournalRepo) GetJournalEntryBySource(ctx context.Context, sourceType, s
 func (r *JournalRepo) ListEntriesBySourceID(ctx context.Context, sourceID string) ([]models.JournalEntry, error) {
 	var list []models.JournalEntry
 	err := r.db.SelectContext(ctx, &list,
-		`SELECT * FROM journal_entries WHERE source_id=$1 ORDER BY journal_id`,
+		`SELECT * FROM journal_entries WHERE source_id=$1 OR source_id LIKE $1 || '-%' ORDER BY journal_id`,
 		sourceID)
 	if list == nil {
 		list = []models.JournalEntry{}

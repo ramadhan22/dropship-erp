@@ -570,7 +570,7 @@ func (s *ShopeeService) ListSalesProfit(
 	}
 	for i := range list {
 		p := list[i]
-		profit := p.AmountSales - (p.ModalPurchase + p.BiayaMitraJakmall + p.BiayaAdministrasi + p.BiayaLayanan + p.BiayaVoucher + p.BiayaAffiliate)
+		profit := p.AmountSales - (p.ModalPurchase + p.BiayaMitraJakmall + p.BiayaAdministrasi + p.BiayaLayanan + p.BiayaVoucher + p.BiayaAffiliate + p.Discount)
 		list[i].Profit = profit
 		if p.AmountSales == 0 {
 			list[i].ProfitPercent = 0
