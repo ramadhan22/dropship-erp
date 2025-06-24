@@ -38,8 +38,14 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	if pl.LabaRugiBersih.Amount != 95 {
 		t.Errorf("got %f want 95", pl.LabaRugiBersih.Amount)
 	}
-	if len(pl.BebanOperasional) != 1 {
-		t.Errorf("expected 1 operasional row, got %d", len(pl.BebanOperasional))
+	if len(pl.BebanOperasional) != 2 {
+		t.Errorf("expected 2 operasional rows, got %d", len(pl.BebanOperasional))
+	}
+	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
+		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
+	}
+	if pl.BebanOperasional[1].Label != "Voucher" {
+		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
 	}
 }
 
