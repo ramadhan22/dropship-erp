@@ -91,7 +91,10 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		case strings.HasPrefix(code, "5.1"):
 			hppRows = append(hppRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalHPP += ab.Balance
-		case strings.HasPrefix(code, "5.2.3"):
+		case code == "5.2.3":
+			totalMarketing += ab.Balance
+			totalOp += ab.Balance
+		case strings.HasPrefix(code, "5.2.3."):
 			marketingRows = append(marketingRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalMarketing += ab.Balance
 			totalOp += ab.Balance

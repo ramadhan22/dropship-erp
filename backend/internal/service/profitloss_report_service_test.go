@@ -49,6 +49,31 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	}
 }
 
+func TestProfitLossReportService_SkipMarketingParentAccount(t *testing.T) {
+	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{
+		{AccountCode: "4.1", AccountName: "Penjualan", Balance: -100},
+		{AccountCode: "5.1", AccountName: "HPP", Balance: 50},
+		{AccountCode: "5.2.3", AccountName: "Beban Pemasaran", Balance: 10},
+		{AccountCode: "5.2.3.1", AccountName: "Voucher", Balance: 5},
+	}}
+	svc := NewProfitLossReportService(repo)
+
+	pl, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(pl.BebanOperasional) != 2 {
+		t.Fatalf("expected 2 operasional rows, got %d", len(pl.BebanOperasional))
+	}
+	if pl.BebanOperasional[0].Label != "Beban Pemasaran" {
+		t.Errorf("got label %s want Beban Pemasaran", pl.BebanOperasional[0].Label)
+	}
+	if pl.BebanOperasional[1].Label != "Voucher" {
+		t.Errorf("got label %s want Voucher", pl.BebanOperasional[1].Label)
+	}
+}
+
 func TestProfitLossReportService_GetProfitLoss_MonthlyPeriod(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
 	svc := NewProfitLossReportService(repo)
