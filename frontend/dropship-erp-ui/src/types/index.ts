@@ -38,6 +38,12 @@ export interface Store {
   store_id: number;
   jenis_channel_id: number;
   nama_toko: string;
+  code_id: string | null;
+  shop_id: string | null;
+}
+
+export interface StoreWithChannel extends Store {
+  jenis_channel: string;
 }
 
 export interface ShopeeSettled {

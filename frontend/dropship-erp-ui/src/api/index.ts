@@ -5,6 +5,7 @@ import type {
   Metric,
   JenisChannel,
   Store,
+  StoreWithChannel,
   DropshipPurchase,
   DropshipPurchaseDetail,
   Account,
@@ -138,6 +139,18 @@ export function createStore(jenisChannelId: number, namaToko: string) {
   });
 }
 
+export function updateStore(id: number, data: Partial<Store>) {
+  return api.put(`/stores/${id}`, data);
+}
+
+export function deleteStore(id: number) {
+  return api.delete(`/stores/${id}`);
+}
+
+export function fetchShopeeAuthURL() {
+  return api.get<{ url: string }>("/config/shopee-auth-url");
+}
+
 export function listJenisChannels() {
   return api.get<JenisChannel[]>("/jenis-channels");
 }
@@ -149,6 +162,10 @@ export function listStores(channelId: number) {
 export function listStoresByChannelName(channel: string) {
   const q = new URLSearchParams({ channel });
   return api.get<Store[]>(`/stores?${q.toString()}`);
+}
+
+export function listAllStoresDirect() {
+  return api.get<StoreWithChannel[]>("/stores/all");
 }
 
 // Fetch stores across all channels by first listing channels then querying each

@@ -22,3 +22,4 @@ shopee_api:
   refresh_token: ""
   # optional base url override
   base_url: "https://partner.shopeemobile.com"
+  auth_url: "https://partner.shopeemobile.com/oauth" # Shopee OpenAPI auth page
