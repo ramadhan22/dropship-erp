@@ -42,6 +42,7 @@ type ShopeeAPIConfig struct {
 	AccessToken  string `mapstructure:"access_token"`
 	RefreshToken string `mapstructure:"refresh_token"`
 	BaseURL      string `mapstructure:"base_url"`
+	AuthURL      string `mapstructure:"auth_url"`
 }
 
 // LoadConfig reads configuration from config.yaml and environment variables.
@@ -99,3 +100,6 @@ func MustLoadConfig() *Config {
 	}
 	return cfg
 }
+
+// ShopeeAuthURL returns the configured authorization URL.
+func (c *Config) ShopeeAuthURL() string { return c.Shopee.AuthURL }

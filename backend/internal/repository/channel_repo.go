@@ -76,3 +76,31 @@ func (r *ChannelRepo) ListStoresByChannelName(ctx context.Context, channelName s
 	}
 	return list, nil
 }
+
+// ListAllStores returns all stores joined with their channel names.
+func (r *ChannelRepo) ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error) {
+	var list []models.StoreWithChannel
+	query := `SELECT st.*, jc.jenis_channel FROM stores st
+                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
+                ORDER BY st.store_id`
+	if err := r.db.SelectContext(ctx, &list, query); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.StoreWithChannel{}
+	}
+	return list, nil
+}
+
+// UpdateStore modifies an existing store row.
+func (r *ChannelRepo) UpdateStore(ctx context.Context, s *models.Store) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE stores SET nama_toko=$1, jenis_channel_id=$2, code_id=$3, shop_id=$4 WHERE store_id=$5`,
+		s.NamaToko, s.JenisChannelID, s.CodeID, s.ShopID, s.StoreID)
+	return err
+}
+
+// DeleteStore removes a store by ID.
+func (r *ChannelRepo) DeleteStore(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM stores WHERE store_id=$1`, id)
+	return err
+}

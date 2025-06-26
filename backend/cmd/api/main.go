@@ -97,7 +97,11 @@ func main() {
 		apiGroup.GET("/balancesheet", handlers.NewBalanceHandler(balanceSvc).HandleGetBalanceSheet)
 		apiGroup.POST("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleCreateJenisChannel)
 		apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
-		apiGroup.GET("/stores", handlers.NewChannelHandler(channelSvc).HandleListStoresByName)
+		chH := handlers.NewChannelHandler(channelSvc)
+		apiGroup.GET("/stores", chH.HandleListStoresByName)
+		apiGroup.GET("/stores/all", chH.HandleListAllStores)
+		apiGroup.PUT("/stores/:id", chH.HandleUpdateStore)
+		apiGroup.DELETE("/stores/:id", chH.HandleDeleteStore)
 		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
 		apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
 
@@ -124,6 +128,7 @@ func main() {
 		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
+		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
