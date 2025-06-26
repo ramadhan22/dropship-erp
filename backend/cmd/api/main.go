@@ -12,28 +12,30 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	// 1) Load configuration (from config.yaml and environment)
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Fatal error loading config: %v", err)
+		logutil.Fatalf("Fatal error loading config: %v", err)
 	}
 
 	// 2) Initialize repositories (Postgres DB connection)
 	repo, err := repository.NewPostgresRepository(cfg.Database.URL)
 	if err != nil {
-		log.Fatalf("DB connection failed: %v", err)
+		logutil.Fatalf("DB connection failed: %v", err)
 	}
 	if err := migrations.Run(repo.DB.DB); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
 			log.Printf("DB migrations: %v", err)
 		} else {
-			log.Fatalf("DB migrations failed: %v", err)
+			logutil.Fatalf("DB migrations failed: %v", err)
 		}
 	}
 
@@ -128,6 +130,6 @@ func main() {
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
 	if err := router.Run(addr); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		logutil.Fatalf("Server failed: %v", err)
 	}
 }
