@@ -431,37 +431,46 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
-               SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
-               COALESCE(MAX(disc.discount),0) AS discount,
-               SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                 - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                    + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                    + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                    + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                    + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
-                    + COALESCE(MAX(disc.discount),0)) AS profit,
-               CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
-                    ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                         - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                            + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                            + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                            + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                            + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
-                            + COALESCE(MAX(disc.discount),0))
-                    ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
-               FROM journal_entries je
-               JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
-               JOIN journal_lines jl ON jl.journal_id = je.journal_id
-               LEFT JOIN (
-                       SELECT REPLACE(jes.source_id,'-discount','') AS kode_pesanan, SUM(jls.amount) AS discount
-                       FROM journal_entries jes
-                       JOIN journal_lines jls ON jls.journal_id = jes.journal_id
-                       WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 52002
-                       GROUP BY kode_pesanan
-               ) disc ON disc.kode_pesanan = je.source_id
-               JOIN stores st ON dp.nama_toko = st.nama_toko
+              SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
+              COALESCE(MAX(disc.discount),0) AS discount,
+              SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                   + COALESCE(aff.aff,0)
+                   + COALESCE(MAX(disc.discount),0)) AS profit,
+              CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
+                   ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                        - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                           + COALESCE(aff.aff,0)
+                           + COALESCE(MAX(disc.discount),0))
+                   ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
+              FROM journal_entries je
+              JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
+              JOIN journal_lines jl ON jl.journal_id = je.journal_id
+              LEFT JOIN (
+                      SELECT REPLACE(jes.source_id,'-discount','') AS kode_pesanan, SUM(jls.amount) AS discount
+                      FROM journal_entries jes
+                      JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                      WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 52002
+                      GROUP BY kode_pesanan
+              ) disc ON disc.kode_pesanan = je.source_id
+              LEFT JOIN (
+                      SELECT split_part(jes.source_id, '-', 1) AS kode_pesanan, SUM(jls.amount) AS aff
+                      FROM journal_entries jes
+                      JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                      WHERE jes.source_type = 'shopee_affiliate' AND jls.account_id = 52005
+                      GROUP BY split_part(jes.source_id, '-', 1)
+              ) aff ON aff.kode_pesanan = je.source_id
+              JOIN stores st ON dp.nama_toko = st.nama_toko
                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
                JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
                WHERE je.source_type IN ('pending_sales','shopee_settled')`
