@@ -21,4 +21,4 @@ shopee_api:
   # long-lived token used to refresh access_token
   refresh_token: ""
   # optional base url override
-  base_url_shopee: "https://partner.test-stable.shopeemobile.com/api/v2"
+  base_url_shopee: "https://partner.test-stable.shopeemobile.com"

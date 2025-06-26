@@ -116,7 +116,7 @@ func (c *Config) ShopeeAuthURL(storeID int64) string {
 	if base == "" {
 		base = "https://partner.test-stable.shopeemobile.com"
 	}
-	path := "/shop/auth_partner"
+	path := "/api/v2/shop/auth_partner"
 	ts := time.Now().Unix()
 	msg := fmt.Sprintf("%s%s%d", c.Shopee.PartnerID, path, ts)
 	h := hmac.New(sha256.New, []byte(c.Shopee.PartnerKey))
