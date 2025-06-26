@@ -128,22 +128,17 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
           COALESCE(SUM(
             CASE WHEN jl.is_debit THEN jl.amount ELSE -jl.amount END
           ), 0) AS balance
-        FROM journal_lines jl
-        JOIN journal_entries je ON jl.journal_id = je.journal_id
-        JOIN accounts a ON jl.account_id = a.account_id
-        WHERE je.entry_date <= $1`
-
-	args := []interface{}{asOfDate}
-	if shop != "" {
-		query += " AND je.shop_username = $2"
-		args = append(args, shop)
-	}
-
-	query += `
+        FROM accounts a
+        LEFT JOIN journal_lines jl ON a.account_id = jl.account_id
+        LEFT JOIN journal_entries je ON jl.journal_id = je.journal_id
+          AND je.entry_date <= $1
+          AND ($2 = '' OR je.shop_username = $2)
         GROUP BY
           a.account_id, a.account_code, a.account_name,
           a.account_type, a.parent_id
         ORDER BY a.account_code;`
+
+	args := []interface{}{asOfDate, shop}
 
 	var result []AccountBalance
 	if err := r.db.SelectContext(ctx, &result, query, args...); err != nil {
@@ -170,22 +165,17 @@ func (r *JournalRepo) GetAccountBalancesBetween(
           COALESCE(SUM(
             CASE WHEN jl.is_debit THEN jl.amount ELSE -jl.amount END
           ), 0) AS balance
-        FROM journal_lines jl
-        JOIN journal_entries je ON jl.journal_id = je.journal_id
-        JOIN accounts a ON jl.account_id = a.account_id
-        WHERE je.entry_date BETWEEN $1 AND $2`
-
-	args := []interface{}{from, to}
-	if shop != "" {
-		query += " AND je.shop_username = $3"
-		args = append(args, shop)
-	}
-
-	query += `
+        FROM accounts a
+        LEFT JOIN journal_lines jl ON a.account_id = jl.account_id
+        LEFT JOIN journal_entries je ON jl.journal_id = je.journal_id
+          AND je.entry_date BETWEEN $1 AND $2
+          AND ($3 = '' OR je.shop_username = $3)
         GROUP BY
           a.account_id, a.account_code, a.account_name,
           a.account_type, a.parent_id
         ORDER BY a.account_code;`
+
+	args := []interface{}{from, to, shop}
 
 	var result []AccountBalance
 	if err := r.db.SelectContext(ctx, &result, query, args...); err != nil {
