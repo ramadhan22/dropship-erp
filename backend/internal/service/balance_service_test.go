@@ -55,3 +55,40 @@ func TestGetBalanceSheet(t *testing.T) {
 		t.Errorf("unexpected Equity group: %+v", cats[2])
 	}
 }
+
+// fakeJournalRepoBMap returns balances based on asOfDate.
+type fakeJournalRepoBMap struct {
+	data map[string]map[string][]repository.AccountBalance
+}
+
+func (f *fakeJournalRepoBMap) GetAccountBalancesAsOf(ctx context.Context, shop string, asOfDate time.Time) ([]repository.AccountBalance, error) {
+	return f.data[shop][asOfDate.Format("2006-01-02")], nil
+}
+
+func TestGetBalanceSheet_DifferentDates(t *testing.T) {
+	shop := "ShopX"
+	d1 := time.Date(2025, 5, 31, 0, 0, 0, 0, time.UTC)
+	d2 := time.Date(2025, 6, 30, 0, 0, 0, 0, time.UTC)
+	repo := &fakeJournalRepoBMap{data: map[string]map[string][]repository.AccountBalance{
+		shop: {
+			d1.Format("2006-01-02"): {
+				{AccountID: 1001, AccountCode: "1001", AccountName: "Cash", AccountType: "Asset", Balance: 100},
+			},
+			d2.Format("2006-01-02"): {
+				{AccountID: 1001, AccountCode: "1001", AccountName: "Cash", AccountType: "Asset", Balance: 200},
+			},
+		},
+	}}
+	svc := NewBalanceService(repo)
+	c1, err := svc.GetBalanceSheet(context.Background(), shop, d1)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	c2, err := svc.GetBalanceSheet(context.Background(), shop, d2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if c1[0].Total == c2[0].Total {
+		t.Errorf("expected different asset totals")
+	}
+}

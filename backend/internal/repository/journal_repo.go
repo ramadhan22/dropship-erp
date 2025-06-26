@@ -129,10 +129,13 @@ func (r *JournalRepo) GetAccountBalancesAsOf(
             CASE WHEN jl.is_debit THEN jl.amount ELSE -jl.amount END
           ), 0) AS balance
         FROM accounts a
-        LEFT JOIN journal_lines jl ON a.account_id = jl.account_id
-        LEFT JOIN journal_entries je ON jl.journal_id = je.journal_id
-          AND je.entry_date <= $1
-          AND ($2 = '' OR je.shop_username = $2)
+        LEFT JOIN (
+          SELECT jl.account_id, jl.is_debit, jl.amount
+            FROM journal_lines jl
+            JOIN journal_entries je ON jl.journal_id = je.journal_id
+           WHERE je.entry_date <= $1
+             AND ($2 = '' OR je.shop_username = $2)
+        ) jl ON a.account_id = jl.account_id
         GROUP BY
           a.account_id, a.account_code, a.account_name,
           a.account_type, a.parent_id
@@ -166,10 +169,13 @@ func (r *JournalRepo) GetAccountBalancesBetween(
             CASE WHEN jl.is_debit THEN jl.amount ELSE -jl.amount END
           ), 0) AS balance
         FROM accounts a
-        LEFT JOIN journal_lines jl ON a.account_id = jl.account_id
-        LEFT JOIN journal_entries je ON jl.journal_id = je.journal_id
-          AND je.entry_date BETWEEN $1 AND $2
-          AND ($3 = '' OR je.shop_username = $3)
+        LEFT JOIN (
+          SELECT jl.account_id, jl.is_debit, jl.amount
+            FROM journal_lines jl
+            JOIN journal_entries je ON jl.journal_id = je.journal_id
+           WHERE je.entry_date BETWEEN $1 AND $2
+             AND ($3 = '' OR je.shop_username = $3)
+        ) jl ON a.account_id = jl.account_id
         GROUP BY
           a.account_id, a.account_code, a.account_name,
           a.account_type, a.parent_id
