@@ -36,6 +36,8 @@ interface ProfitLoss {
   labaKotor: { amount: number; percent: number };
   bebanOperasional: PLRow[];
   totalBebanOperasional: number;
+  bebanPemasaran: PLRow[];
+  totalBebanPemasaran: number;
   bebanAdministrasi: PLRow[];
   totalBebanAdministrasi: number;
   totalBebanUsaha: { amount: number; percent: number };
@@ -278,6 +280,19 @@ export default function PLPage() {
               <TableCell sx={{ fontWeight: "bold" }}>Jumlah Beban Operasional</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
                 {numFmt.format(data.totalBebanOperasional)}
+              </TableCell>
+              <TableCell />
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={3} sx={{ bgcolor: "#eee", fontWeight: "bold", pl: 4 }}>
+                Beban Pemasaran
+              </TableCell>
+            </TableRow>
+            {renderRows(data.bebanPemasaran, numFmt, 2)}
+            <TableRow>
+              <TableCell sx={{ fontWeight: "bold" }}>Jumlah Beban Operasional</TableCell>
+              <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                {numFmt.format(data.totalBebanPemasaran)}
               </TableCell>
               <TableCell />
             </TableRow>
