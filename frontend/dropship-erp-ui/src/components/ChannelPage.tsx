@@ -13,6 +13,7 @@ import {
   TextField,
 } from "@mui/material";
 import SortableTable from "./SortableTable";
+import { Link } from "react-router-dom";
 import {
   createJenisChannel,
   createStore,
@@ -113,6 +114,9 @@ export default function ChannelPage() {
       label: "Actions",
       render: (_: any, row: StoreWithChannel) => (
         <>
+          <Button component={Link} to={`/stores/${row.store_id}`} size="small">
+            Detail
+          </Button>
           <Button size="small" onClick={() => handleEdit(row)}>
             Edit
           </Button>
