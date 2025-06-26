@@ -20,6 +20,10 @@ it("creates channel and store", async () => {
   });
   (api.listAllStoresDirect as jest.Mock).mockResolvedValue({ data: [] });
   (api.fetchShopeeAuthURL as jest.Mock).mockResolvedValue({ data: { url: "u" } });
+  (api.createJenisChannel as jest.Mock).mockResolvedValue({
+    data: { jenis_channel_id: 2 },
+  });
+  (api.createStore as jest.Mock).mockResolvedValue({ data: { store_id: 3 } });
 
   render(<ChannelPage />);
 
@@ -34,7 +38,8 @@ it("creates channel and store", async () => {
   await waitFor(() => expect(screen.queryByText(/Add Channel/i)).not.toBeInTheDocument());
 
   fireEvent.click(screen.getAllByRole("button", { name: /New Store/i })[0]);
-  fireEvent.change(screen.getByLabelText(/Channel/), { target: { value: "1" } });
+  fireEvent.mouseDown(screen.getByLabelText(/Channel/));
+  fireEvent.click(await screen.findByText("Tokopedia"));
   fireEvent.change(screen.getByLabelText(/Store Name/i), {
     target: { value: "ShopA" },
   });

@@ -16,6 +16,7 @@ type ChannelServiceInterface interface {
 	ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
 	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
 	ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
+	GetStore(ctx context.Context, id int64) (*models.Store, error)
 	ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error)
 	UpdateStore(ctx context.Context, st *models.Store) error
 	DeleteStore(ctx context.Context, id int64) error
@@ -99,6 +100,22 @@ func (h *ChannelHandler) HandleListStoresByName(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// HandleGetStore returns a single store by ID.
+func (h *ChannelHandler) HandleGetStore(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid store id"})
+		return
+	}
+	st, err := h.svc.GetStore(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, st)
 }
 
 // HandleListAllStores returns all stores joined with channel names.
