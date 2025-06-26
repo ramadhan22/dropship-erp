@@ -411,6 +411,24 @@ func TestImportAffiliateCSV_FilterStatus(t *testing.T) {
 	}
 }
 
+func TestImportAffiliateCSV_NonSahNoJournal(t *testing.T) {
+	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,IDModel,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
+		"SO1,Selesai,Tidak,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,5,,,"
+	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, nil, jr)
+	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
+	if err != nil {
+		t.Fatalf("import error: %v", err)
+	}
+	if inserted != 1 || repo.count != 1 {
+		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
+	}
+	if len(jr.entries) != 0 {
+		t.Fatalf("expected no journal entries, got %d", len(jr.entries))
+	}
+}
+
 func TestConfirmSettleCreatesFeeLines(t *testing.T) {
 	repo := &fakeShopeeRepo{
 		order: &models.ShopeeSettled{

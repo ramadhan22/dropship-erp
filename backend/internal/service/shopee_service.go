@@ -280,7 +280,7 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		if err := s.repo.InsertShopeeAffiliateSale(ctx, entry); err != nil {
 			return inserted, fmt.Errorf("insert: %w", err)
 		}
-		if orderExists {
+		if orderExists && strings.EqualFold(entry.StatusTerverifikasi, "Sah") {
 			if err := s.addAffiliateToJournal(ctx, entry); err != nil {
 				return inserted, fmt.Errorf("journal: %w", err)
 			}
