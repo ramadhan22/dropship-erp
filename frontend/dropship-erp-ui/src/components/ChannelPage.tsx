@@ -35,12 +35,10 @@ export default function ChannelPage() {
   const [openChannel, setOpenChannel] = useState(false);
   const [openStore, setOpenStore] = useState(false);
   const [editing, setEditing] = useState<StoreWithChannel | null>(null);
-  const [authUrl, setAuthUrl] = useState<string>("");
 
   useEffect(() => {
     listJenisChannels().then((res) => setChannels(res.data));
     refreshStores();
-    fetchShopeeAuthURL().then((r) => setAuthUrl(r.data.url));
   }, []);
 
   async function refreshStores() {
@@ -105,7 +103,14 @@ export default function ChannelPage() {
       label: "Authorize",
       render: (_: any, row: StoreWithChannel) =>
         row.jenis_channel === "Shopee" && !row.code_id && !row.shop_id ? (
-          <Button href={authUrl} target="_blank" size="small">
+          <Button
+            size="small"
+            onClick={() =>
+              fetchShopeeAuthURL(row.store_id).then((r) =>
+                window.open(r.data.url, "_blank"),
+              )
+            }
+          >
             Authorize
           </Button>
         ) : null,

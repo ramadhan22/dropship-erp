@@ -37,10 +37,10 @@ Shopee API calls require credentials including a long-lived `refresh_token`.
 request using this value.
 Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
 `SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
-signing API calls.
-`SHOPEE_AUTH_URL` provides the OAuth page link exposed to the frontend.
-As of this version, `ShopeeClient` no longer loads configuration inside
-`RefreshAccessToken`; all required values are taken from the struct fields
+signing API calls. `base_url_shopee` in `config.yaml` defines the Partner API
+host used when generating authorization links. As of this version, `ShopeeClient`
+no longer loads configuration inside `RefreshAccessToken`; all required values
+are taken from the struct fields
 initialized in `NewShopeeClient`.
 
 To start the backend:

@@ -147,8 +147,8 @@ export function deleteStore(id: number) {
   return api.delete(`/stores/${id}`);
 }
 
-export function fetchShopeeAuthURL() {
-  return api.get<{ url: string }>("/config/shopee-auth-url");
+export function fetchShopeeAuthURL(storeId: number) {
+  return api.get<{ url: string }>(`/config/shopee-auth-url?store_id=${storeId}`);
 }
 
 export function listJenisChannels() {
