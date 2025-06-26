@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 )
 
 // ShopeeClient handles calls to Shopee partner API.
@@ -122,13 +122,13 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Printf("RefreshAccessToken request error: %v", err)
+		logutil.Errorf("RefreshAccessToken request error: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Printf("RefreshAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
+		logutil.Errorf("RefreshAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out refreshResp
@@ -136,7 +136,7 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 		return err
 	}
 	if out.Error != "" {
-		log.Printf("RefreshAccessToken API error: %s", out.Error)
+		logutil.Errorf("RefreshAccessToken API error: %s", out.Error)
 		return fmt.Errorf("shopee error: %s", out.Error)
 	}
 	if out.Response.AccessToken != "" {
@@ -168,13 +168,13 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Printf("GetOrderDetail request error: %v", err)
+		logutil.Errorf("GetOrderDetail request error: %v", err)
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Printf("GetOrderDetail unexpected status %d: %s", resp.StatusCode, string(body))
+		logutil.Errorf("GetOrderDetail unexpected status %d: %s", resp.StatusCode, string(body))
 		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out orderDetailResp
@@ -182,7 +182,7 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 		return "", err
 	}
 	if out.Error != "" {
-		log.Printf("GetOrderDetail API error: %s", out.Error)
+		logutil.Errorf("GetOrderDetail API error: %s", out.Error)
 		return "", fmt.Errorf("shopee error: %s", out.Error)
 	}
 	return out.Response.OrderStatus, nil
@@ -211,13 +211,13 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Printf("getOrderDetailExt request error: %v", err)
+		logutil.Errorf("getOrderDetailExt request error: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Printf("getOrderDetailExt unexpected status %d: %s", resp.StatusCode, string(body))
+		logutil.Errorf("getOrderDetailExt unexpected status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out orderDetailExtResp
@@ -225,7 +225,7 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 		return nil, err
 	}
 	if out.Error != "" {
-		log.Printf("getOrderDetailExt API error: %s", out.Error)
+		logutil.Errorf("getOrderDetailExt API error: %s", out.Error)
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
 	if len(out.Response.OrderList) == 0 {
@@ -265,7 +265,7 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 		}
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			log.Printf("GetOrderList request error: %v", err)
+			logutil.Errorf("GetOrderList request error: %v", err)
 			return 0, err
 		}
 		var more bool
@@ -273,7 +273,7 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				body, _ := io.ReadAll(resp.Body)
-				log.Printf("GetOrderList unexpected status %d: %s", resp.StatusCode, string(body))
+				logutil.Errorf("GetOrderList unexpected status %d: %s", resp.StatusCode, string(body))
 				err = fmt.Errorf("unexpected status %d", resp.StatusCode)
 				return
 			}
