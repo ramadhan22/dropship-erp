@@ -100,6 +100,7 @@ func main() {
 		chH := handlers.NewChannelHandler(channelSvc)
 		apiGroup.GET("/stores", chH.HandleListStoresByName)
 		apiGroup.GET("/stores/all", chH.HandleListAllStores)
+		apiGroup.GET("/stores/:id", chH.HandleGetStore)
 		apiGroup.PUT("/stores/:id", chH.HandleUpdateStore)
 		apiGroup.DELETE("/stores/:id", chH.HandleDeleteStore)
 		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)

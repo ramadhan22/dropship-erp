@@ -77,6 +77,15 @@ func (r *ChannelRepo) ListStoresByChannelName(ctx context.Context, channelName s
 	return list, nil
 }
 
+// GetStoreByID fetches a store row by ID.
+func (r *ChannelRepo) GetStoreByID(ctx context.Context, id int64) (*models.Store, error) {
+	var st models.Store
+	if err := r.db.GetContext(ctx, &st, `SELECT * FROM stores WHERE store_id=$1`, id); err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
 // ListAllStores returns all stores joined with their channel names.
 func (r *ChannelRepo) ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error) {
 	var list []models.StoreWithChannel

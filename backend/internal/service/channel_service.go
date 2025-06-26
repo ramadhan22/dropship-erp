@@ -13,6 +13,7 @@ type ChannelRepoInterface interface {
 	ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
 	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
 	ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
+	GetStoreByID(ctx context.Context, id int64) (*models.Store, error)
 	ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error)
 	UpdateStore(ctx context.Context, s *models.Store) error
 	DeleteStore(ctx context.Context, id int64) error
@@ -48,6 +49,10 @@ func (s *ChannelService) ListStoresByChannel(ctx context.Context, channelID int6
 
 func (s *ChannelService) ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error) {
 	return s.repo.ListStoresByChannelName(ctx, channelName)
+}
+
+func (s *ChannelService) GetStore(ctx context.Context, id int64) (*models.Store, error) {
+	return s.repo.GetStoreByID(ctx, id)
 }
 
 func (s *ChannelService) ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error) {

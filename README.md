@@ -25,6 +25,8 @@ Main features:
 - Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses. Expenses can now be edited and the previous journal is reversed automatically.
+- Store detail pages capture Shopee `code` and `shop_id` parameters after authorization.
+  The page is accessible via `/stores/:id` and pre-fills values from the callback URL.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations
@@ -98,9 +100,10 @@ models or pages should keep this list in sync.
 - **expenses** and **expense_lines** – editable via `ExpensePage`.
 - **ad_invoices** – imported from `AdInvoicePage`.
 - **asset_accounts** – only accounts under code `1.1.1` appear on `KasAccountPage`.
-- **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
-  across filters. `stores` now include optional `code_id` and `shop_id` for
-  Shopee API authorization.
+ - **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
+   across filters. `stores` now include optional `code_id` and `shop_id` for
+   Shopee API authorization. `StoreDetailPage` allows saving these values from
+   the OAuth callback.
 
 ### Service ↔ Table Mapping
 Services in the backend interact with particular tables. Updating services or

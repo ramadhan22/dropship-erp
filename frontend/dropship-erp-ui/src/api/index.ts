@@ -168,6 +168,10 @@ export function listAllStoresDirect() {
   return api.get<StoreWithChannel[]>("/stores/all");
 }
 
+export function getStore(id: number) {
+  return api.get<Store>(`/stores/${id}`);
+}
+
 // Fetch stores across all channels by first listing channels then querying each
 // channel's stores. Returns a flat array of Store objects.
 export async function listAllStores() {
