@@ -20,6 +20,7 @@ type fakeShopeeRepo struct {
 	fail              bool
 	existingSettled   map[string]bool
 	existingAffiliate map[string]bool
+	deletedAffiliate  []string
 	affExpense        float64
 	order             *models.ShopeeSettled
 	confirmed         []string
@@ -125,6 +126,23 @@ func (f *fakeJournalRepoS) UpdateJournalLineAmount(ctx context.Context, lineID i
 	return nil
 }
 
+func (f *fakeJournalRepoS) DeleteJournalEntry(ctx context.Context, id int64) error {
+	for i, e := range f.entries {
+		if e.JournalID == id {
+			f.entries = append(f.entries[:i], f.entries[i+1:]...)
+			break
+		}
+	}
+	filtered := []*models.JournalLine{}
+	for _, l := range f.lines {
+		if l.JournalID != id {
+			filtered = append(filtered, l)
+		}
+	}
+	f.lines = filtered
+	return nil
+}
+
 func (f *fakeShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSettled) error {
 	if f.fail {
 		return errors.New("fail")
@@ -148,11 +166,16 @@ func (f *fakeShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan stri
 	return f.existingSettled[noPesanan], nil
 }
 
-func (f *fakeShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error) {
+func (f *fakeShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) (bool, error) {
 	if f.existingAffiliate == nil {
 		return false, nil
 	}
-	return f.existingAffiliate[orderID], nil
+	return f.existingAffiliate[orderID+"|"+productCode+"|"+komisiID], nil
+}
+
+func (f *fakeShopeeRepo) DeleteShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) error {
+	f.deletedAffiliate = append(f.deletedAffiliate, orderID+"|"+productCode+"|"+komisiID)
+	return nil
 }
 
 func (f *fakeShopeeRepo) ListShopeeSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error) {
@@ -364,15 +387,19 @@ func TestImportAffiliateCSV_SkipDuplicate(t *testing.T) {
 		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
 	repo := &fakeShopeeRepo{
 		existingSettled:   map[string]bool{"SO1": true},
-		existingAffiliate: map[string]bool{"SO1": true},
+		existingAffiliate: map[string]bool{"SO1|P1|1": true},
 	}
-	svc := NewShopeeService(nil, repo, nil, nil)
+	jr := &fakeJournalRepoS{}
+	svc := NewShopeeService(nil, repo, nil, jr)
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
 	}
-	if inserted != 0 || repo.count != 0 {
-		t.Fatalf("expected 0 insert, got svc %d repo %d", inserted, repo.count)
+	if inserted != 1 || repo.count != 1 {
+		t.Fatalf("expected 1 insert, got svc %d repo %d", inserted, repo.count)
+	}
+	if len(repo.deletedAffiliate) != 1 {
+		t.Fatalf("expected delete called")
 	}
 }
 

@@ -73,7 +73,8 @@ type ShopeeRepoInterface interface {
 	ListShopeeSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error)
 	SumShopeeSettled(ctx context.Context, channel, store, from, to string) (*models.ShopeeSummary, error)
 	ExistsShopeeSettled(ctx context.Context, noPesanan string) (bool, error)
-	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error)
+	ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) (bool, error)
+	DeleteShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) error
 	ListShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string, limit, offset int) ([]models.ShopeeAffiliateSale, int, error)
 	SumShopeeAffiliateSales(ctx context.Context, noPesanan, from, to string) (*models.ShopeeAffiliateSummary, error)
 	GetAffiliateExpenseByOrder(ctx context.Context, kodePesanan string) (float64, error)
@@ -98,6 +99,7 @@ type ShopeeJournalRepo interface {
 	GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error)
 	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
 	UpdateJournalLineAmount(ctx context.Context, lineID int64, amount float64) error
+	DeleteJournalEntry(ctx context.Context, id int64) error
 }
 
 // ShopeeService handles import of settled Shopee orders from XLSX files.
@@ -254,12 +256,19 @@ func (s *ShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (in
 		if !allowedStatus[entry.StatusPesanan] {
 			continue
 		}
-		exists, err := s.repo.ExistsShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk)
+		exists, err := s.repo.ExistsShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk, entry.IDKomisiPesanan)
 		if err != nil {
 			return inserted, fmt.Errorf("check existing: %w", err)
 		}
 		if exists {
-			continue
+			if err := s.repo.DeleteShopeeAffiliateSale(ctx, entry.KodePesanan, entry.KodeProduk, entry.IDKomisiPesanan); err != nil {
+				return inserted, fmt.Errorf("delete existing: %w", err)
+			}
+			if s.journalRepo != nil {
+				if je, err := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_affiliate", fmt.Sprintf("%s-%s", entry.KodePesanan, entry.KodeProduk)); err == nil && je != nil {
+					_ = s.journalRepo.DeleteJournalEntry(ctx, je.JournalID)
+				}
+			}
 		}
 		orderExists, err := s.repo.ExistsShopeeSettled(ctx, entry.KodePesanan)
 		if err != nil {
