@@ -1,4 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import BreadcrumbsNav from "./components/BreadcrumbsNav";
 import BalanceSheetPage from "./components/BalanceSheetPage";
 import ChannelPage from "./components/ChannelPage";
 import DropshipImport from "./components/DropshipImport";
@@ -39,6 +40,7 @@ export default function App() {
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
+        <BreadcrumbsNav />
         <Routes>
           <Route path="/" element={<SalesSummaryPage />} />
           <Route path="/dropship" element={<DropshipImport />} />
