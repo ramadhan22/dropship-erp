@@ -170,11 +170,23 @@ func (r *ShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *models.Sh
 }
 
 // ExistsShopeeAffiliateSale checks if a row exists for the given order and product.
-func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error) {
+// ExistsShopeeAffiliateSale checks if a row exists for the given order,
+// product and commission id.
+func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) (bool, error) {
 	var exists bool
 	err := r.db.GetContext(ctx, &exists,
-		`SELECT EXISTS(SELECT 1 FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2)`, orderID, productCode)
+		`SELECT EXISTS(SELECT 1 FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2 AND id_komisi_pesanan=$3)`,
+		orderID, productCode, komisiID)
 	return exists, err
+}
+
+// DeleteShopeeAffiliateSale removes an affiliate sale row by order, product
+// and commission id.
+func (r *ShopeeRepo) DeleteShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) error {
+	_, err := r.db.ExecContext(ctx,
+		`DELETE FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2 AND id_komisi_pesanan=$3`,
+		orderID, productCode, komisiID)
+	return err
 }
 
 // ListShopeeAffiliateSales returns affiliate sales filtered by optional date/month/year with pagination.
