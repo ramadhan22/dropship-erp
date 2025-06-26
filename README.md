@@ -25,8 +25,8 @@ Main features:
 - Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses. Expenses can now be edited and the previous journal is reversed automatically.
-- Store detail pages capture Shopee `code` and `shop_id` parameters after authorization.
-  The page is accessible via `/stores/:id` and pre-fills values from the callback URL.
+- Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.
+  The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations

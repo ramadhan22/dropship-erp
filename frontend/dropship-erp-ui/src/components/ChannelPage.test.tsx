@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api";
 import ChannelPage from "./ChannelPage";
@@ -45,4 +46,27 @@ it("creates channel and store", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: /^Save$/i }));
   await waitFor(() => expect(api.createStore).toHaveBeenCalledWith(1, "ShopA"));
+});
+
+it("shows detail link", async () => {
+  (api.listJenisChannels as jest.Mock).mockResolvedValue({ data: [] });
+  (api.listAllStoresDirect as jest.Mock).mockResolvedValue({
+    data: [
+      {
+        store_id: 1,
+        jenis_channel_id: 2,
+        nama_toko: "Shop",
+        jenis_channel: "Tokopedia",
+      },
+    ],
+  });
+  (api.fetchShopeeAuthURL as jest.Mock).mockResolvedValue({ data: { url: "u" } });
+  render(
+    <MemoryRouter>
+      <ChannelPage />
+    </MemoryRouter>,
+  );
+  await waitFor(() => expect(api.listAllStoresDirect).toHaveBeenCalled());
+  const link = screen.getByRole("link", { name: /Detail/i });
+  expect(link).toHaveAttribute("href", "/stores/1");
 });
