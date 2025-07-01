@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // DropshipServiceInterface defines only the method the handler needs.
@@ -18,6 +19,7 @@ type DropshipServiceInterface interface {
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
+	DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error)
 }
 
 type DropshipHandler struct {
@@ -119,6 +121,20 @@ func (h *DropshipHandler) HandleTopProducts(c *gin.Context) {
 		limit = 5
 	}
 	res, err := h.svc.TopProducts(context.Background(), channel, store, from, to, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// HandleDailyTotals returns daily aggregated purchase totals and counts.
+func (h *DropshipHandler) HandleDailyTotals(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	from := c.Query("from")
+	to := c.Query("to")
+	res, err := h.svc.DailyTotals(c.Request.Context(), channel, store, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
