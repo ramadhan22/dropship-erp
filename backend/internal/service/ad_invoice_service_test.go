@@ -3,6 +3,7 @@ package service
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -140,9 +141,12 @@ func TestAdInvoiceAmountPositive(t *testing.T) {
 	if _, err := exec.LookPath("pdftotext"); err != nil {
 		t.Skip("pdftotext not installed")
 	}
-	files := []string{
-		"../../../sample_data/SPEI092025053100172422 (1).pdf",
-		"../../../sample_data/SPEI092024073100117166.pdf",
+	files, err := filepath.Glob("../../../sample_data/SPE*.pdf")
+	if err != nil {
+		t.Fatalf("glob sample files: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no sample SPE pdf files found")
 	}
 	svc := NewAdInvoiceService(nil, nil, nil)
 	for _, fp := range files {
