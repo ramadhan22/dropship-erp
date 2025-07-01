@@ -11,9 +11,16 @@ import {
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
-import { createExpense, listExpenses, deleteExpense } from "../api/expenses";
+import {
+  createExpense,
+  listExpenses,
+  deleteExpense,
+  getExpense,
+  updateExpense,
+} from "../api/expenses";
+import { getJournalLinesBySource } from "../api/journal";
 import { listAccounts } from "../api";
-import type { Expense, Account } from "../types";
+import type { Expense, Account, JournalEntryWithLines } from "../types";
 import usePagination from "../usePagination";
 
 export default function ExpensePage() {
@@ -28,6 +35,10 @@ export default function ExpensePage() {
   const assetAccounts = accounts.filter((a) => a.account_type === "Asset");
   const expenseAccounts = accounts.filter((a) => a.account_type === "Expense");
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailExpense, setDetailExpense] = useState<Expense | null>(null);
+  const [journal, setJournal] = useState<JournalEntryWithLines[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -40,21 +51,34 @@ export default function ExpensePage() {
     listAccounts().then((r) => setAccounts(r.data));
   }, []);
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     try {
-      await createExpense({
-        description: desc,
-        asset_account_id: Number(asset),
-        lines: lines.map((l) => ({
-          account_id: Number(l.account),
-          amount: Number(l.amount),
-        })),
-        date: new Date().toISOString(),
-      });
+      if (editing) {
+        await updateExpense(editing.id, {
+          description: desc,
+          asset_account_id: Number(asset),
+          lines: lines.map((l) => ({
+            account_id: Number(l.account),
+            amount: Number(l.amount),
+          })),
+          date: editing.date,
+        });
+      } else {
+        await createExpense({
+          description: desc,
+          asset_account_id: Number(asset),
+          lines: lines.map((l) => ({
+            account_id: Number(l.account),
+            amount: Number(l.amount),
+          })),
+          date: new Date().toISOString(),
+        });
+      }
       setDesc("");
       setAsset("");
       setLines([{ account: "", amount: "" }]);
       setOpen(false);
+      setEditing(null);
       fetchData();
       setMsg({ type: "success", text: "saved" });
     } catch (e: any) {
@@ -63,6 +87,11 @@ export default function ExpensePage() {
   };
 
   const columns: Column<Expense>[] = [
+    {
+      label: "Date",
+      key: "date",
+      render: (v) => new Date(v).toLocaleDateString(),
+    },
     { label: "Description", key: "description" },
     {
       label: "Amount",
@@ -76,21 +105,42 @@ export default function ExpensePage() {
     },
     { label: "Asset", key: "asset_account_id" },
     {
-      label: "Lines",
-      render: (_, e) =>
-        e.lines.map((l) => `${l.account_id}:${l.amount}`).join(", "),
-    },
-    {
       label: "",
       render: (_, e) => (
-        <Button
-          size="small"
-          onClick={() => {
-            deleteExpense(e.id).then(fetchData);
-          }}
-        >
-          Del
-        </Button>
+        <>
+          <Button
+            size="small"
+            onClick={() => {
+              setEditing(e);
+              setDesc(e.description);
+              setAsset(String(e.asset_account_id));
+              setLines(e.lines.map((l) => ({ account: String(l.account_id), amount: String(l.amount) })));
+              setOpen(true);
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              setDetailExpense(e);
+              getJournalLinesBySource(e.id).then((r) => {
+                setJournal(r.data);
+                setDetailOpen(true);
+              });
+            }}
+          >
+            Detail
+          </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              deleteExpense(e.id).then(fetchData);
+            }}
+          >
+            Del
+          </Button>
+        </>
       ),
     },
   ];
@@ -98,14 +148,34 @@ export default function ExpensePage() {
   return (
     <div>
       <h2>Expenses</h2>
-      <Button variant="contained" onClick={() => setOpen(true)} sx={{ mb: 2 }}>
+      <Button
+        variant="contained"
+        onClick={() => {
+          setEditing(null);
+          setDesc("");
+          setAsset("");
+          setLines([{ account: "", amount: "" }]);
+          setOpen(true);
+        }}
+        sx={{ mb: 2 }}
+      >
         Add Expense
       </Button>
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
-      <SortableTable columns={columns} data={paginated} />
+      <SortableTable
+        columns={columns}
+        data={paginated}
+        defaultSort={{ key: "date", direction: "desc" }}
+      />
       {controls}
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Add Expense</DialogTitle>
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setEditing(null);
+        }}
+      >
+        <DialogTitle>{editing ? "Edit Expense" : "Add Expense"}</DialogTitle>
         <DialogContent
           sx={{ display: "flex", flexDirection: "column", gap: 1 }}
         >
@@ -167,10 +237,45 @@ export default function ExpensePage() {
           </Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate}>
+          <Button
+            onClick={() => {
+              setOpen(false);
+              setEditing(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSave}>
             Save
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+        <DialogTitle>Expense Detail</DialogTitle>
+        <DialogContent>
+          {detailExpense && (
+            <div style={{ marginBottom: "0.5rem" }}>
+              <div>Description: {detailExpense.description}</div>
+              <div>Amount: {detailExpense.amount}</div>
+            </div>
+          )}
+          {journal.map((j) => (
+            <div key={j.entry.journal_id} style={{ marginBottom: "0.5rem" }}>
+              <div>
+                <strong>Journal {j.entry.journal_id}</strong> - {new Date(j.entry.entry_date).toLocaleDateString()}
+              </div>
+              <ul>
+                {j.lines.map((l) => (
+                  <li key={l.line_id}>
+                    {l.account_name} - {l.is_debit ? "D" : "C"} {l.amount}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </div>

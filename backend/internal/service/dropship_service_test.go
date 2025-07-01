@@ -116,7 +116,7 @@ func TestImportFromCSV_Success(t *testing.T) {
 	svc := NewDropshipService(nil, fake, jfake)
 
 	ctx := context.Background()
-	count, err := svc.ImportFromCSV(ctx, &buf)
+	count, err := svc.ImportFromCSV(ctx, &buf, "")
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 
 	fake := &fakeDropshipRepo{}
 	svc := NewDropshipService(nil, fake, nil)
-	count, err := svc.ImportFromCSV(context.Background(), &buf)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
@@ -174,7 +174,7 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
 	svc := NewDropshipService(nil, fake, nil)
-	count, err := svc.ImportFromCSV(context.Background(), &buf)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
 	jfake := &fakeJournalRepoDrop{}
 	svc := NewDropshipService(nil, fake, jfake)
 
-	count, err := svc.ImportFromCSV(context.Background(), &buf)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -226,5 +226,29 @@ func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
 	}
 	if sales != 51.5 {
 		t.Errorf("expected sales 51.5, got %.2f", sales)
+	}
+}
+
+func TestImportFromCSV_ChannelFilter(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-1234", "TRX1", "SKU1", "ProdukA", "15.75", "1", "15.75", "1", "0.5", "17.25", "15.75", "15.75", "1.0", "user", "Shopee", "Shop1", "INV", "Gudang", "JNE", "Ya", "RESI", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row)
+	w.Flush()
+
+	fake := &fakeDropshipRepo{}
+	svc := NewDropshipService(nil, fake, nil)
+
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "Tokopedia")
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected count 0, got %d", count)
+	}
+	if len(fake.insertedHeader) != 0 {
+		t.Errorf("expected no inserts, got %d", len(fake.insertedHeader))
 	}
 }

@@ -78,3 +78,86 @@ func (s *ExpenseService) ListExpenses(ctx context.Context, accountID int64, sort
 func (s *ExpenseService) DeleteExpense(ctx context.Context, id string) error {
 	return s.expenseRepo.Delete(ctx, id)
 }
+
+func (s *ExpenseService) GetExpense(ctx context.Context, id string) (*models.Expense, error) {
+	return s.expenseRepo.GetByID(ctx, id)
+}
+
+func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) error {
+	var tx *sqlx.Tx
+	expRepo := s.expenseRepo
+	jRepo := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		expRepo = repository.NewExpenseRepo(tx)
+		jRepo = repository.NewJournalRepo(tx)
+	}
+
+	oldEntry, err := jRepo.GetJournalEntryBySource(ctx, "expense", e.ID)
+	if err == nil && oldEntry != nil {
+		lines, _ := jRepo.GetLinesByJournalID(ctx, oldEntry.JournalID)
+		rev := &models.JournalEntry{
+			EntryDate:    time.Now(),
+			Description:  expPtrString("Reverse " + e.Description),
+			SourceType:   "expense_reverse",
+			SourceID:     e.ID + "-rev-" + time.Now().Format("20060102150405"),
+			ShopUsername: "",
+			Store:        "",
+			CreatedAt:    time.Now(),
+		}
+		jid, err := jRepo.CreateJournalEntry(ctx, rev)
+		if err != nil {
+			return err
+		}
+		for _, l := range lines {
+			rl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: !l.IsDebit, Amount: l.Amount, Memo: rev.Description}
+			if err := jRepo.InsertJournalLine(ctx, rl); err != nil {
+				return err
+			}
+		}
+	}
+
+	var total float64
+	for _, l := range e.Lines {
+		total += l.Amount
+	}
+	e.Amount = total
+	if err := expRepo.Update(ctx, e); err != nil {
+		return err
+	}
+	je := &models.JournalEntry{
+		EntryDate:    e.Date,
+		Description:  &e.Description,
+		SourceType:   "expense",
+		SourceID:     e.ID,
+		ShopUsername: "",
+		Store:        "",
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jRepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	for i := range e.Lines {
+		l := e.Lines[i]
+		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
+		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
+			return err
+		}
+	}
+	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
+	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
+		return err
+	}
+	if tx != nil {
+		return tx.Commit()
+	}
+	return nil
+}
+
+func expPtrString(s string) *string { return &s }

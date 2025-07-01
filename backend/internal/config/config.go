@@ -2,9 +2,14 @@
 package config
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -36,12 +41,14 @@ type JWTConfig struct {
 
 // ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
 type ShopeeAPIConfig struct {
-	PartnerID    string `mapstructure:"partner_id"`
-	PartnerKey   string `mapstructure:"partner_key"`
-	ShopID       string `mapstructure:"shop_id"`
-	AccessToken  string `mapstructure:"access_token"`
-	RefreshToken string `mapstructure:"refresh_token"`
-	BaseURL      string `mapstructure:"base_url"`
+	PartnerID     string `mapstructure:"partner_id"`
+	PartnerKey    string `mapstructure:"partner_key"`
+	ShopID        string `mapstructure:"shop_id"`
+	AccessToken   string `mapstructure:"access_token"`
+	RefreshToken  string `mapstructure:"refresh_token"`
+	BaseURL       string `mapstructure:"base_url"`
+	BaseURLShopee string `mapstructure:"base_url_shopee"`
+	AuthURL       string `mapstructure:"auth_url"`
 }
 
 // LoadConfig reads configuration from config.yaml and environment variables.
@@ -98,4 +105,24 @@ func MustLoadConfig() *Config {
 		os.Exit(1)
 	}
 	return cfg
+}
+
+// ShopeeAuthURL builds the authorization link for a store.
+func (c *Config) ShopeeAuthURL(storeID int64) string {
+	base := c.Shopee.BaseURLShopee
+	if base == "" {
+		base = c.Shopee.AuthURL
+	}
+	if base == "" {
+		base = "https://partner.test-stable.shopeemobile.com"
+	}
+	path := "/api/v2/shop/auth_partner"
+	ts := time.Now().Unix()
+	msg := fmt.Sprintf("%s%s%d", c.Shopee.PartnerID, path, ts)
+	h := hmac.New(sha256.New, []byte(c.Shopee.PartnerKey))
+	h.Write([]byte(msg))
+	sign := hex.EncodeToString(h.Sum(nil))
+	redirect := fmt.Sprintf("%s/stores/%d", strings.TrimSuffix(c.Server.CorsOrigins[0], "/"), storeID)
+	return fmt.Sprintf("%s%s?partner_id=%s&timestamp=%d&sign=%s&redirect=%s",
+		base, path, c.Shopee.PartnerID, ts, sign, url.QueryEscape(redirect))
 }

@@ -5,6 +5,7 @@ import type {
   Metric,
   JenisChannel,
   Store,
+  StoreWithChannel,
   DropshipPurchase,
   DropshipPurchaseDetail,
   Account,
@@ -60,9 +61,12 @@ api.interceptors.response.use(
 );
 
 // Dropship import
-export function importDropship(file: File) {
+export function importDropship(file: File, channel?: string) {
   const data = new FormData();
   data.append("file", file);
+  if (channel) {
+    data.append("channel", channel);
+  }
   return api.post<ImportResponse>("/dropship/import", data, {
     headers: { "Content-Type": "multipart/form-data" },
   });
@@ -88,6 +92,14 @@ export function importShopeeAffiliate(files: File[]) {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+export const confirmShopeeSettle = (orderSN: string) =>
+  api.post<{ success: boolean }>(`/shopee/settle/${orderSN}`);
+
+export const getShopeeSettleDetail = (orderSN: string) =>
+  api.get<{ data: ShopeeSettled; dropship_total: number }>(
+    `/shopee/settled/${orderSN}`,
+  );
 
 // Reconcile
 export function reconcile(purchaseId: string, orderId: string, shop: string) {
@@ -127,6 +139,18 @@ export function createStore(jenisChannelId: number, namaToko: string) {
   });
 }
 
+export function updateStore(id: number, data: Partial<Store>) {
+  return api.put(`/stores/${id}`, data);
+}
+
+export function deleteStore(id: number) {
+  return api.delete(`/stores/${id}`);
+}
+
+export function fetchShopeeAuthURL(storeId: number) {
+  return api.get<{ url: string }>(`/config/shopee-auth-url?store_id=${storeId}`);
+}
+
 export function listJenisChannels() {
   return api.get<JenisChannel[]>("/jenis-channels");
 }
@@ -138,6 +162,14 @@ export function listStores(channelId: number) {
 export function listStoresByChannelName(channel: string) {
   const q = new URLSearchParams({ channel });
   return api.get<Store[]>(`/stores?${q.toString()}`);
+}
+
+export function listAllStoresDirect() {
+  return api.get<StoreWithChannel[]>("/stores/all");
+}
+
+export function getStore(id: number) {
+  return api.get<Store>(`/stores/${id}`);
 }
 
 // Fetch stores across all channels by first listing channels then querying each
@@ -345,10 +377,8 @@ export function getDropshipPurchaseDetails(id: string) {
   return api.get<DropshipPurchaseDetail[]>(`/dropship/purchases/${id}/details`);
 }
 
-
 export const withdrawShopeeBalance = (store: string, amount: number) =>
   api.post("/withdraw", { store, amount });
 
 export const fetchPendingBalance = (store: string) =>
   api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
-

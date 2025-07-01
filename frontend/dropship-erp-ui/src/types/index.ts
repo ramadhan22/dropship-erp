@@ -38,6 +38,12 @@ export interface Store {
   store_id: number;
   jenis_channel_id: number;
   nama_toko: string;
+  code_id: string | null;
+  shop_id: string | null;
+}
+
+export interface StoreWithChannel extends Store {
+  jenis_channel: string;
 }
 
 export interface ShopeeSettled {
@@ -78,6 +84,8 @@ export interface ShopeeSettled {
   pro_rata_voucher_shopee_untuk_pengembalian_barang: number;
   pro_rated_bank_payment_channel_promotion_for_returns: number;
   pro_rated_shopee_payment_channel_promotion_for_returns: number;
+  is_data_mismatch: boolean;
+  is_settled_confirmed: boolean;
 }
 
 export interface ShopeeSettledSummary {
@@ -258,6 +266,7 @@ export interface SalesProfit {
   biaya_layanan: number;
   biaya_voucher: number;
   biaya_affiliate: number;
+  discount: number;
   profit: number;
   profit_percent: number;
 }

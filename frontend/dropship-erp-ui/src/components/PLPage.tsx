@@ -24,6 +24,8 @@ interface PLRow {
   amount: number;
   percent?: number;
   manual?: boolean;
+  indent?: number;
+  group?: boolean;
 }
 
 interface ProfitLoss {
@@ -34,6 +36,8 @@ interface ProfitLoss {
   labaKotor: { amount: number; percent: number };
   bebanOperasional: PLRow[];
   totalBebanOperasional: number;
+  bebanPemasaran: PLRow[];
+  totalBebanPemasaran: number;
   bebanAdministrasi: PLRow[];
   totalBebanAdministrasi: number;
   totalBebanUsaha: { amount: number; percent: number };
@@ -68,10 +72,10 @@ function renderRows(
   if (!rows) return null;
   return rows.map((r) => (
     <TableRow key={r.label} sx={r.manual ? { bgcolor: "#fdecea" } : undefined}>
-      <TableCell sx={{ pl: 4 * indent }}>{r.label}</TableCell>
-      <TableCell align="right">{fmt.format(r.amount)}</TableCell>
+      <TableCell sx={{ pl: 4 * (indent + (r.indent ?? 0)) }}>{r.label}</TableCell>
+      <TableCell align="right">{r.group ? "" : fmt.format(r.amount)}</TableCell>
       <TableCell align="right">
-        {r.percent != null ? fmt.format(r.percent) : ""}
+        {r.percent != null && !r.group ? fmt.format(r.percent) : ""}
       </TableCell>
     </TableRow>
   ));
@@ -276,6 +280,19 @@ export default function PLPage() {
               <TableCell sx={{ fontWeight: "bold" }}>Jumlah Beban Operasional</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
                 {numFmt.format(data.totalBebanOperasional)}
+              </TableCell>
+              <TableCell />
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={3} sx={{ bgcolor: "#eee", fontWeight: "bold", pl: 4 }}>
+                Beban Pemasaran
+              </TableCell>
+            </TableRow>
+            {renderRows(data.bebanPemasaran, numFmt, 2)}
+            <TableRow>
+              <TableCell sx={{ fontWeight: "bold" }}>Jumlah Beban Operasional</TableCell>
+              <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                {numFmt.format(data.totalBebanPemasaran)}
               </TableCell>
               <TableCell />
             </TableRow>

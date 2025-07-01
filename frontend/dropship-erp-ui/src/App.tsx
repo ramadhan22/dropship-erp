@@ -1,4 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import BreadcrumbsNav from "./components/BreadcrumbsNav";
 import BalanceSheetPage from "./components/BalanceSheetPage";
 import ChannelPage from "./components/ChannelPage";
 import DropshipImport from "./components/DropshipImport";
@@ -17,6 +18,7 @@ import SalesSummaryPage from "./components/SalesSummaryPage";
 import SalesProfitPage from "./components/SalesProfitPage";
 import KasAccountPage from "./components/KasAccountPage";
 import PendingBalancePage from "./components/PendingBalancePage";
+import StoreDetailPage from "./components/StoreDetailPage";
 
 export default function App() {
   return (
@@ -38,6 +40,7 @@ export default function App() {
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
+        <BreadcrumbsNav />
         <Routes>
           <Route path="/" element={<SalesSummaryPage />} />
           <Route path="/dropship" element={<DropshipImport />} />
@@ -56,6 +59,7 @@ export default function App() {
           <Route path="/ads" element={<AdInvoicePage />} />
           <Route path="/journal" element={<JournalPage />} />
           <Route path="/kas" element={<KasAccountPage />} />
+          <Route path="/stores/:id" element={<StoreDetailPage />} />
           <Route path="/pending-balance" element={<PendingBalancePage />} />
         </Routes>
       </div>

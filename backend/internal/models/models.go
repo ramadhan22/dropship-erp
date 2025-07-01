@@ -106,6 +106,8 @@ type ShopeeSettled struct {
 	ProRataVoucherShopeeUntukPengembalianBarang      float64   `db:"pro_rata_voucher_shopee_untuk_pengembalian_barang" json:"pro_rata_voucher_shopee_untuk_pengembalian_barang"`
 	ProRatedBankPaymentChannelPromotionForReturns    float64   `db:"pro_rated_bank_payment_channel_promotion_for_returns" json:"pro_rated_bank_payment_channel_promotion_for_returns"`
 	ProRatedShopeePaymentChannelPromotionForReturns  float64   `db:"pro_rated_shopee_payment_channel_promotion_for_returns" json:"pro_rated_shopee_payment_channel_promotion_for_returns"`
+	IsDataMismatch                                   bool      `db:"is_data_mismatch" json:"is_data_mismatch"`
+	IsSettledConfirmed                               bool      `db:"is_settled_confirmed" json:"is_settled_confirmed"`
 }
 
 // JournalEntry represents the D7 header table: journal_entries
@@ -172,9 +174,17 @@ type JenisChannel struct {
 
 // Store represents a store/shop under a jenis channel.
 type Store struct {
-	StoreID        int64  `db:"store_id" json:"store_id"`
-	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`
-	NamaToko       string `db:"nama_toko" json:"nama_toko"`
+	StoreID        int64   `db:"store_id" json:"store_id"`
+	JenisChannelID int64   `db:"jenis_channel_id" json:"jenis_channel_id"`
+	NamaToko       string  `db:"nama_toko" json:"nama_toko"`
+	CodeID         *string `db:"code_id" json:"code_id"`
+	ShopID         *string `db:"shop_id" json:"shop_id"`
+}
+
+// StoreWithChannel joins a store with its channel name.
+type StoreWithChannel struct {
+	Store
+	JenisChannel string `db:"jenis_channel" json:"jenis_channel"`
 }
 
 // ProductSales represents aggregated sales for a product.
@@ -256,6 +266,7 @@ type SalesProfit struct {
 	BiayaLayanan      float64   `db:"biaya_layanan" json:"biaya_layanan"`
 	BiayaVoucher      float64   `db:"biaya_voucher" json:"biaya_voucher"`
 	BiayaAffiliate    float64   `db:"biaya_affiliate" json:"biaya_affiliate"`
-        Profit            float64   `db:"profit" json:"profit"`
-        ProfitPercent     float64   `db:"profit_percent" json:"profit_percent"`
+	Discount          float64   `db:"discount" json:"discount"`
+	Profit            float64   `db:"profit" json:"profit"`
+	ProfitPercent     float64   `db:"profit_percent" json:"profit_percent"`
 }

@@ -12,3 +12,11 @@ export function listExpenses(params?: Record<string, any>) {
 export function deleteExpense(id: string) {
   return api.delete(`/expenses/${id}`);
 }
+
+export function getExpense(id: string) {
+  return api.get<Expense>(`/expenses/${id}`);
+}
+
+export function updateExpense(id: string, exp: Partial<Expense>) {
+  return api.put(`/expenses/${id}`, exp);
+}

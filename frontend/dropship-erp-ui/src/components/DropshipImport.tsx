@@ -41,6 +41,7 @@ export default function DropshipImport() {
     text: string;
   } | null>(null);
   const [open, setOpen] = useState(false);
+  const [importChannel, setImportChannel] = useState("");
   const [searchParams] = useSearchParams();
 
   const [channel, setChannel] = useState("");
@@ -196,7 +197,10 @@ export default function DropshipImport() {
       if (!files || files.length === 0) return;
       let inserted = 0;
       for (const f of Array.from(files)) {
-        const res = await importDropship(f);
+        const res = await importDropship(
+          f,
+          importChannel || undefined,
+        );
         inserted += res.data.inserted;
       }
       setMsg({
@@ -333,29 +337,57 @@ export default function DropshipImport() {
             </div>
           )}
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>SKU</TableCell>
-                <TableCell>Nama Produk</TableCell>
-                <TableCell>Qty</TableCell>
-                <TableCell>Harga</TableCell>
+          <TableHead>
+            <TableRow>
+              <TableCell>SKU</TableCell>
+              <TableCell>Nama Produk</TableCell>
+              <TableCell>Qty</TableCell>
+              <TableCell>Harga</TableCell>
+              <TableCell>Harga Channel</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {details.map((dt) => (
+              <TableRow key={dt.id}>
+                <TableCell>{dt.sku}</TableCell>
+                <TableCell>{dt.nama_produk}</TableCell>
+                <TableCell>{dt.qty}</TableCell>
+                <TableCell>
+                  {dt.total_harga_produk.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+                </TableCell>
+                <TableCell>
+                  {dt.total_harga_produk_channel.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {details.map((dt) => (
-                <TableRow key={dt.id}>
-                  <TableCell>{dt.sku}</TableCell>
-                  <TableCell>{dt.nama_produk}</TableCell>
-                  <TableCell>{dt.qty}</TableCell>
-                  <TableCell>
-                    {dt.total_harga_produk.toLocaleString("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+            ))}
+            <TableRow>
+              <TableCell colSpan={3} sx={{ textAlign: "right", fontWeight: "bold" }}>
+                Total
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                {details
+                  .reduce((acc, cur) => acc + cur.total_harga_produk, 0)
+                  .toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+              </TableCell>
+              <TableCell sx={{ fontWeight: "bold" }}>
+                {details
+                  .reduce((acc, cur) => acc + cur.total_harga_produk_channel, 0)
+                  .toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+              </TableCell>
+            </TableRow>
+          </TableBody>
           </Table>
         </DialogContent>
         <DialogActions>
@@ -394,6 +426,17 @@ export default function DropshipImport() {
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Import Dropship CSV</DialogTitle>
         <DialogContent>
+          <select
+            aria-label="Import Channel"
+            value={importChannel}
+            onChange={(e) => setImportChannel(e.target.value)}
+            style={{ display: "block", marginBottom: "0.5rem" }}
+          >
+            <option value="">All</option>
+            <option value="Shopee">Shopee</option>
+            <option value="Tokopedia">Tokopedia</option>
+            <option value="Tiktok Seller Center">Tiktok Seller Center</option>
+          </select>
           <input
             type="file"
             multiple

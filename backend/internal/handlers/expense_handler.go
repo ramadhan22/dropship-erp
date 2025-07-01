@@ -18,6 +18,8 @@ func (h *ExpenseHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/expenses")
 	grp.POST("/", h.create)
 	grp.GET("/", h.list)
+	grp.GET("/:id", h.get)
+	grp.PUT("/:id", h.update)
 	grp.DELETE("/:id", h.delete)
 }
 
@@ -67,6 +69,35 @@ func (h *ExpenseHandler) list(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": ex, "total": total})
+}
+
+func (h *ExpenseHandler) get(c *gin.Context) {
+	id := c.Param("id")
+	ex, err := h.svc.GetExpense(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if ex == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	c.JSON(http.StatusOK, ex)
+}
+
+func (h *ExpenseHandler) update(c *gin.Context) {
+	id := c.Param("id")
+	var e models.Expense
+	if err := c.ShouldBindJSON(&e); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	e.ID = id
+	if err := h.svc.UpdateExpense(context.Background(), &e); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
 func (h *ExpenseHandler) delete(c *gin.Context) {

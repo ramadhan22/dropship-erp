@@ -20,11 +20,11 @@ type fakeShopeeService struct {
 	err bool
 }
 
-func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, error) {
+func (f *fakeShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader) (int, []string, error) {
 	if f.err {
-		return 0, errors.New("fail import")
+		return 0, nil, errors.New("fail import")
 	}
-	return 1, nil
+	return 1, []string{"SN1"}, nil
 }
 
 func (f *fakeShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader) (int, error) {
@@ -32,6 +32,13 @@ func (f *fakeShopeeService) ImportAffiliateCSV(ctx context.Context, r io.Reader)
 		return 0, errors.New("fail import")
 	}
 	return 1, nil
+}
+
+func (f *fakeShopeeService) ConfirmSettle(ctx context.Context, orderSN string) error {
+	if f.err {
+		return errors.New("fail confirm")
+	}
+	return nil
 }
 
 func (f *fakeShopeeService) ListSettled(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.ShopeeSettled, int, error) {
@@ -52,6 +59,10 @@ func (f *fakeShopeeService) SumAffiliate(ctx context.Context, date, month, year 
 
 func (f *fakeShopeeService) ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error) {
 	return nil, 0, nil
+}
+
+func (f *fakeShopeeService) GetSettleDetail(ctx context.Context, orderSN string) (*models.ShopeeSettled, float64, error) {
+	return &models.ShopeeSettled{NoPesanan: orderSN}, 0, nil
 }
 
 func TestShopeeHandleImport_Success(t *testing.T) {

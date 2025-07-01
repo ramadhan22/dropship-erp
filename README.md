@@ -16,14 +16,17 @@ The backend lives under [`backend`](backend) and exposes a REST API using [Gin](
 
 Main features:
 
-- Import dropship purchases from CSV files.
+- Import dropship purchases from CSV files with optional channel filter.
 - Import settled Shopee orders from XLSX files.
-- Import Shopee affiliate conversions from CSV.
+- Import Shopee affiliate conversions from CSV. Journal entries are recorded only when the row's `status_terverifikasi` is `Sah`.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.
+- Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
-- Manage channels, accounts and expenses.
+- Manage channels, accounts and expenses. Expenses can now be edited and the previous journal is reversed automatically.
+- Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.
+  The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations
@@ -34,9 +37,10 @@ Shopee API calls require credentials including a long-lived `refresh_token`.
 request using this value.
 Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
 `SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
-signing API calls.
-As of this version, `ShopeeClient` no longer loads configuration inside
-`RefreshAccessToken`; all required values are taken from the struct fields
+signing API calls. `base_url_shopee` in `config.yaml` defines the Partner API
+host used when generating authorization links. As of this version, `ShopeeClient`
+no longer loads configuration inside `RefreshAccessToken`; all required values
+are taken from the struct fields
 initialized in `NewShopeeClient`.
 
 To start the backend:
@@ -96,8 +100,10 @@ models or pages should keep this list in sync.
 - **expenses** and **expense_lines** – editable via `ExpensePage`.
 - **ad_invoices** – imported from `AdInvoicePage`.
 - **asset_accounts** – only accounts under code `1.1.1` appear on `KasAccountPage`.
-- **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
-  across filters.
+ - **jenis_channels** and **stores** – maintained on `ChannelPage` and referenced
+   across filters. `stores` now include optional `code_id` and `shop_id` for
+   Shopee API authorization. `StoreDetailPage` allows saving these values from
+   the OAuth callback.
 
 ### Service ↔ Table Mapping
 Services in the backend interact with particular tables. Updating services or

@@ -57,6 +57,10 @@ features or debugging issues.
 - **ShopeeService** – imports `shopee_settled_orders`, `shopee_settled` and
   `shopee_affiliate_sales`; updates dropship statuses and writes journal
   entries/lines.
+  When reconciling settled orders, compare
+  `shopee_settled.harga_asli_produk` with the sum of
+  `dropship_purchase_details.total_harga_produk_channel` for the matching
+  invoice.
 - **ReconcileService** – records `reconciled_transactions` and creates matching
   journal entries and lines.
 - **ExpenseService** – stores `expenses` and `expense_lines` while journaling the

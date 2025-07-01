@@ -15,6 +15,8 @@ type ProfitLossRow struct {
 	Amount  float64 `json:"amount"`
 	Percent float64 `json:"percent,omitempty"`
 	Manual  bool    `json:"manual,omitempty"`
+	Indent  int     `json:"indent,omitempty"`
+	Group   bool    `json:"group,omitempty"`
 }
 
 // ProfitLoss aggregates profit and loss data for a period.
@@ -26,6 +28,8 @@ type ProfitLoss struct {
 	LabaKotor                ProfitLossRow   `json:"labaKotor"`
 	BebanOperasional         []ProfitLossRow `json:"bebanOperasional"`
 	TotalBebanOperasional    float64         `json:"totalBebanOperasional"`
+	BebanPemasaran           []ProfitLossRow `json:"bebanPemasaran"`
+	TotalBebanPemasaran      float64         `json:"totalBebanPemasaran"`
 	BebanAdministrasi        []ProfitLossRow `json:"bebanAdministrasi"`
 	TotalBebanAdministrasi   float64         `json:"totalBebanAdministrasi"`
 	TotalBebanUsaha          ProfitLossRow   `json:"totalBebanUsaha"`
@@ -75,8 +79,10 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		return nil, err
 	}
 
-	var revRows, hppRows, opRows, adminRows, taxRows []ProfitLossRow
-	var totalRev, totalHPP, totalOp, totalAdmin, totalTax float64
+	var revRows, hppRows, opRows []ProfitLossRow
+	var adminRows, taxRows []ProfitLossRow
+	var marketingRows []ProfitLossRow
+	var totalRev, totalHPP, totalOp, totalMarketing, totalAdmin, totalTax float64
 
 	for _, ab := range balances {
 		code := ab.AccountCode
@@ -88,6 +94,11 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		case strings.HasPrefix(code, "5.1"):
 			hppRows = append(hppRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalHPP += ab.Balance
+		case code == "5.5":
+			// skip parent marketing account balance
+		case strings.HasPrefix(code, "5.5."):
+			marketingRows = append(marketingRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance, Indent: 1})
+			totalMarketing += ab.Balance
 		case strings.HasPrefix(code, "5.2"):
 			opRows = append(opRows, ProfitLossRow{Label: ab.AccountName, Amount: ab.Balance})
 			totalOp += ab.Balance
@@ -101,8 +112,8 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 	}
 
 	labaKotor := totalRev - totalHPP
-	totalBebanUsahaAmt := totalOp + totalAdmin
-	labaSebelumPajak := totalRev - totalHPP - totalOp - totalAdmin
+	totalBebanUsahaAmt := totalOp + totalMarketing + totalAdmin
+	labaSebelumPajak := totalRev - totalHPP - totalOp - totalMarketing - totalAdmin
 	labaBersih := labaSebelumPajak - totalTax
 
 	res := &ProfitLoss{
@@ -113,6 +124,8 @@ func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string,
 		LabaKotor:                ProfitLossRow{Amount: labaKotor, Percent: pct(labaKotor, totalRev)},
 		BebanOperasional:         opRows,
 		TotalBebanOperasional:    totalOp,
+		BebanPemasaran:           marketingRows,
+		TotalBebanPemasaran:      totalMarketing,
 		BebanAdministrasi:        adminRows,
 		TotalBebanAdministrasi:   totalAdmin,
 		TotalBebanUsaha:          ProfitLossRow{Amount: totalBebanUsahaAmt, Percent: pct(totalBebanUsahaAmt, totalRev)},

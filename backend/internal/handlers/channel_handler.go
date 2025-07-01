@@ -16,6 +16,10 @@ type ChannelServiceInterface interface {
 	ListJenisChannels(ctx context.Context) ([]models.JenisChannel, error)
 	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
 	ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
+	GetStore(ctx context.Context, id int64) (*models.Store, error)
+	ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error)
+	UpdateStore(ctx context.Context, st *models.Store) error
+	DeleteStore(ctx context.Context, id int64) error
 }
 
 type ChannelHandler struct {
@@ -96,4 +100,77 @@ func (h *ChannelHandler) HandleListStoresByName(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// HandleGetStore returns a single store by ID.
+func (h *ChannelHandler) HandleGetStore(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid store id"})
+		return
+	}
+	st, err := h.svc.GetStore(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, st)
+}
+
+// HandleListAllStores returns all stores joined with channel names.
+func (h *ChannelHandler) HandleListAllStores(c *gin.Context) {
+	list, err := h.svc.ListAllStores(context.Background())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
+// HandleUpdateStore updates a store row.
+func (h *ChannelHandler) HandleUpdateStore(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid store id"})
+		return
+	}
+	var req struct {
+		JenisChannelID int64   `json:"jenis_channel_id"`
+		NamaToko       string  `json:"nama_toko"`
+		CodeID         *string `json:"code_id"`
+		ShopID         *string `json:"shop_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	st := &models.Store{
+		StoreID:        id,
+		JenisChannelID: req.JenisChannelID,
+		NamaToko:       req.NamaToko,
+		CodeID:         req.CodeID,
+		ShopID:         req.ShopID,
+	}
+	if err := h.svc.UpdateStore(context.Background(), st); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// HandleDeleteStore removes a store.
+func (h *ChannelHandler) HandleDeleteStore(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid store id"})
+		return
+	}
+	if err := h.svc.DeleteStore(context.Background(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

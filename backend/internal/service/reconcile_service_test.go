@@ -39,6 +39,20 @@ func (f *fakeDropRepoRec) UpdatePurchaseStatus(ctx context.Context, kode, status
 	return errors.New("not found")
 }
 
+func (f *fakeDropRepoRec) SumDetailByInvoice(ctx context.Context, inv string) (float64, error) {
+	if dp, ok := f.data[inv]; ok {
+		return dp.TotalTransaksi, nil
+	}
+	return 0, nil
+}
+
+func (f *fakeDropRepoRec) SumProductCostByInvoice(ctx context.Context, inv string) (float64, error) {
+	if dp, ok := f.data[inv]; ok {
+		return dp.TotalTransaksi, nil
+	}
+	return 0, nil
+}
+
 type fakeShopeeRepoRec struct {
 	data map[string]*models.ShopeeSettledOrder
 }

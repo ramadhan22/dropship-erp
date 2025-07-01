@@ -12,28 +12,30 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	// 1) Load configuration (from config.yaml and environment)
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Fatal error loading config: %v", err)
+		logutil.Fatalf("Fatal error loading config: %v", err)
 	}
 
 	// 2) Initialize repositories (Postgres DB connection)
 	repo, err := repository.NewPostgresRepository(cfg.Database.URL)
 	if err != nil {
-		log.Fatalf("DB connection failed: %v", err)
+		logutil.Fatalf("DB connection failed: %v", err)
 	}
 	if err := migrations.Run(repo.DB.DB); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
 			log.Printf("DB migrations: %v", err)
 		} else {
-			log.Fatalf("DB migrations failed: %v", err)
+			logutil.Fatalf("DB migrations failed: %v", err)
 		}
 	}
 
@@ -79,20 +81,28 @@ func main() {
 		apiGroup.GET("/dropship/purchases/summary", handlers.NewDropshipHandler(dropshipSvc).HandleSum)
 		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
 		apiGroup.GET("/dropship/top-products", handlers.NewDropshipHandler(dropshipSvc).HandleTopProducts)
-		apiGroup.POST("/shopee/import", handlers.NewShopeeHandler(shopeeSvc).HandleImport)
-		apiGroup.POST("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleImportAffiliate)
-		apiGroup.GET("/shopee/affiliate", handlers.NewShopeeHandler(shopeeSvc).HandleListAffiliate)
-		apiGroup.GET("/shopee/affiliate/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumAffiliate)
-		apiGroup.GET("/shopee/settled", handlers.NewShopeeHandler(shopeeSvc).HandleListSettled)
-		apiGroup.GET("/shopee/settled/summary", handlers.NewShopeeHandler(shopeeSvc).HandleSumSettled)
-		apiGroup.GET("/sales", handlers.NewShopeeHandler(shopeeSvc).HandleListSalesProfit)
+		shHandler := handlers.NewShopeeHandler(shopeeSvc)
+		apiGroup.POST("/shopee/import", shHandler.HandleImport)
+		apiGroup.POST("/shopee/affiliate", shHandler.HandleImportAffiliate)
+		apiGroup.POST("/shopee/settle/:order_sn", shHandler.HandleConfirmSettle)
+		apiGroup.GET("/shopee/affiliate", shHandler.HandleListAffiliate)
+		apiGroup.GET("/shopee/affiliate/summary", shHandler.HandleSumAffiliate)
+		apiGroup.GET("/shopee/settled", shHandler.HandleListSettled)
+		apiGroup.GET("/shopee/settled/:order_sn", shHandler.HandleGetSettleDetail)
+		apiGroup.GET("/shopee/settled/summary", shHandler.HandleSumSettled)
+		apiGroup.GET("/sales", shHandler.HandleListSalesProfit)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)
 		apiGroup.GET("/metrics", handlers.NewMetricHandler(metricSvc).HandleGetMetrics)
 		apiGroup.GET("/balancesheet", handlers.NewBalanceHandler(balanceSvc).HandleGetBalanceSheet)
 		apiGroup.POST("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleCreateJenisChannel)
 		apiGroup.POST("/stores", handlers.NewChannelHandler(channelSvc).HandleCreateStore)
-		apiGroup.GET("/stores", handlers.NewChannelHandler(channelSvc).HandleListStoresByName)
+		chH := handlers.NewChannelHandler(channelSvc)
+		apiGroup.GET("/stores", chH.HandleListStoresByName)
+		apiGroup.GET("/stores/all", chH.HandleListAllStores)
+		apiGroup.GET("/stores/:id", chH.HandleGetStore)
+		apiGroup.PUT("/stores/:id", chH.HandleUpdateStore)
+		apiGroup.DELETE("/stores/:id", chH.HandleDeleteStore)
 		apiGroup.GET("/jenis-channels", handlers.NewChannelHandler(channelSvc).HandleListJenisChannels)
 		apiGroup.GET("/jenis-channels/:id/stores", handlers.NewChannelHandler(channelSvc).HandleListStores)
 
@@ -119,12 +129,13 @@ func main() {
 		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
+		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
 	if err := router.Run(addr); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		logutil.Fatalf("Server failed: %v", err)
 	}
 }

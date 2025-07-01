@@ -74,7 +74,9 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             pro_rata_voucher_shopee_untuk_pengembalian_barang,
             pro_rated_bank_payment_channel_promotion_for_returns,
-            pro_rated_shopee_payment_channel_promotion_for_returns
+            pro_rated_shopee_payment_channel_promotion_for_returns,
+            is_data_mismatch,
+            is_settled_confirmed
         ) VALUES (
             :nama_toko, :no_pesanan, :no_pengajuan, :username_pembeli, :waktu_pesanan_dibuat,
             :metode_pembayaran_pembeli, :tanggal_dana_dilepaskan, :harga_asli_produk,
@@ -89,7 +91,9 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             :pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
             :pro_rata_voucher_shopee_untuk_pengembalian_barang,
             :pro_rated_bank_payment_channel_promotion_for_returns,
-            :pro_rated_shopee_payment_channel_promotion_for_returns
+            :pro_rated_shopee_payment_channel_promotion_for_returns,
+            :is_data_mismatch,
+            :is_settled_confirmed
         )`
 	_, err := r.db.NamedExecContext(ctx, query, s)
 	return err
@@ -101,6 +105,32 @@ func (r *ShopeeRepo) ExistsShopeeSettled(ctx context.Context, noPesanan string) 
 	err := r.db.GetContext(ctx, &exists,
 		"SELECT EXISTS(SELECT 1 FROM shopee_settled WHERE no_pesanan=$1)", noPesanan)
 	return exists, err
+}
+
+// MarkMismatch updates the is_data_mismatch flag for a given order number.
+func (r *ShopeeRepo) MarkMismatch(ctx context.Context, orderSN string, mismatch bool) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE shopee_settled SET is_data_mismatch=$2 WHERE no_pesanan=$1`,
+		orderSN, mismatch)
+	return err
+}
+
+// ConfirmSettle sets the is_settled_confirmed flag to true for the given order number.
+func (r *ShopeeRepo) ConfirmSettle(ctx context.Context, orderSN string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE shopee_settled SET is_settled_confirmed=TRUE WHERE no_pesanan=$1`,
+		orderSN)
+	return err
+}
+
+// GetBySN retrieves a single shopee_settled row by order number.
+func (r *ShopeeRepo) GetBySN(ctx context.Context, orderSN string) (*models.ShopeeSettled, error) {
+	var s models.ShopeeSettled
+	err := r.db.GetContext(ctx, &s, `SELECT * FROM shopee_settled WHERE no_pesanan=$1`, orderSN)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
 }
 
 // InsertShopeeAffiliateSale inserts a row into the shopee_affiliate_sales table.
@@ -140,11 +170,23 @@ func (r *ShopeeRepo) InsertShopeeAffiliateSale(ctx context.Context, s *models.Sh
 }
 
 // ExistsShopeeAffiliateSale checks if a row exists for the given order and product.
-func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode string) (bool, error) {
+// ExistsShopeeAffiliateSale checks if a row exists for the given order,
+// product and commission id.
+func (r *ShopeeRepo) ExistsShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) (bool, error) {
 	var exists bool
 	err := r.db.GetContext(ctx, &exists,
-		`SELECT EXISTS(SELECT 1 FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2)`, orderID, productCode)
+		`SELECT EXISTS(SELECT 1 FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2 AND id_komisi_pesanan=$3)`,
+		orderID, productCode, komisiID)
 	return exists, err
+}
+
+// DeleteShopeeAffiliateSale removes an affiliate sale row by order, product
+// and commission id.
+func (r *ShopeeRepo) DeleteShopeeAffiliateSale(ctx context.Context, orderID, productCode, komisiID string) error {
+	_, err := r.db.ExecContext(ctx,
+		`DELETE FROM shopee_affiliate_sales WHERE kode_pesanan=$1 AND kode_produk=$2 AND id_komisi_pesanan=$3`,
+		orderID, productCode, komisiID)
+	return err
 }
 
 // ListShopeeAffiliateSales returns affiliate sales filtered by optional date/month/year with pagination.
@@ -381,37 +423,57 @@ func (r *ShopeeRepo) ListSalesProfit(
 	limit, offset int,
 ) ([]models.SalesProfit, int, error) {
 	base := `SELECT
-                je.source_id AS kode_pesanan,
-                dp.waktu_pesanan_terbuat AS tanggal_pesanan,
-                SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END) AS modal_purchase,
-                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) AS amount_sales,
-                SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
-                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
-                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
-                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
-                SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) AS biaya_affiliate,
-                SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                  - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                     + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)) AS profit,
-                CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
-                     ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
-                          - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                             + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END))
-                     ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
-                FROM journal_entries je
-                JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
-                JOIN journal_lines jl ON jl.journal_id = je.journal_id
-                JOIN stores st ON dp.nama_toko = st.nama_toko
-                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
-                WHERE je.source_type IN ('pending_sales','shopee_settled')`
+               je.source_id AS kode_pesanan,
+               dp.waktu_pesanan_terbuat AS tanggal_pesanan,
+               SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END) AS modal_purchase,
+               SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) AS amount_sales,
+               SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
+               SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
+               SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
+               SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
+              SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
+              COALESCE(MAX(disc.discount),0) AS discount,
+              SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                   + COALESCE(aff.aff,0)
+                   + COALESCE(MAX(disc.discount),0)) AS profit,
+              CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
+                   ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+                        - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                           + COALESCE(aff.aff,0)
+                           + COALESCE(MAX(disc.discount),0))
+                   ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
+              FROM journal_entries je
+              JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
+              JOIN journal_lines jl ON jl.journal_id = je.journal_id
+              LEFT JOIN (
+                      SELECT REPLACE(jes.source_id,'-discount','') AS kode_pesanan, SUM(jls.amount) AS discount
+                      FROM journal_entries jes
+                      JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                      WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 52002
+                      GROUP BY kode_pesanan
+              ) disc ON disc.kode_pesanan = je.source_id
+              LEFT JOIN (
+                      SELECT split_part(jes.source_id, '-', 1) AS kode_pesanan, SUM(jls.amount) AS aff
+                      FROM journal_entries jes
+                      JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                      WHERE jes.source_type = 'shopee_affiliate' AND jls.account_id = 52005
+                      GROUP BY split_part(jes.source_id, '-', 1)
+              ) aff ON aff.kode_pesanan = je.source_id
+              JOIN stores st ON dp.nama_toko = st.nama_toko
+               JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
+               JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
+               WHERE je.source_type IN ('pending_sales','shopee_settled')`
 	args := []interface{}{}
 	conds := []string{}
 	arg := 1
@@ -444,7 +506,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 	if len(conds) > 0 {
 		query += " AND " + strings.Join(conds, " AND ")
 	}
-	query += " GROUP BY je.source_id, dp.waktu_pesanan_terbuat"
+	query += " GROUP BY je.source_id, dp.waktu_pesanan_terbuat, aff.aff"
 	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
 	var count int
 	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
@@ -460,6 +522,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 		"biaya_layanan":       "biaya_layanan",
 		"biaya_voucher":       "biaya_voucher",
 		"biaya_affiliate":     "biaya_affiliate",
+		"discount":            "discount",
 		"profit":              "profit",
 		"profit_percent":      "profit_percent",
 	}[sortBy]
@@ -482,6 +545,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 		BiayaLayanan      float64   `db:"biaya_layanan"`
 		BiayaVoucher      float64   `db:"biaya_voucher"`
 		BiayaAffiliate    float64   `db:"biaya_affiliate"`
+		Discount          float64   `db:"discount"`
 		Profit            float64   `db:"profit"`
 		ProfitPercent     float64   `db:"profit_percent"`
 	}
@@ -500,6 +564,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 			BiayaLayanan:      r.BiayaLayanan,
 			BiayaVoucher:      r.BiayaVoucher,
 			BiayaAffiliate:    r.BiayaAffiliate,
+			Discount:          r.Discount,
 			Profit:            r.Profit,
 			ProfitPercent:     r.ProfitPercent,
 		}
