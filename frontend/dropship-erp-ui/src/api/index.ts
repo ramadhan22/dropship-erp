@@ -21,10 +21,11 @@ export interface ImportResponse {
   inserted: number;
 }
 
-// Base URL for API calls. In Jest/Node we read from process.env; in Vite builds
-// you can still set VITE_API_URL, otherwise we fall back to localhost.
-// Base URL for API calls – in Vite builds import.meta.env is available; otherwise we default to localhost
-let BASE_URL = "http://erp-backend.rama.my.id/api";
+// Base URL for API calls. Default to a relative "/api" path so the frontend and
+// backend can be hosted on the same domain without triggering CORS. For
+// development or other environments you can override this using the VITE_API_URL
+// environment variable.
+let BASE_URL = "/api";
 
 if (typeof process !== "undefined" && process.env?.VITE_API_URL) {
   BASE_URL = process.env.VITE_API_URL;
