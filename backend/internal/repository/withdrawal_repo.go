@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -12,6 +13,21 @@ import (
 type WithdrawalRepo struct{ db DBTX }
 
 func NewWithdrawalRepo(db DBTX) *WithdrawalRepo { return &WithdrawalRepo{db: db} }
+
+// GetByStoreDate fetches a withdrawal by store and date if it exists.
+func (r *WithdrawalRepo) GetByStoreDate(ctx context.Context, store string, date time.Time) (*models.Withdrawal, error) {
+	var w models.Withdrawal
+	if err := r.db.GetContext(ctx, &w, `SELECT * FROM withdrawals WHERE store=$1 AND date=$2 LIMIT 1`, store, date); err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
+// Delete removes a withdrawal row by id.
+func (r *WithdrawalRepo) Delete(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM withdrawals WHERE id=$1`, id)
+	return err
+}
 
 func (r *WithdrawalRepo) Insert(ctx context.Context, w *models.Withdrawal) error {
 	q := `INSERT INTO withdrawals (store, date, amount, created_at)
