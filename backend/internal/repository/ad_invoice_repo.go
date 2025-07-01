@@ -25,6 +25,12 @@ func (r *AdInvoiceRepo) Exists(ctx context.Context, invoiceNo string) (bool, err
 	return exists, err
 }
 
+// Delete removes an ad invoice by invoice number.
+func (r *AdInvoiceRepo) Delete(ctx context.Context, invoiceNo string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM ad_invoices WHERE invoice_no=$1`, invoiceNo)
+	return err
+}
+
 func (r *AdInvoiceRepo) List(ctx context.Context, sortBy, dir string) ([]models.AdInvoice, error) {
 	if sortBy == "" {
 		sortBy = "invoice_date"

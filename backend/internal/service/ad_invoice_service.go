@@ -171,7 +171,17 @@ func (s *AdInvoiceService) ImportInvoicePDF(ctx context.Context, r io.Reader) er
 		return err
 	}
 	if exists {
-		return nil
+		if err := s.repo.Delete(ctx, inv.InvoiceNo); err != nil {
+			return err
+		}
+		if s.journalRepo != nil {
+			old, err := s.journalRepo.GetJournalEntryBySource(ctx, "ads_invoice", inv.InvoiceNo)
+			if err == nil && old != nil {
+				if err := s.journalRepo.DeleteJournalEntry(ctx, old.JournalID); err != nil {
+					return err
+				}
+			}
+		}
 	}
 	if err := s.repo.Insert(ctx, inv); err != nil {
 		return err
