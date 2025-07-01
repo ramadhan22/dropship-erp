@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // fakeDropshipService implements the DropshipServiceInterface for testing.
@@ -47,6 +48,10 @@ func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel,
 }
 
 func (f *fakeDropshipService) TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error) {
+	return nil, nil
+}
+
+func (f *fakeDropshipService) DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error) {
 	return nil, nil
 }
 

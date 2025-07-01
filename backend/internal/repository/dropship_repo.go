@@ -13,6 +13,13 @@ type DropshipRepo struct {
 	db DBTX
 }
 
+// DailyPurchaseTotal represents aggregated purchase totals per day.
+type DailyPurchaseTotal struct {
+	Date  string  `db:"date" json:"date"`
+	Total float64 `db:"total" json:"total"`
+	Count int     `db:"count" json:"count"`
+}
+
 // NewDropshipRepo constructs a DropshipRepo given an *sqlx.DB connection.
 func NewDropshipRepo(db DBTX) *DropshipRepo {
 	return &DropshipRepo{db: db}
@@ -266,6 +273,35 @@ func (r *DropshipRepo) TopProducts(
 	}
 	if list == nil {
 		list = []models.ProductSales{}
+	}
+	return list, nil
+}
+
+// DailyTotals sums total_harga_produk_channel grouped by date with optional
+// channel, store and date range filters. It also counts distinct purchases per
+// day.
+func (r *DropshipRepo) DailyTotals(
+	ctx context.Context,
+	channel, store, from, to string,
+) ([]DailyPurchaseTotal, error) {
+	query := `SELECT
+                DATE(p.waktu_pesanan_terbuat) AS date,
+                COUNT(DISTINCT p.kode_pesanan) AS count,
+                COALESCE(SUM(d.total_harga_produk_channel),0) AS total
+                FROM dropship_purchase_details d
+                JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                WHERE ($1 = '' OR p.jenis_channel = $1)
+                  AND ($2 = '' OR p.nama_toko = $2)
+                  AND ($3 = '' OR DATE(p.waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(p.waktu_pesanan_terbuat) <= $4::date)
+                GROUP BY DATE(p.waktu_pesanan_terbuat)
+                ORDER BY DATE(p.waktu_pesanan_terbuat)`
+	var list []DailyPurchaseTotal
+	if err := r.db.SelectContext(ctx, &list, query, channel, store, from, to); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []DailyPurchaseTotal{}
 	}
 	return list, nil
 }

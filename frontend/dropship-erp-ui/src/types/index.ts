@@ -216,6 +216,12 @@ export interface ProductSales {
   total_value: number;
 }
 
+export interface DailyPurchaseTotal {
+  date: string;
+  total: number;
+  count: number;
+}
+
 export interface ShopeeAffiliateSale {
   nama_toko: string;
   kode_pesanan: string;

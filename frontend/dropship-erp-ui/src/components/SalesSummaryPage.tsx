@@ -7,7 +7,7 @@ import { getCurrentMonthRange } from "../utils/date";
 import {
   listJenisChannels,
   listStoresByChannelName,
-  listShopeeSettled,
+  fetchDailyPurchaseTotals,
   fetchTopProducts,
 } from "../api";
 import type { JenisChannel, Store, ProductSales } from "../types";
@@ -56,35 +56,17 @@ export default function SalesSummaryPage() {
 
   const fetchData = async () => {
     try {
-      const res = await listShopeeSettled({
+      const res = await fetchDailyPurchaseTotals({
         channel: channel || undefined,
         store,
         from,
         to,
-        page: 1,
-        page_size: 1000,
       });
-      const amountMap = new Map<string, number>();
-      const countMap = new Map<string, number>();
-      let totalAmt = 0;
-      res.data.data.forEach((d) => {
-        const dateStr =
-          (d as any).waktu_pesanan_dibuat ?? (d as any).tanggal_dana_dilepaskan;
-        const key = new Date(dateStr).toISOString().split("T")[0];
-        amountMap.set(key, (amountMap.get(key) || 0) + d.total_penghasilan);
-        countMap.set(key, (countMap.get(key) || 0) + 1);
-        totalAmt += d.total_penghasilan;
-      });
-      const arr = Array.from(amountMap.entries()).sort((a, b) =>
-        a[0] < b[0] ? -1 : 1,
-      );
-      const arrCount = Array.from(countMap.entries()).sort((a, b) =>
-        a[0] < b[0] ? -1 : 1,
-      );
-      setData(arr.map(([date, total]) => ({ date, total })));
-      setCountData(arrCount.map(([date, count]) => ({ date, count })));
-      setTotalRevenue(totalAmt);
-      setTotalOrders(res.data.data.length);
+      const arr = res.data.sort((a, b) => (a.date < b.date ? -1 : 1));
+      setData(arr.map((d) => ({ date: d.date, total: d.total })));
+      setCountData(arr.map((d) => ({ date: d.date, count: d.count })));
+      setTotalRevenue(arr.reduce((sum, d) => sum + d.total, 0));
+      setTotalOrders(arr.reduce((sum, d) => sum + d.count, 0));
       const topRes = await fetchTopProducts({
         channel: channel || undefined,
         store,

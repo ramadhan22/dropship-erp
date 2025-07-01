@@ -58,6 +58,10 @@ func (f *fakeDropshipRepo) TopProducts(ctx context.Context, channel, store, from
 	return nil, nil
 }
 
+func (f *fakeDropshipRepo) DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error) {
+	return nil, nil
+}
+
 type fakeJournalRepoDrop struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine
