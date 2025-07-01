@@ -6,9 +6,9 @@ React/TypeScript frontend.
 
 ## Dependencies
 
-The backend and frontend only require Go and Node.js. PDF parsing for ads
-invoices is handled with a pure Go library so no additional system packages are
-needed.
+The backend and frontend only require Go and Node.js. Parsing ad invoice PDFs
+depends on the `pdftotext` utility from the `poppler-utils` package. Install this
+system package so invoice imports work correctly.
 
 ## Backend
 

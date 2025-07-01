@@ -142,6 +142,7 @@ func TestAdInvoiceAmountPositive(t *testing.T) {
 	}
 	files := []string{
 		"../../../sample_data/SPEI092025053100172422 (1).pdf",
+		"../../../sample_data/SPEI092024073100117166.pdf",
 	}
 	svc := NewAdInvoiceService(nil, nil, nil)
 	for _, fp := range files {
