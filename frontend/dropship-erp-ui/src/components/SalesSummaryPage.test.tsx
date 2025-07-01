@@ -7,30 +7,21 @@ import SalesSummaryPage from "./SalesSummaryPage";
 jest.mock("../api", () => ({
   listJenisChannels: jest.fn().mockResolvedValue({ data: [] }),
   listStoresByChannelName: jest.fn(),
-  listShopeeSettled: jest.fn(),
+  fetchDailyPurchaseTotals: jest.fn(),
+  fetchTopProducts: jest.fn(),
 }));
 
 test("displays totals after fetching data", async () => {
-  (api.listShopeeSettled as jest.Mock).mockResolvedValue({
-    data: {
-      data: [
-        {
-          waktu_pesanan_dibuat: "2025-05-01T00:00:00Z",
-          total_penghasilan: 100,
-        },
-        { waktu_pesanan_dibuat: "2025-05-01T01:00:00Z", total_penghasilan: 50 },
-        {
-          waktu_pesanan_dibuat: "2025-05-02T00:00:00Z",
-          total_penghasilan: 200,
-        },
-      ],
-      total: 3,
-    },
+  (api.fetchDailyPurchaseTotals as jest.Mock).mockResolvedValue({
+    data: [
+      { date: "2025-05-01", total: 150, count: 2 },
+      { date: "2025-05-02", total: 200, count: 1 },
+    ],
   });
 
   render(<SalesSummaryPage />);
 
-  await waitFor(() => expect(api.listShopeeSettled).toHaveBeenCalled());
+  await waitFor(() => expect(api.fetchDailyPurchaseTotals).toHaveBeenCalled());
 
   await waitFor(() =>
     expect(screen.getByText(/Total Revenue:/i)).toBeInTheDocument(),
