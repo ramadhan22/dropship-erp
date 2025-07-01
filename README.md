@@ -140,6 +140,8 @@ Automated agents contributing to this repository should follow the
 - Run `npm run lint` and `npm test` inside `frontend/dropship-erp-ui`.
 - Update this README or other documentation when new features or commands are
   introduced.
+- Ensure the backend CORS configuration is kept in sync whenever new pages or
+  API endpoints are added.
 
 ## License
 
