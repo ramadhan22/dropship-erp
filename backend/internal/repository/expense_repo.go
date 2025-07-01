@@ -14,10 +14,21 @@ type ExpenseRepo struct{ db DBTX }
 func NewExpenseRepo(db DBTX) *ExpenseRepo { return &ExpenseRepo{db: db} }
 
 func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
-	_, err := r.db.NamedExecContext(ctx,
-		`INSERT INTO expenses (id, date, description, amount, asset_account_id) VALUES (:id,:date,:description,:amount,:asset_account_id)`, e)
+	query := `INSERT INTO expenses (id, date, description, amount, asset_account_id)
+        VALUES (:id,:date,:description,:amount,:asset_account_id) RETURNING id`
+	if e.ID == "" {
+		query = `INSERT INTO expenses (date, description, amount, asset_account_id)
+                VALUES (:date,:description,:amount,:asset_account_id) RETURNING id`
+	}
+	rows, err := sqlx.NamedQueryContext(ctx, r.db, query, e)
 	if err != nil {
 		return err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		if err := rows.Scan(&e.ID); err != nil {
+			return err
+		}
 	}
 	for i := range e.Lines {
 		l := e.Lines[i]
