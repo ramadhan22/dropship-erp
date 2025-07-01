@@ -20,16 +20,14 @@ func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
 		e.ID = uuid.NewString()
 	}
 	query := `INSERT INTO expenses (id, date, description, amount, asset_account_id)
-        VALUES (:id,:date,:description,:amount,:asset_account_id) RETURNING id`
-	rows, err := sqlx.NamedQueryContext(ctx, r.db, query, e)
+       VALUES (:id,:date,:description,:amount,:asset_account_id) RETURNING id`
+	q, args, err := sqlx.Named(query, e)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-	if rows.Next() {
-		if err := rows.Scan(&e.ID); err != nil {
-			return err
-		}
+	q = r.db.Rebind(q)
+	if err := r.db.QueryRowxContext(ctx, q, args...).Scan(&e.ID); err != nil {
+		return err
 	}
 	for i := range e.Lines {
 		l := e.Lines[i]
