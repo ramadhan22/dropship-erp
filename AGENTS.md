@@ -18,6 +18,8 @@ If a command cannot be executed in the environment, mention this in the pull req
 - Prefer passing configuration into services rather than calling
   `config.MustLoadConfig` from within business logic. This keeps tests
   independent from external files.
+- When adding a new page or API endpoint, adjust the backend CORS
+  configuration so the page can be accessed without cross-origin errors.
 
 ## UI Patterns
 - Use the `SortableTable` component for displaying tabular data.
