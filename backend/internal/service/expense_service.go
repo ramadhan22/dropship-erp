@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
@@ -23,6 +24,9 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	var tx *sqlx.Tx
 	expRepo := s.expenseRepo
 	jRepo := s.journalRepo
+	if e.ID == "" {
+		e.ID = uuid.NewString()
+	}
 	if s.db != nil {
 		var err error
 		tx, err = s.db.BeginTxx(ctx, nil)
