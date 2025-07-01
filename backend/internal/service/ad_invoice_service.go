@@ -118,15 +118,27 @@ func parseInvoiceText(lines []string) *models.AdInvoice {
 				inv.Total = v
 				continue
 			}
+			var last float64
 			for j := i + 1; j < len(lines); j++ {
 				amt := strings.TrimSpace(lines[j])
 				if amt == "" || strings.HasPrefix(amt, "(") {
+					if last > 0 {
+						break
+					}
 					continue
 				}
 				if v, ok := parseAmount(amt); ok {
-					inv.Total = v
+					if v > 0 {
+						last = v
+					}
+					continue
+				}
+				if last > 0 {
 					break
 				}
+			}
+			if last > 0 {
+				inv.Total = last
 			}
 		}
 	}
