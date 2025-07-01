@@ -270,3 +270,12 @@ type SalesProfit struct {
 	Profit            float64   `db:"profit" json:"profit"`
 	ProfitPercent     float64   `db:"profit_percent" json:"profit_percent"`
 }
+
+// Withdrawal represents cash out from Shopee balance to bank.
+type Withdrawal struct {
+	ID        int64     `db:"id" json:"id"`
+	Store     string    `db:"store" json:"store"`
+	Date      time.Time `db:"date" json:"date"`
+	Amount    float64   `db:"amount" json:"amount"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}

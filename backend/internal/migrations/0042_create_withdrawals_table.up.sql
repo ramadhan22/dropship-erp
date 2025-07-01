@@ -1,0 +1,7 @@
+CREATE TABLE withdrawals (
+  id SERIAL PRIMARY KEY,
+  store VARCHAR(128) NOT NULL,
+  date DATE NOT NULL,
+  amount NUMERIC NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
