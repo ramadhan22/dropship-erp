@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -14,12 +15,12 @@ type ExpenseRepo struct{ db DBTX }
 func NewExpenseRepo(db DBTX) *ExpenseRepo { return &ExpenseRepo{db: db} }
 
 func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
+	// Ensure an ID exists so that expense_lines can reference it
+	if e.ID == "" {
+		e.ID = uuid.NewString()
+	}
 	query := `INSERT INTO expenses (id, date, description, amount, asset_account_id)
         VALUES (:id,:date,:description,:amount,:asset_account_id) RETURNING id`
-	if e.ID == "" {
-		query = `INSERT INTO expenses (date, description, amount, asset_account_id)
-                VALUES (:date,:description,:amount,:asset_account_id) RETURNING id`
-	}
 	rows, err := sqlx.NamedQueryContext(ctx, r.db, query, e)
 	if err != nil {
 		return err
