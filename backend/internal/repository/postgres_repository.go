@@ -18,6 +18,7 @@ type Repository struct {
 	AccountRepo      *AccountRepo
 	AdInvoiceRepo    *AdInvoiceRepo
 	AssetAccountRepo *AssetAccountRepo
+	WithdrawalRepo   *WithdrawalRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -39,6 +40,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	accountRepo := NewAccountRepo(db)
 	adInvoiceRepo := NewAdInvoiceRepo(db)
 	assetAccountRepo := NewAssetAccountRepo(db)
+	withdrawalRepo := NewWithdrawalRepo(db)
 
 	return &Repository{
 		DB:               db,
@@ -51,6 +53,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		AccountRepo:      accountRepo,
 		AdInvoiceRepo:    adInvoiceRepo,
 		AssetAccountRepo: assetAccountRepo,
+		WithdrawalRepo:   withdrawalRepo,
 	}, nil
 }
 

@@ -62,6 +62,7 @@ func main() {
 	glSvc := service.NewGLService(repo.JournalRepo)
 	pbSvc := service.NewPendingBalanceService(shClient)
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
+	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -129,6 +130,7 @@ func main() {
 		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
+		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 	}
 
