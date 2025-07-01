@@ -117,6 +117,14 @@ func (s *WithdrawalService) ImportXLSX(ctx context.Context, r io.Reader) (int, e
 			continue
 		}
 		w := &models.Withdrawal{Store: store, Date: t, Amount: -amt, CreatedAt: time.Now()}
+		if old, err := s.repo.GetByStoreDate(ctx, store, t); err == nil && old != nil {
+			_ = s.repo.Delete(ctx, old.ID)
+			if s.journalRepo != nil {
+				if je, err := s.journalRepo.GetJournalEntryBySource(ctx, "withdrawal", fmt.Sprintf("%d", old.ID)); err == nil && je != nil {
+					_ = s.journalRepo.DeleteJournalEntry(ctx, je.JournalID)
+				}
+			}
+		}
 		if err := s.Create(ctx, w); err != nil {
 			return inserted, err
 		}
