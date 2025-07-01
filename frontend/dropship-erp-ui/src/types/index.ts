@@ -157,6 +157,14 @@ export interface AdInvoice {
   created_at: string;
 }
 
+export interface Withdrawal {
+  id: number;
+  store: string;
+  date: string;
+  amount: number;
+  created_at: string;
+}
+
 export interface JournalEntry {
   journal_id: number;
   entry_date: string;

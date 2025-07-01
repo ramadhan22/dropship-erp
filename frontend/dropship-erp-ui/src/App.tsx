@@ -19,6 +19,7 @@ import SalesProfitPage from "./components/SalesProfitPage";
 import KasAccountPage from "./components/KasAccountPage";
 import PendingBalancePage from "./components/PendingBalancePage";
 import StoreDetailPage from "./components/StoreDetailPage";
+import WithdrawalPage from "./components/WithdrawalPage";
 
 export default function App() {
   return (
@@ -37,7 +38,8 @@ export default function App() {
         <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
         | <Link to="/kas">Kas</Link> |{" "}
         <Link to="/pending-balance">Pending Balance</Link> |{" "}
-        <Link to="/reconcile/dashboard">Reconcile Dashboard</Link>
+        <Link to="/reconcile/dashboard">Reconcile Dashboard</Link> |{" "}
+        <Link to="/withdrawals">Withdrawals</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
         <BreadcrumbsNav />
@@ -61,6 +63,7 @@ export default function App() {
           <Route path="/kas" element={<KasAccountPage />} />
           <Route path="/stores/:id" element={<StoreDetailPage />} />
           <Route path="/pending-balance" element={<PendingBalancePage />} />
+          <Route path="/withdrawals" element={<WithdrawalPage />} />
         </Routes>
       </div>
     </BrowserRouter>
