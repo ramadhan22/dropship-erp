@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/xuri/excelize/v2"
 
@@ -156,8 +157,8 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		}
 	}
 
-	inserted := 0
-	mismatches := []string{}
+	entries := []*models.ShopeeSettled{}
+	orderNos := []string{}
 	for i := headerIndex + 1; i < len(rows); i++ {
 		row := rows[i]
 		if len(row) < 37 {
@@ -171,15 +172,23 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		if err != nil {
 			continue
 		}
-		exists, err := s.repo.ExistsShopeeSettled(ctx, entry.NoPesanan)
-		if err != nil {
-			return inserted, mismatches, fmt.Errorf("check existing row %d: %w", i+1, err)
-		}
-		if exists {
+		entries = append(entries, entry)
+		orderNos = append(orderNos, entry.NoPesanan)
+	}
+
+	existing, err := s.existingOrders(ctx, orderNos)
+	if err != nil {
+		return 0, nil, fmt.Errorf("check existing: %w", err)
+	}
+
+	inserted := 0
+	mismatches := []string{}
+	for _, entry := range entries {
+		if existing[entry.NoPesanan] {
 			continue
 		}
 		if err := s.repo.InsertShopeeSettled(ctx, entry); err != nil {
-			return inserted, mismatches, fmt.Errorf("insert row %d: %w", i+1, err)
+			return inserted, mismatches, fmt.Errorf("insert %s: %w", entry.NoPesanan, err)
 		}
 		var sum float64
 		if s.db != nil {
@@ -533,6 +542,34 @@ func formatNamaToko(username string) string {
 	}
 	u = strings.ReplaceAll(u, ".", " ")
 	return CapitalizeWords(u)
+}
+
+func (s *ShopeeService) existingOrders(ctx context.Context, ids []string) (map[string]bool, error) {
+	m := make(map[string]bool, len(ids))
+	if len(ids) == 0 {
+		return m, nil
+	}
+	if s.db != nil {
+		var existing []string
+		query := `SELECT no_pesanan FROM shopee_settled WHERE no_pesanan = ANY($1)`
+		if err := s.db.SelectContext(ctx, &existing, query, pq.Array(ids)); err != nil {
+			return nil, err
+		}
+		for _, id := range existing {
+			m[id] = true
+		}
+		return m, nil
+	}
+	for _, id := range ids {
+		ok, err := s.repo.ExistsShopeeSettled(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			m[id] = true
+		}
+	}
+	return m, nil
 }
 
 // ListSettled proxies to the repository for fetching settled orders with filters.
