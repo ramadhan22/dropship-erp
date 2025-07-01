@@ -29,9 +29,7 @@ func (h *ExpenseHandler) create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if e.ID == "" {
-		e.ID = ""
-	} // placeholder, DB default
+
 	var total float64
 	for _, l := range e.Lines {
 		total += l.Amount
