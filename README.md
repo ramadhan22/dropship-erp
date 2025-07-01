@@ -24,7 +24,7 @@ Main features:
 - Automatically compute revenue, COGS, fees and net profit metrics.
 - Sales Profit page shows discounts and links to all related journal entries.
 - View general ledger, balance sheet and profit and loss pages.
-- Manage channels, accounts and expenses. Expenses can now be edited and the previous journal is reversed automatically.
+- Manage channels, accounts and expenses. Expenses can be edited with a selectable date and the previous journal is reversed automatically.
 - Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.
   The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 

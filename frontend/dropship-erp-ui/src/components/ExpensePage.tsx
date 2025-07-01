@@ -8,6 +8,9 @@ import {
   DialogActions,
   Autocomplete,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { useEffect, useState } from "react";
@@ -28,6 +31,9 @@ export default function ExpensePage() {
   const { paginated, controls } = usePagination(list);
   const [desc, setDesc] = useState("");
   const [asset, setAsset] = useState("");
+  const [date, setDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [lines, setLines] = useState<{ account: string; amount: string }[]>([
     { account: "", amount: "" },
   ]);
@@ -61,7 +67,7 @@ export default function ExpensePage() {
             account_id: Number(l.account),
             amount: Number(l.amount),
           })),
-          date: editing.date,
+          date: new Date(date).toISOString(),
         });
       } else {
         await createExpense({
@@ -71,7 +77,7 @@ export default function ExpensePage() {
             account_id: Number(l.account),
             amount: Number(l.amount),
           })),
-          date: new Date().toISOString(),
+          date: new Date(date).toISOString(),
         });
       }
       setDesc("");
@@ -114,6 +120,7 @@ export default function ExpensePage() {
               setEditing(e);
               setDesc(e.description);
               setAsset(String(e.asset_account_id));
+              setDate(e.date.split("T")[0]);
               setLines(e.lines.map((l) => ({ account: String(l.account_id), amount: String(l.amount) })));
               setOpen(true);
             }}
@@ -154,6 +161,7 @@ export default function ExpensePage() {
           setEditing(null);
           setDesc("");
           setAsset("");
+          setDate(new Date().toISOString().split("T")[0]);
           setLines([{ account: "", amount: "" }]);
           setOpen(true);
         }}
@@ -193,12 +201,24 @@ export default function ExpensePage() {
               assetAccounts.find((a) => String(a.account_id) === asset) || null
             }
             onChange={(_, v) => setAsset(v ? String(v.account_id) : "")}
-            renderInput={(params) => (
-              <TextField {...params} label="Asset Account" />
-            )}
-            size="small"
+          renderInput={(params) => (
+            <TextField {...params} label="Asset Account" />
+          )}
+          size="small"
+        />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Date"
+            format="yyyy-MM-dd"
+            value={new Date(date)}
+            onChange={(d) => {
+              if (!d) return;
+              setDate(d.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
           />
-          {lines.map((ln, idx) => (
+        </LocalizationProvider>
+        {lines.map((ln, idx) => (
             <div key={idx} style={{ display: "flex", gap: 4 }}>
               <Autocomplete
                 options={expenseAccounts}
