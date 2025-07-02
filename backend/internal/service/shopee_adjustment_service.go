@@ -18,6 +18,9 @@ type AdjustmentRepo interface {
 	Delete(ctx context.Context, order string, t time.Time, typ string) error
 	List(ctx context.Context, from, to string) ([]models.ShopeeAdjustment, error)
 	ListByOrder(ctx context.Context, order string) ([]models.ShopeeAdjustment, error)
+	Get(ctx context.Context, id int64) (*models.ShopeeAdjustment, error)
+	Update(ctx context.Context, a *models.ShopeeAdjustment) error
+	DeleteByID(ctx context.Context, id int64) error
 }
 
 type ShopeeAdjustmentService struct {
@@ -152,6 +155,47 @@ func (s *ShopeeAdjustmentService) createJournal(ctx context.Context, jr ShopeeJo
 			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func (s *ShopeeAdjustmentService) Delete(ctx context.Context, id int64) error {
+	adj, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.DeleteByID(ctx, id); err != nil {
+		return err
+	}
+	if s.journalRepo != nil {
+		sid := fmt.Sprintf("%s-%s-%s", adj.NoPesanan, adj.TanggalPenyesuaian.Format("20060102"), sanitizeID(adj.TipePenyesuaian))
+		if je, _ := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_adjustment", sid); je != nil {
+			if err := s.journalRepo.DeleteJournalEntry(ctx, je.JournalID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *ShopeeAdjustmentService) Update(ctx context.Context, a *models.ShopeeAdjustment) error {
+	old, err := s.repo.Get(ctx, a.ID)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.Update(ctx, a); err != nil {
+		return err
+	}
+	if s.journalRepo != nil {
+		sid := fmt.Sprintf("%s-%s-%s", old.NoPesanan, old.TanggalPenyesuaian.Format("20060102"), sanitizeID(old.TipePenyesuaian))
+		if je, _ := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_adjustment", sid); je != nil {
+			if err := s.journalRepo.DeleteJournalEntry(ctx, je.JournalID); err != nil {
+				return err
+			}
+		}
+		if err := s.createJournal(ctx, s.journalRepo, a); err != nil {
+			return err
 		}
 	}
 	return nil

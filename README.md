@@ -22,6 +22,9 @@ Main features:
 - Import Shopee adjustments from income reports with automatic journal postings.
   Existing entries for the same order/date/type are replaced and they are also
   captured when importing settled orders.
+  Adjustments can be browsed on the **Shopee Adjustments** page.
+  Adjustments may be edited or deleted; updating replaces the original
+  journal entry.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.

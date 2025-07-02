@@ -18,3 +18,11 @@ export const listShopeeAdjustments = (params: {
   if (params.to) q.append("to", params.to);
   return api.get<ShopeeAdjustment[]>(`/shopee/adjustments/?${q.toString()}`);
 };
+
+export const updateShopeeAdjustment = (
+  id: number,
+  data: Partial<ShopeeAdjustment>
+) => api.put(`/shopee/adjustments/${id}`, data);
+
+export const deleteShopeeAdjustment = (id: number) =>
+  api.delete(`/shopee/adjustments/${id}`);

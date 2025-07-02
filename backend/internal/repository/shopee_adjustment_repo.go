@@ -14,12 +14,37 @@ type ShopeeAdjustmentRepo struct{ db DBTX }
 
 func NewShopeeAdjustmentRepo(db DBTX) *ShopeeAdjustmentRepo { return &ShopeeAdjustmentRepo{db: db} }
 
+func (r *ShopeeAdjustmentRepo) Get(ctx context.Context, id int64) (*models.ShopeeAdjustment, error) {
+	var a models.ShopeeAdjustment
+	if err := r.db.GetContext(ctx, &a, `SELECT * FROM shopee_adjustments WHERE id=$1`, id); err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
 func (r *ShopeeAdjustmentRepo) Insert(ctx context.Context, a *models.ShopeeAdjustment) error {
 	q := `INSERT INTO shopee_adjustments
         (nama_toko, tanggal_penyesuaian, tipe_penyesuaian, alasan_penyesuaian, biaya_penyesuaian, no_pesanan, created_at)
         VALUES (:nama_toko,:tanggal_penyesuaian,:tipe_penyesuaian,:alasan_penyesuaian,:biaya_penyesuaian,:no_pesanan,:created_at)
         ON CONFLICT (no_pesanan, tanggal_penyesuaian, tipe_penyesuaian) DO NOTHING`
 	_, err := r.db.NamedExecContext(ctx, q, a)
+	return err
+}
+
+func (r *ShopeeAdjustmentRepo) Update(ctx context.Context, a *models.ShopeeAdjustment) error {
+	_, err := r.db.NamedExecContext(ctx, `UPDATE shopee_adjustments SET
+               nama_toko=:nama_toko,
+               tanggal_penyesuaian=:tanggal_penyesuaian,
+               tipe_penyesuaian=:tipe_penyesuaian,
+               alasan_penyesuaian=:alasan_penyesuaian,
+               biaya_penyesuaian=:biaya_penyesuaian,
+               no_pesanan=:no_pesanan
+               WHERE id=:id`, a)
+	return err
+}
+
+func (r *ShopeeAdjustmentRepo) DeleteByID(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM shopee_adjustments WHERE id=$1`, id)
 	return err
 }
 

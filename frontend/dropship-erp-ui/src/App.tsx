@@ -20,6 +20,7 @@ import KasAccountPage from "./components/KasAccountPage";
 import PendingBalancePage from "./components/PendingBalancePage";
 import StoreDetailPage from "./components/StoreDetailPage";
 import WithdrawalPage from "./components/WithdrawalPage";
+import ShopeeAdjustmentPage from "./components/ShopeeAdjustmentPage";
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
         <Link to="/">Home</Link> | <Link to="/dropship">Dropship Import</Link> |{" "}
         <Link to="/shopee">Shopee Sales</Link> |{" "}
         <Link to="/sales-profit">Sales Profit</Link> |{" "}
+        <Link to="/shopee/adjustments">Adjustments</Link> |{" "}
         <Link to="/shopee/affiliate">Affiliate Sales</Link> |{" "}
         <Link to="/reconcile">Reconcile</Link> |{" "}
         <Link to="/metrics">Metrics</Link> | <Link to="/pl">P&L</Link> |{" "}
@@ -48,6 +50,7 @@ export default function App() {
           <Route path="/dropship" element={<DropshipImport />} />
           <Route path="/shopee" element={<ShopeeSalesPage />} />
           <Route path="/sales-profit" element={<SalesProfitPage />} />
+          <Route path="/shopee/adjustments" element={<ShopeeAdjustmentPage />} />
           <Route path="/shopee/affiliate" element={<ShopeeAffiliatePage />} />
           <Route path="/reconcile" element={<ReconcileForm />} />
           <Route path="/reconcile/dashboard" element={<ReconcileDashboard />} />

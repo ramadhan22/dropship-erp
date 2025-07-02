@@ -35,6 +35,18 @@ func (f *fakeAdjRepo) ListByOrder(ctx context.Context, order string) ([]models.S
 	return nil, nil
 }
 
+func (f *fakeAdjRepo) Get(ctx context.Context, id int64) (*models.ShopeeAdjustment, error) {
+	return &models.ShopeeAdjustment{ID: id}, nil
+}
+
+func (f *fakeAdjRepo) Update(ctx context.Context, a *models.ShopeeAdjustment) error {
+	return nil
+}
+
+func (f *fakeAdjRepo) DeleteByID(ctx context.Context, id int64) error {
+	return nil
+}
+
 type fakeJournalRepoA struct {
 	deleted []int64
 	entries []*models.JournalEntry
