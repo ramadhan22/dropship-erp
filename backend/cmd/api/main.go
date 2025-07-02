@@ -46,6 +46,7 @@ func main() {
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
+		repo.ChannelRepo,
 		shClient,
 	)
 	metricSvc := service.NewMetricService(

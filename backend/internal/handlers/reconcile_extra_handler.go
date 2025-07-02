@@ -14,6 +14,7 @@ type ReconcileExtraService interface {
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
+	GetShopeeAccessToken(ctx context.Context, invoice string) (string, error)
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 }
 
@@ -31,6 +32,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.POST("/check", h.check)
 	grp.POST("/cancel", h.cancel)
 	grp.GET("/status", h.status)
+	grp.GET("/token", h.token)
 }
 
 func (h *ReconcileExtraHandler) list(c *gin.Context) {
@@ -113,4 +115,18 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": status})
+}
+
+func (h *ReconcileExtraHandler) token(c *gin.Context) {
+	invoice := c.Query("invoice")
+	if invoice == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
+		return
+	}
+	tok, err := h.svc.GetShopeeAccessToken(context.Background(), invoice)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"access_token": tok})
 }

@@ -86,6 +86,15 @@ func (r *ChannelRepo) GetStoreByID(ctx context.Context, id int64) (*models.Store
 	return &st, nil
 }
 
+// GetStoreByName fetches a store row by nama_toko.
+func (r *ChannelRepo) GetStoreByName(ctx context.Context, name string) (*models.Store, error) {
+	var st models.Store
+	if err := r.db.GetContext(ctx, &st, `SELECT * FROM stores WHERE nama_toko=$1`, name); err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
 // ListAllStores returns all stores joined with their channel names.
 func (r *ChannelRepo) ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error) {
 	var list []models.StoreWithChannel
