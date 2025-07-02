@@ -15,6 +15,7 @@ import type {
   ShopeeAffiliateSummary,
   SalesProfit,
   DailyPurchaseTotal,
+  MonthlyPurchaseTotal,
 } from "../types";
 
 export interface ImportResponse {
@@ -351,6 +352,22 @@ export function fetchDailyPurchaseTotals(params: {
   if (params.to) q.append("to", params.to);
   return api.get<DailyPurchaseTotal[]>(
     `/dropship/purchases/daily?${q.toString()}`,
+  );
+}
+
+export function fetchMonthlyPurchaseTotals(params: {
+  channel?: string;
+  store?: string;
+  from?: string;
+  to?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
+  return api.get<MonthlyPurchaseTotal[]>(
+    `/dropship/purchases/monthly?${q.toString()}`,
   );
 }
 

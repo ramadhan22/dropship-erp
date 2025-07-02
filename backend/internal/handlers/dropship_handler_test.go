@@ -55,6 +55,10 @@ func (f *fakeDropshipService) DailyTotals(ctx context.Context, channel, store, f
 	return nil, nil
 }
 
+func (f *fakeDropshipService) MonthlyTotals(ctx context.Context, channel, store, from, to string) ([]repository.MonthlyPurchaseTotal, error) {
+	return nil, nil
+}
+
 func TestHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{}

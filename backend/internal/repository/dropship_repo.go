@@ -20,6 +20,13 @@ type DailyPurchaseTotal struct {
 	Count int     `db:"count" json:"count"`
 }
 
+// MonthlyPurchaseTotal represents aggregated purchase totals per month.
+type MonthlyPurchaseTotal struct {
+	Month string  `db:"month" json:"month"`
+	Total float64 `db:"total" json:"total"`
+	Count int     `db:"count" json:"count"`
+}
+
 // NewDropshipRepo constructs a DropshipRepo given an *sqlx.DB connection.
 func NewDropshipRepo(db DBTX) *DropshipRepo {
 	return &DropshipRepo{db: db}
@@ -302,6 +309,33 @@ func (r *DropshipRepo) DailyTotals(
 	}
 	if list == nil {
 		list = []DailyPurchaseTotal{}
+	}
+	return list, nil
+}
+
+// MonthlyTotals sums totals grouped by month with optional filters.
+func (r *DropshipRepo) MonthlyTotals(
+	ctx context.Context,
+	channel, store, from, to string,
+) ([]MonthlyPurchaseTotal, error) {
+	query := `SELECT
+                TO_CHAR(DATE_TRUNC('month', p.waktu_pesanan_terbuat), 'YYYY-MM') AS month,
+                COUNT(DISTINCT p.kode_pesanan) AS count,
+                COALESCE(SUM(d.total_harga_produk_channel),0) AS total
+                FROM dropship_purchase_details d
+                JOIN dropship_purchases p ON d.kode_pesanan = p.kode_pesanan
+                WHERE ($1 = '' OR p.jenis_channel = $1)
+                  AND ($2 = '' OR p.nama_toko = $2)
+                  AND ($3 = '' OR DATE(p.waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(p.waktu_pesanan_terbuat) <= $4::date)
+                GROUP BY DATE_TRUNC('month', p.waktu_pesanan_terbuat)
+                ORDER BY DATE_TRUNC('month', p.waktu_pesanan_terbuat)`
+	var list []MonthlyPurchaseTotal
+	if err := r.db.SelectContext(ctx, &list, query, channel, store, from, to); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []MonthlyPurchaseTotal{}
 	}
 	return list, nil
 }

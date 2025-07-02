@@ -8,6 +8,7 @@ import {
   listJenisChannels,
   listStoresByChannelName,
   fetchDailyPurchaseTotals,
+  fetchMonthlyPurchaseTotals,
   fetchTopProducts,
 } from "../api";
 import type { JenisChannel, Store, ProductSales } from "../types";
@@ -30,6 +31,7 @@ export default function SalesSummaryPage() {
   const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
+  const [period, setPeriod] = useState<"Daily" | "Monthly">("Daily");
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
   const [countData, setCountData] = useState<{ date: string; count: number }[]>(
     [],
@@ -56,15 +58,37 @@ export default function SalesSummaryPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetchDailyPurchaseTotals({
-        channel: channel || undefined,
-        store,
-        from,
-        to,
+      const res =
+        period === "Daily"
+          ? await fetchDailyPurchaseTotals({
+              channel: channel || undefined,
+              store,
+              from,
+              to,
+            })
+          : await fetchMonthlyPurchaseTotals({
+              channel: channel || undefined,
+              store,
+              from,
+              to,
+            });
+      const arr = res.data.sort((a, b) => {
+        const da = period === "Daily" ? a.date : a.month;
+        const db = period === "Daily" ? b.date : b.month;
+        return da < db ? -1 : 1;
       });
-      const arr = res.data.sort((a, b) => (a.date < b.date ? -1 : 1));
-      setData(arr.map((d) => ({ date: d.date, total: d.total })));
-      setCountData(arr.map((d) => ({ date: d.date, count: d.count })));
+      setData(
+        arr.map((d: any) => ({
+          date: period === "Daily" ? d.date : d.month,
+          total: d.total,
+        }))
+      );
+      setCountData(
+        arr.map((d: any) => ({
+          date: period === "Daily" ? d.date : d.month,
+          count: d.count,
+        }))
+      );
       setTotalRevenue(arr.reduce((sum, d) => sum + d.total, 0));
       setTotalOrders(arr.reduce((sum, d) => sum + d.count, 0));
       const topRes = await fetchTopProducts({
@@ -84,7 +108,7 @@ export default function SalesSummaryPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, store, from, to]);
+  }, [channel, store, from, to, period]);
 
   return (
     <div>
@@ -113,6 +137,10 @@ export default function SalesSummaryPage() {
               {s.nama_toko}
             </option>
           ))}
+        </select>
+        <select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value as any)}>
+          <option value="Daily">Daily</option>
+          <option value="Monthly">Monthly</option>
         </select>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <DatePicker
