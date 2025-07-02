@@ -77,25 +77,48 @@ export default function BalanceSheetPage() {
         ? `${year}-${String(month).padStart(2, "0")}`
         : `${year}-12`;
     const prevYears = years.filter((y) => y < year);
+
+    const currentYearTasks =
+      periodType === "Monthly"
+        ? Array.from({ length: month }, (_, idx) =>
+            fetchProfitLoss({
+              type: "Monthly",
+              month: idx + 1,
+              year,
+              store: shop,
+            }),
+          )
+        : [
+            fetchProfitLoss({
+              type: "Yearly",
+              month: 12,
+              year,
+              store: shop,
+            }),
+          ];
+
     const tasks = [
       fetchBalanceSheet(shop, periodStr),
-      fetchProfitLoss({
-        type: "Yearly",
-        month: periodType === "Monthly" ? month : 12,
-        year,
-        store: shop,
-      }),
+      ...currentYearTasks,
       ...prevYears.map((y) =>
         fetchProfitLoss({ type: "Yearly", month: 12, year: y, store: shop })
       ),
     ];
     const results = await Promise.all(tasks);
     const bsRes = results[0];
-    const plRes = results[1];
-    const prevResults = results.slice(2) as Array<{ data: { labaRugiBersih: { amount: number } } }>;
+    const currentResults = results.slice(1, 1 + currentYearTasks.length) as Array<{
+      data: { labaRugiBersih: { amount: number } };
+    }>;
+    const prevResults = results.slice(1 + currentYearTasks.length) as Array<{
+      data: { labaRugiBersih: { amount: number } };
+    }>;
 
     setData((bsRes as any).data);
-    setNetProfit((plRes as any).data.labaRugiBersih.amount);
+    const net = currentResults.reduce(
+      (sum, r) => sum + r.data.labaRugiBersih.amount,
+      0,
+    );
+    setNetProfit(net);
     const retained = prevResults.reduce(
       (sum, r) => sum + r.data.labaRugiBersih.amount,
       0,
