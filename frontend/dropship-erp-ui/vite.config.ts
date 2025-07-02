@@ -8,6 +8,6 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
-    allowedHosts: ['erp.rama.my.id'], // ✅ allow custom domain
+    allowedHosts: ['http://localhost:8080'], // ✅ allow custom domain
   },
 })

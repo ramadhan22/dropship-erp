@@ -32,9 +32,9 @@ type ShopeeClient struct {
 
 // NewShopeeClient constructs a ShopeeClient from configuration.
 func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
-	base := cfg.BaseURL
+	base := cfg.BaseURLShopee
 	if base == "" {
-		base = "https://ads.shopeemobile.com"
+		base = "https://partner.test-stable.shopeemobile.com"
 	}
 	return &ShopeeClient{
 		BaseURL:      base,

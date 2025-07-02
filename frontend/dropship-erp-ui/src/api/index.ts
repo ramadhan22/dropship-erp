@@ -26,7 +26,7 @@ export interface ImportResponse {
 // backend can be hosted on the same domain without triggering CORS. For
 // development or other environments you can override this using the VITE_API_URL
 // environment variable.
-let BASE_URL = "/api";
+let BASE_URL = "http://localhost:8080/api";
 
 if (typeof process !== "undefined" && process.env?.VITE_API_URL) {
   BASE_URL = process.env.VITE_API_URL;
