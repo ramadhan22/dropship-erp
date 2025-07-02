@@ -31,7 +31,9 @@ Main features:
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.
-- Sales Profit page shows discounts and links to all related journal entries.
+ - Sales Profit page shows discounts and links to all related journal entries.
+   Adjustments including shipping fee discrepancies are now factored into profit
+   calculations.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses. Expenses can be edited with a selectable date and the previous journal is reversed automatically.
 - Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.

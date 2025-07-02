@@ -431,28 +431,35 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
-              SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
+               SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
+               COALESCE(adj.refund,0) AS biaya_refund,
+               COALESCE(adj.selisih,0) AS selisih_ongkir,
+               COALESCE(adj.income,0) AS adjustment_income,
               COALESCE(MAX(disc.discount),0) AS discount,
-              SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+              SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) + COALESCE(adj.income,0)
                 - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                   + COALESCE(adj.refund,0)
+                   + COALESCE(adj.selisih,0)
                    + COALESCE(aff.aff,0)
                    + COALESCE(MAX(disc.discount),0)) AS profit,
-              CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) = 0 THEN 0
-                   ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END)
+              CASE WHEN SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) + COALESCE(adj.income,0) = 0 THEN 0
+                   ELSE (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) + COALESCE(adj.income,0)
                         - (SUM(CASE WHEN jl.account_id = 5001 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                           + COALESCE(adj.refund,0)
+                           + COALESCE(adj.selisih,0)
                            + COALESCE(aff.aff,0)
                            + COALESCE(MAX(disc.discount),0))
-                   ) / SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) * 100 END AS profit_percent
+                   ) / (SUM(CASE WHEN jl.account_id IN (11010,11012) AND jl.is_debit = false THEN jl.amount ELSE 0 END) + COALESCE(adj.income,0)) * 100 END AS profit_percent
               FROM journal_entries je
               JOIN dropship_purchases dp ON dp.kode_invoice_channel = je.source_id
               JOIN journal_lines jl ON jl.journal_id = je.journal_id
@@ -470,6 +477,16 @@ func (r *ShopeeRepo) ListSalesProfit(
                       WHERE jes.source_type = 'shopee_affiliate' AND jls.account_id = 52005
                       GROUP BY split_part(jes.source_id, '-', 1)
               ) aff ON aff.kode_pesanan = je.source_id
+              LEFT JOIN (
+                      SELECT split_part(jes.source_id, '-', 1) AS kode_pesanan,
+                             SUM(CASE WHEN jls.account_id = 52009 THEN jls.amount ELSE 0 END) AS refund,
+                             SUM(CASE WHEN jls.account_id = 52010 THEN jls.amount ELSE 0 END) AS selisih,
+                             SUM(CASE WHEN jls.account_id = 4001 AND jls.is_debit = false THEN jls.amount ELSE 0 END) AS income
+                      FROM journal_entries jes
+                      JOIN journal_lines jls ON jls.journal_id = jes.journal_id
+                      WHERE jes.source_type = 'shopee_adjustment'
+                      GROUP BY split_part(jes.source_id, '-', 1)
+              ) adj ON adj.kode_pesanan = je.source_id
               JOIN stores st ON dp.nama_toko = st.nama_toko
                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
                JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
@@ -522,6 +539,9 @@ func (r *ShopeeRepo) ListSalesProfit(
 		"biaya_layanan":       "biaya_layanan",
 		"biaya_voucher":       "biaya_voucher",
 		"biaya_affiliate":     "biaya_affiliate",
+		"biaya_refund":        "biaya_refund",
+		"selisih_ongkir":      "selisih_ongkir",
+		"adjustment_income":   "adjustment_income",
 		"discount":            "discount",
 		"profit":              "profit",
 		"profit_percent":      "profit_percent",
@@ -545,6 +565,9 @@ func (r *ShopeeRepo) ListSalesProfit(
 		BiayaLayanan      float64   `db:"biaya_layanan"`
 		BiayaVoucher      float64   `db:"biaya_voucher"`
 		BiayaAffiliate    float64   `db:"biaya_affiliate"`
+		BiayaRefund       float64   `db:"biaya_refund"`
+		SelisihOngkir     float64   `db:"selisih_ongkir"`
+		AdjustmentIncome  float64   `db:"adjustment_income"`
 		Discount          float64   `db:"discount"`
 		Profit            float64   `db:"profit"`
 		ProfitPercent     float64   `db:"profit_percent"`
@@ -564,6 +587,9 @@ func (r *ShopeeRepo) ListSalesProfit(
 			BiayaLayanan:      r.BiayaLayanan,
 			BiayaVoucher:      r.BiayaVoucher,
 			BiayaAffiliate:    r.BiayaAffiliate,
+			BiayaRefund:       r.BiayaRefund,
+			SelisihOngkir:     r.SelisihOngkir,
+			AdjustmentIncome:  r.AdjustmentIncome,
 			Discount:          r.Discount,
 			Profit:            r.Profit,
 			ProfitPercent:     r.ProfitPercent,
