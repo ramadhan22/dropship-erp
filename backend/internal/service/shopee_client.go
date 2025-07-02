@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -132,11 +133,13 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	q.Set("shop_id", c.ShopID)
 	q.Set("refresh_token", c.RefreshToken)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(q.Encode()))
+	body := q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	log.Printf("ShopeeClient request: POST %s body=%s", c.BaseURL+path, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("RefreshAccessToken request error: %v", err)
@@ -175,11 +178,13 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 	q.Set("code", code)
 	q.Set("shop_id", shopID)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(q.Encode()))
+	body := q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	log.Printf("ShopeeClient request: POST %s body=%s", c.BaseURL+path, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetAccessToken request error: %v", err)
@@ -219,10 +224,12 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	q.Set("access_token", c.AccessToken)
 	q.Set("order_sn_list", orderSn)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 	if err != nil {
 		return "", err
 	}
+	log.Printf("ShopeeClient request: GET %s", urlStr)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetOrderDetail request error: %v", err)
@@ -262,10 +269,12 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 	q.Set("access_token", c.AccessToken)
 	q.Set("order_sn_list", orderSn)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("ShopeeClient request: GET %s", urlStr)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("getOrderDetailExt request error: %v", err)
@@ -316,10 +325,12 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 		q.Set("pagination_offset", strconv.Itoa(offset))
 		q.Set("pagination_entries_per_page", strconv.Itoa(pageSize))
 
-		req, err := http.NewRequestWithContext(ctx, "GET", c.BaseURL+path+"?"+q.Encode(), nil)
+		urlStr := c.BaseURL + path + "?" + q.Encode()
+		req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 		if err != nil {
 			return 0, err
 		}
+		log.Printf("ShopeeClient request: GET %s", urlStr)
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			logutil.Errorf("GetOrderList request error: %v", err)
