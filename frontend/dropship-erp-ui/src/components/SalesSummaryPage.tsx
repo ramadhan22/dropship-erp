@@ -1,9 +1,18 @@
-import { Alert } from "@mui/material";
+import {
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useEffect, useState } from "react";
 import { getCurrentMonthRange } from "../utils/date";
+import { listShopeeAdjustments } from "../api/shopeeAdjustments";
+import { getJournalLinesBySource } from "../api/journal";
 import {
   listJenisChannels,
   listStoresByChannelName,
@@ -11,7 +20,13 @@ import {
   fetchMonthlyPurchaseTotals,
   fetchTopProducts,
 } from "../api";
-import type { JenisChannel, Store, ProductSales } from "../types";
+import type {
+  JenisChannel,
+  Store,
+  ProductSales,
+  ShopeeAdjustment,
+  JournalLineDetail,
+} from "../types";
 import {
   LineChart,
   Line,
@@ -39,6 +54,9 @@ export default function SalesSummaryPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
+  const [adjustments, setAdjustments] = useState<ShopeeAdjustment[]>([]);
+  const [lines, setLines] = useState<JournalLineDetail[]>([]);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -81,13 +99,13 @@ export default function SalesSummaryPage() {
         arr.map((d: any) => ({
           date: period === "Daily" ? d.date : d.month,
           total: d.total,
-        }))
+        })),
       );
       setCountData(
         arr.map((d: any) => ({
           date: period === "Daily" ? d.date : d.month,
           count: d.count,
-        }))
+        })),
       );
       setTotalRevenue(arr.reduce((sum, d) => sum + d.total, 0));
       setTotalOrders(arr.reduce((sum, d) => sum + d.count, 0));
@@ -99,6 +117,8 @@ export default function SalesSummaryPage() {
         limit: 5,
       });
       setTopProducts(topRes.data);
+      const adjRes = await listShopeeAdjustments({ from, to });
+      setAdjustments(adjRes.data);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -109,6 +129,15 @@ export default function SalesSummaryPage() {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, store, from, to, period]);
+
+  const openDetail = async (a: ShopeeAdjustment) => {
+    const id = `${a.no_pesanan}-${a.tanggal_penyesuaian.replaceAll("-", "")}`;
+    const res = await getJournalLinesBySource(id);
+    if (res.data.length > 0) {
+      setLines(res.data[0].lines);
+      setDetailOpen(true);
+    }
+  };
 
   return (
     <div>
@@ -138,7 +167,11 @@ export default function SalesSummaryPage() {
             </option>
           ))}
         </select>
-        <select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value as any)}>
+        <select
+          aria-label="Period"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as any)}
+        >
           <option value="Daily">Daily</option>
           <option value="Monthly">Monthly</option>
         </select>
@@ -177,8 +210,8 @@ export default function SalesSummaryPage() {
         {totalRevenue.toLocaleString("id-ID", {
           style: "currency",
           currency: "IDR",
-        })}{" "}|{" "}
-        <strong>Total Orders:</strong> {totalOrders}
+        })}{" "}
+        | <strong>Total Orders:</strong> {totalOrders}
       </div>
       <h3>Total Sales by Amount</h3>
       <LineChart
@@ -245,6 +278,80 @@ export default function SalesSummaryPage() {
           </table>
         </div>
       )}
+      {adjustments.length > 0 && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3>Order Adjustments</h3>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Order</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {adjustments.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.tanggal_penyesuaian}</td>
+                  <td>{a.tipe_penyesuaian}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {a.biaya_penyesuaian.toLocaleString("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                    })}
+                  </td>
+                  <td>{a.no_pesanan}</td>
+                  <td>
+                    <button onClick={() => openDetail(a)}>View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+        <DialogTitle>Journal Lines</DialogTitle>
+        <DialogContent>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Debit</th>
+                <th>Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((l, idx) => (
+                <tr key={idx}>
+                  <td>{l.account_name}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {l.is_debit
+                      ? l.amount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {!l.is_debit
+                      ? l.amount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })
+                      : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

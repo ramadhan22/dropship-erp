@@ -19,6 +19,9 @@ Main features:
 - Import dropship purchases from CSV files with optional channel filter.
 - Import settled Shopee orders from XLSX files.
 - Import Shopee affiliate conversions from CSV. Journal entries are recorded only when the row's `status_terverifikasi` is `Sah`.
+- Import Shopee adjustments from income reports with automatic journal postings.
+  Existing entries for the same order/date/type are replaced and they are also
+  captured when importing settled orders.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.

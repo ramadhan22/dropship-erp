@@ -41,7 +41,7 @@ func main() {
 
 	// 3) Initialize services with the appropriate repo interfaces
 	dropshipSvc := service.NewDropshipService(repo.DB, repo.DropshipRepo, repo.JournalRepo)
-	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo)
+	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo)
 	shClient := service.NewShopeeClient(cfg.Shopee)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
@@ -63,6 +63,7 @@ func main() {
 	pbSvc := service.NewPendingBalanceService(shClient)
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
+	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -133,6 +134,7 @@ func main() {
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
+		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 	}
 

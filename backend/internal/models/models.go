@@ -279,3 +279,15 @@ type Withdrawal struct {
 	Amount    float64   `db:"amount" json:"amount"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
+
+// ShopeeAdjustment records adjustment entries from Shopee income reports.
+type ShopeeAdjustment struct {
+	ID                 int64     `db:"id" json:"id"`
+	NamaToko           string    `db:"nama_toko" json:"nama_toko"`
+	TanggalPenyesuaian time.Time `db:"tanggal_penyesuaian" json:"tanggal_penyesuaian"`
+	TipePenyesuaian    string    `db:"tipe_penyesuaian" json:"tipe_penyesuaian"`
+	AlasanPenyesuaian  string    `db:"alasan_penyesuaian" json:"alasan_penyesuaian"`
+	BiayaPenyesuaian   float64   `db:"biaya_penyesuaian" json:"biaya_penyesuaian"`
+	NoPesanan          string    `db:"no_pesanan" json:"no_pesanan"`
+	CreatedAt          time.Time `db:"created_at" json:"created_at"`
+}
