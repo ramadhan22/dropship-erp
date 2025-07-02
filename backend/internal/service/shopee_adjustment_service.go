@@ -82,6 +82,9 @@ func (s *ShopeeAdjustmentService) ImportXLSX(ctx context.Context, r io.Reader) (
 		if err != nil {
 			continue
 		}
+		if strings.Contains(strings.ToLower(row[2]), "bd marketing") || strings.Contains(strings.ToLower(row[3]), "bd marketing") {
+			continue
+		}
 		adj := &models.ShopeeAdjustment{
 			NamaToko:           store,
 			TanggalPenyesuaian: t,
