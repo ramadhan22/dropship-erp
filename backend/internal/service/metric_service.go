@@ -129,3 +129,46 @@ func (s *MetricService) CalculateAndCacheMetrics(
 func (s *MetricService) MetricRepo() MetricRepoInterface {
 	return s.metricRepo
 }
+
+// GetRevenue sums net income for a store over the given period.
+// periodType is "monthly" (YYYY-MM) or "yearly" (YYYY).
+func (s *MetricService) GetRevenue(ctx context.Context, store, periodType, periodValue string) (float64, error) {
+	var start time.Time
+	var err error
+	switch periodType {
+	case "monthly":
+		start, err = time.Parse("2006-01", periodValue)
+		if err != nil {
+			return 0, err
+		}
+		start = start.UTC()
+		end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		orders, err := s.shopeeRepo.ListShopeeOrdersByShopAndDate(ctx, store, start.Format("2006-01-02"), end.Format("2006-01-02"))
+		if err != nil {
+			return 0, err
+		}
+		var sum float64
+		for _, o := range orders {
+			sum += o.NetIncome
+		}
+		return sum, nil
+	case "yearly":
+		start, err = time.Parse("2006", periodValue)
+		if err != nil {
+			return 0, err
+		}
+		start = start.UTC()
+		end := start.AddDate(1, 0, 0).Add(-time.Nanosecond)
+		orders, err := s.shopeeRepo.ListShopeeOrdersByShopAndDate(ctx, store, start.Format("2006-01-02"), end.Format("2006-01-02"))
+		if err != nil {
+			return 0, err
+		}
+		var sum float64
+		for _, o := range orders {
+			sum += o.NetIncome
+		}
+		return sum, nil
+	default:
+		return 0, fmt.Errorf("unknown period type")
+	}
+}

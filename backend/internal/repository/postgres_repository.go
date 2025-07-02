@@ -19,6 +19,7 @@ type Repository struct {
 	AdInvoiceRepo        *AdInvoiceRepo
 	AssetAccountRepo     *AssetAccountRepo
 	WithdrawalRepo       *WithdrawalRepo
+	TaxRepo              *TaxRepo
 	ShopeeAdjustmentRepo *ShopeeAdjustmentRepo
 }
 
@@ -42,6 +43,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	adInvoiceRepo := NewAdInvoiceRepo(db)
 	assetAccountRepo := NewAssetAccountRepo(db)
 	withdrawalRepo := NewWithdrawalRepo(db)
+	taxRepo := NewTaxRepo(db)
 	adjustmentRepo := NewShopeeAdjustmentRepo(db)
 
 	return &Repository{
@@ -56,6 +58,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		AdInvoiceRepo:        adInvoiceRepo,
 		AssetAccountRepo:     assetAccountRepo,
 		WithdrawalRepo:       withdrawalRepo,
+		TaxRepo:              taxRepo,
 		ShopeeAdjustmentRepo: adjustmentRepo,
 	}, nil
 }
