@@ -286,6 +286,9 @@ export interface SalesProfit {
   biaya_layanan: number;
   biaya_voucher: number;
   biaya_affiliate: number;
+  biaya_refund: number;
+  selisih_ongkir: number;
+  adjustment_income: number;
   discount: number;
   profit: number;
   profit_percent: number;
