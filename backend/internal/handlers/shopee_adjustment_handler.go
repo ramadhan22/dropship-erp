@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -12,6 +13,8 @@ import (
 type ShopeeAdjustmentSvc interface {
 	ImportXLSX(ctx context.Context, r io.Reader) (int, error)
 	List(ctx context.Context, from, to string) ([]models.ShopeeAdjustment, error)
+	Update(ctx context.Context, a *models.ShopeeAdjustment) error
+	Delete(ctx context.Context, id int64) error
 }
 
 type ShopeeAdjustmentHandler struct{ svc ShopeeAdjustmentSvc }
@@ -24,6 +27,8 @@ func (h *ShopeeAdjustmentHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/shopee/adjustments")
 	grp.POST("/import", h.importXLSX)
 	grp.GET("/", h.list)
+	grp.PUT("/:id", h.update)
+	grp.DELETE("/:id", h.delete)
 }
 
 func (h *ShopeeAdjustmentHandler) importXLSX(c *gin.Context) {
@@ -55,4 +60,28 @@ func (h *ShopeeAdjustmentHandler) list(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+func (h *ShopeeAdjustmentHandler) update(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var a models.ShopeeAdjustment
+	if err := c.ShouldBindJSON(&a); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	a.ID = id
+	if err := h.svc.Update(c.Request.Context(), &a); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *ShopeeAdjustmentHandler) delete(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
 }
