@@ -21,6 +21,12 @@ If a command cannot be executed in the environment, mention this in the pull req
 - When adding a new page or API endpoint, adjust the backend CORS
   configuration so the page can be accessed without cross-origin errors.
 
+## Import Guidelines
+- When creating an import feature, first delete any existing data for the
+  same key so repeated imports overwrite previous rows.
+- Remove any related journal entries when old data is purged to prevent
+  duplicate postings.
+
 ## UI Patterns
 - Use the `SortableTable` component for displaying tabular data.
 - Paginate long lists with the `usePagination` hook or `Pagination` component.
