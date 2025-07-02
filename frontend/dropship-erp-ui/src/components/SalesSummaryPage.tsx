@@ -180,6 +180,7 @@ export default function SalesSummaryPage() {
         })}{" "}|{" "}
         <strong>Total Orders:</strong> {totalOrders}
       </div>
+      <h3>Total Sales by Amount</h3>
       <LineChart
         width={600}
         height={300}
@@ -188,15 +189,32 @@ export default function SalesSummaryPage() {
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
+        <YAxis
+          tickFormatter={(v) =>
+            v.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+              maximumFractionDigits: 0,
+            })
+          }
+        />
+        <Tooltip
+          formatter={(v: number) =>
+            v.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+              maximumFractionDigits: 0,
+            })
+          }
+        />
         <Line type="monotone" dataKey="total" stroke="#8884d8" />
       </LineChart>
+      <h3>Total Sales by Quantity</h3>
       <BarChart width={600} height={300} data={countData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
+        <YAxis tickFormatter={(v) => v.toLocaleString("id-ID")}/> 
+        <Tooltip formatter={(v: number) => v.toLocaleString("id-ID")} />
         <Bar dataKey="count" fill="#82ca9d" />
       </BarChart>
       {topProducts.length > 0 && (
