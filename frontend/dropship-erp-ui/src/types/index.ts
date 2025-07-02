@@ -304,3 +304,15 @@ export interface ShopeeAdjustment {
   no_pesanan: string;
   created_at: string;
 }
+
+export interface TaxPayment {
+  id: string;
+  store: string;
+  period_type: string;
+  period_value: string;
+  revenue: number;
+  tax_rate: number;
+  tax_amount: number;
+  is_paid: boolean;
+  paid_at: string;
+}

@@ -51,6 +51,7 @@ func main() {
 	metricSvc := service.NewMetricService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
 	)
+	taxSvc := service.NewTaxService(repo.DB, repo.TaxRepo, repo.JournalRepo, metricSvc)
 	expenseSvc := service.NewExpenseService(repo.DB, repository.NewExpenseRepo(repo.DB), repo.JournalRepo)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo)
@@ -125,6 +126,7 @@ func main() {
 
 		jHandler := handlers.NewJournalHandler(journalSvc)
 		jHandler.RegisterRoutes(apiGroup)
+		handlers.NewTaxHandler(taxSvc).Register(apiGroup)
 
 		handlers.NewPLHandler(plSvc).RegisterRoutes(apiGroup)
 		handlers.NewProfitLossReportHandler(plReportSvc).RegisterRoutes(apiGroup)
