@@ -25,7 +25,9 @@ Main features:
   Adjustments can be browsed on the **Shopee Adjustments** page.
   Adjustments may be edited or deleted; updating replaces the original
   journal entry. Negative values are posted to a dedicated **Refund** account
-  instead of the Discount account.
+  instead of the Discount account. The **Shipping Fee Discrepancy** sheet of the
+  income report is also parsed so extra courier charges are imported as
+  adjustments.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.
