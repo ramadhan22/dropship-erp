@@ -20,6 +20,7 @@ type DropshipServiceInterface interface {
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
 	DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error)
+	MonthlyTotals(ctx context.Context, channel, store, from, to string) ([]repository.MonthlyPurchaseTotal, error)
 }
 
 type DropshipHandler struct {
@@ -135,6 +136,20 @@ func (h *DropshipHandler) HandleDailyTotals(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 	res, err := h.svc.DailyTotals(c.Request.Context(), channel, store, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// HandleMonthlyTotals returns monthly aggregated purchase totals and counts.
+func (h *DropshipHandler) HandleMonthlyTotals(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	from := c.Query("from")
+	to := c.Query("to")
+	res, err := h.svc.MonthlyTotals(c.Request.Context(), channel, store, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

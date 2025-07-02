@@ -27,6 +27,7 @@ type DropshipRepoInterface interface {
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
 	DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error)
+	MonthlyTotals(ctx context.Context, channel, store, from, to string) ([]repository.MonthlyPurchaseTotal, error)
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
@@ -243,6 +244,10 @@ func (s *DropshipService) TopProducts(ctx context.Context, channel, store, from,
 
 func (s *DropshipService) DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error) {
 	return s.repo.DailyTotals(ctx, channel, store, from, to)
+}
+
+func (s *DropshipService) MonthlyTotals(ctx context.Context, channel, store, from, to string) ([]repository.MonthlyPurchaseTotal, error) {
+	return s.repo.MonthlyTotals(ctx, channel, store, from, to)
 }
 
 func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr DropshipJournalRepo, p *models.DropshipPurchase, totalProduk, totalProdukChannel float64) error {

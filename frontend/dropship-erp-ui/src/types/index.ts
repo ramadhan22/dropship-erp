@@ -222,6 +222,12 @@ export interface DailyPurchaseTotal {
   count: number;
 }
 
+export interface MonthlyPurchaseTotal {
+  month: string;
+  total: number;
+  count: number;
+}
+
 export interface ShopeeAffiliateSale {
   nama_toko: string;
   kode_pesanan: string;
