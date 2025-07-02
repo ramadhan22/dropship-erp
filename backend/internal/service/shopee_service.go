@@ -1090,7 +1090,7 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 	} else {
 		aamt := -amt
 		lines := []models.JournalLine{
-			{JournalID: jid, AccountID: 52002, IsDebit: true, Amount: aamt},
+			{JournalID: jid, AccountID: 52009, IsDebit: true, Amount: aamt},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: aamt},
 		}
 		for i := range lines {
