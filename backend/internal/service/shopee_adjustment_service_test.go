@@ -110,3 +110,37 @@ func TestShopeeAdjustmentImportDeletesExisting(t *testing.T) {
 		t.Fatalf("journal not deleted on second import")
 	}
 }
+
+func TestShopeeAdjustmentImportIgnoreBDMarketing(t *testing.T) {
+	f := excelize.NewFile()
+	sheet, _ := f.NewSheet("Adjustment")
+	f.SetCellValue("Adjustment", "B2", "tokostore")
+	f.SetCellValue("Adjustment", "A4", "Rincian Transaksi Penyesuaian")
+	row := []interface{}{1, "2025-01-02", "BD Marketing", "fee", 100, "SO1"}
+	for i, v := range row {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		f.SetCellValue("Adjustment", cell, v)
+	}
+	f.SetActiveSheet(sheet)
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeAdjRepo{}
+	jr := &fakeJournalRepoA{}
+	svc := &ShopeeAdjustmentService{repo: repo, journalRepo: jr}
+	inserted, err := svc.ImportXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatalf("import err %v", err)
+	}
+	if inserted != 0 {
+		t.Fatalf("expected 0 rows inserted, got %d", inserted)
+	}
+	if len(repo.deleted) != 0 {
+		t.Fatalf("unexpected delete calls")
+	}
+	if len(jr.entries) != 0 {
+		t.Fatalf("unexpected journal entries")
+	}
+}

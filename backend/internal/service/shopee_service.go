@@ -1027,6 +1027,9 @@ func (s *ShopeeService) importAdjustments(ctx context.Context, f *excelize.File)
 		if err != nil {
 			continue
 		}
+		if strings.Contains(strings.ToLower(row[2]), "bd marketing") || strings.Contains(strings.ToLower(row[3]), "bd marketing") {
+			continue
+		}
 		adj := &models.ShopeeAdjustment{
 			NamaToko:           store,
 			TanggalPenyesuaian: t,
