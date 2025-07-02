@@ -24,7 +24,8 @@ Main features:
   captured when importing settled orders.
   Adjustments can be browsed on the **Shopee Adjustments** page.
   Adjustments may be edited or deleted; updating replaces the original
-  journal entry.
+  journal entry. Negative values are posted to a dedicated **Refund** account
+  instead of the Discount account.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Automatically compute revenue, COGS, fees and net profit metrics.
