@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Button } from "@mui/material";
+import { Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import {
   listCandidates,
   reconcileCheck,
-  fetchShopeeStatus,
+  fetchShopeeToken,
   cancelPurchase,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
@@ -22,6 +22,8 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [token, setToken] = useState("");
+  const [tokenOpen, setTokenOpen] = useState(false);
   const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
 
@@ -49,8 +51,9 @@ export default function ReconcileDashboard() {
 
   const handleCheckStatus = async (inv: string) => {
     try {
-      const res = await fetchShopeeStatus(inv);
-      setMsg({ type: "success", text: res.data.status });
+      const res = await fetchShopeeToken(inv);
+      setToken(res.data.access_token);
+      setTokenOpen(true);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -159,6 +162,13 @@ export default function ReconcileDashboard() {
       )}
       <SortableTable columns={columns} data={paginated} />
       {controls}
+      <Dialog open={tokenOpen} onClose={() => setTokenOpen(false)}>
+        <DialogTitle>Access Token</DialogTitle>
+        <DialogContent>{token}</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTokenOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

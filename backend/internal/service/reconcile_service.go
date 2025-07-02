@@ -32,6 +32,9 @@ type ReconcileServiceJournalRepo interface {
 type ReconcileServiceRecRepo interface {
 	InsertReconciledTransaction(ctx context.Context, r *models.ReconciledTransaction) error
 }
+type ReconcileServiceStoreRepo interface {
+	GetStoreByName(ctx context.Context, name string) (*models.Store, error)
+}
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
@@ -40,6 +43,7 @@ type ReconcileService struct {
 	shopeeRepo  ReconcileServiceShopeeRepo
 	journalRepo ReconcileServiceJournalRepo
 	recRepo     ReconcileServiceRecRepo
+	storeRepo   ReconcileServiceStoreRepo
 	client      *ShopeeClient
 }
 
@@ -50,6 +54,7 @@ func NewReconcileService(
 	sr ReconcileServiceShopeeRepo,
 	jr ReconcileServiceJournalRepo,
 	rr ReconcileServiceRecRepo,
+	srp ReconcileServiceStoreRepo,
 	c *ShopeeClient,
 ) *ReconcileService {
 	return &ReconcileService{
@@ -58,6 +63,7 @@ func NewReconcileService(
 		shopeeRepo:  sr,
 		journalRepo: jr,
 		recRepo:     rr,
+		storeRepo:   srp,
 		client:      c,
 	}
 }
@@ -297,4 +303,26 @@ func (s *ReconcileService) GetShopeeOrderStatus(ctx context.Context, invoice str
 		return "", fmt.Errorf("shopee client not configured")
 	}
 	return s.client.GetOrderDetail(ctx, invoice)
+}
+
+// GetShopeeAccessToken obtains an access token for the store related to the given invoice.
+func (s *ReconcileService) GetShopeeAccessToken(ctx context.Context, invoice string) (string, error) {
+	if s.client == nil {
+		return "", fmt.Errorf("shopee client not configured")
+	}
+	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return "", fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+	if s.storeRepo == nil {
+		return "", fmt.Errorf("store repo not configured")
+	}
+	st, err := s.storeRepo.GetStoreByName(ctx, dp.NamaToko)
+	if err != nil || st == nil {
+		return "", fmt.Errorf("fetch store %s: %w", dp.NamaToko, err)
+	}
+	if st.CodeID == nil || st.ShopID == nil {
+		return "", fmt.Errorf("store missing code or shop id")
+	}
+	return s.client.GetAccessToken(ctx, *st.CodeID, *st.ShopID)
 }

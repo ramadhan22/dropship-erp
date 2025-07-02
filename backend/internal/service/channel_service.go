@@ -14,6 +14,7 @@ type ChannelRepoInterface interface {
 	ListStoresByChannel(ctx context.Context, channelID int64) ([]models.Store, error)
 	ListStoresByChannelName(ctx context.Context, channelName string) ([]models.Store, error)
 	GetStoreByID(ctx context.Context, id int64) (*models.Store, error)
+	GetStoreByName(ctx context.Context, name string) (*models.Store, error)
 	ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error)
 	UpdateStore(ctx context.Context, s *models.Store) error
 	DeleteStore(ctx context.Context, id int64) error
@@ -53,6 +54,10 @@ func (s *ChannelService) ListStoresByChannelName(ctx context.Context, channelNam
 
 func (s *ChannelService) GetStore(ctx context.Context, id int64) (*models.Store, error) {
 	return s.repo.GetStoreByID(ctx, id)
+}
+
+func (s *ChannelService) GetStoreByName(ctx context.Context, name string) (*models.Store, error) {
+	return s.repo.GetStoreByName(ctx, name)
 }
 
 func (s *ChannelService) ListAllStores(ctx context.Context) ([]models.StoreWithChannel, error) {
