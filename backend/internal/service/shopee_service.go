@@ -109,11 +109,12 @@ type ShopeeService struct {
 	repo         ShopeeRepoInterface
 	dropshipRepo ShopeeDropshipRepo
 	journalRepo  ShopeeJournalRepo
+	adjRepo      *repository.ShopeeAdjustmentRepo
 }
 
 // NewShopeeService constructs a ShopeeService.
-func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo) *ShopeeService {
-	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr}
+func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo, ar *repository.ShopeeAdjustmentRepo) *ShopeeService {
+	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr, adjRepo: ar}
 }
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
@@ -221,6 +222,11 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 			}
 		}
 		inserted++
+	}
+	if s.adjRepo != nil {
+		if _, err := s.importAdjustments(ctx, f); err != nil {
+			return inserted, mismatches, err
+		}
 	}
 	return inserted, mismatches, nil
 }
@@ -964,6 +970,125 @@ func createWithdrawJournal(ctx context.Context, jr ShopeeJournalRepo, store stri
 		lines := []models.JournalLine{
 			{JournalID: jid, AccountID: bankAcc, IsDebit: true, Amount: amount},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// importAdjustments parses the Adjustment sheet from the same income file and
+// stores the rows into the shopee_adjustments table while posting journals.
+func (s *ShopeeService) importAdjustments(ctx context.Context, f *excelize.File) (int, error) {
+	sheet := ""
+	for _, sh := range f.GetSheetList() {
+		if strings.EqualFold(sh, "Adjustment") {
+			sheet = sh
+			break
+		}
+	}
+	if sheet == "" {
+		return 0, nil
+	}
+
+	username, _ := f.GetCellValue(sheet, "B2")
+	store := formatNamaToko(username)
+	rows, err := f.GetRows(sheet)
+	if err != nil {
+		return 0, err
+	}
+	start := 0
+	for i, row := range rows {
+		if len(row) > 0 && strings.Contains(strings.ToLower(row[0]), "rincian transaksi penyesuaian") {
+			start = i + 2
+			break
+		}
+	}
+	inserted := 0
+	for i := start; i < len(rows); i++ {
+		row := rows[i]
+		if len(row) < 6 {
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(row[0]), "total") {
+			break
+		}
+		if strings.TrimSpace(row[0]) == "" {
+			continue
+		}
+		t, err := parseDate(row[1])
+		if err != nil {
+			continue
+		}
+		amt, err := parseFloat(row[4])
+		if err != nil {
+			continue
+		}
+		adj := &models.ShopeeAdjustment{
+			NamaToko:           store,
+			TanggalPenyesuaian: t,
+			TipePenyesuaian:    row[2],
+			AlasanPenyesuaian:  row[3],
+			BiayaPenyesuaian:   amt,
+			NoPesanan:          row[5],
+			CreatedAt:          time.Now(),
+		}
+		if err := s.adjRepo.Delete(ctx, adj.NoPesanan, adj.TanggalPenyesuaian, adj.TipePenyesuaian); err != nil {
+			return inserted, err
+		}
+		if s.journalRepo != nil {
+			sid := fmt.Sprintf("%s-%s-%s", adj.NoPesanan, adj.TanggalPenyesuaian.Format("20060102"), sanitizeID(adj.TipePenyesuaian))
+			if je, _ := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_adjustment", sid); je != nil {
+				_ = s.journalRepo.DeleteJournalEntry(ctx, je.JournalID)
+			}
+		}
+		if err := s.adjRepo.Insert(ctx, adj); err != nil {
+			return inserted, err
+		}
+		if s.journalRepo != nil {
+			if err := s.createAdjustmentJournal(ctx, s.journalRepo, adj); err != nil {
+				return inserted, err
+			}
+		}
+		inserted++
+	}
+	return inserted, nil
+}
+
+func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJournalRepo, a *models.ShopeeAdjustment) error {
+	je := &models.JournalEntry{
+		EntryDate:    a.TanggalPenyesuaian,
+		Description:  ptrString("Shopee adjustment " + a.NoPesanan),
+		SourceType:   "shopee_adjustment",
+		SourceID:     fmt.Sprintf("%s-%s-%s", a.NoPesanan, a.TanggalPenyesuaian.Format("20060102"), sanitizeID(a.TipePenyesuaian)),
+		ShopUsername: a.NamaToko,
+		Store:        a.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	amt := a.BiayaPenyesuaian
+	saldoAcc := saldoShopeeAccountID(a.NamaToko)
+	if amt >= 0 {
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: true, Amount: amt},
+			{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: amt},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	} else {
+		aamt := -amt
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: 52002, IsDebit: true, Amount: aamt},
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: aamt},
 		}
 		for i := range lines {
 			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {

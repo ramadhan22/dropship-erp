@@ -290,3 +290,14 @@ export interface SalesProfit {
   profit: number;
   profit_percent: number;
 }
+
+export interface ShopeeAdjustment {
+  id: number;
+  nama_toko: string;
+  tanggal_penyesuaian: string;
+  tipe_penyesuaian: string;
+  alasan_penyesuaian: string;
+  biaya_penyesuaian: number;
+  no_pesanan: string;
+  created_at: string;
+}
