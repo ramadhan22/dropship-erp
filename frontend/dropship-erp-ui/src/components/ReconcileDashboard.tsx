@@ -166,51 +166,9 @@ export default function ReconcileDashboard() {
         <DialogTitle>Order Detail</DialogTitle>
         <DialogContent>
           {detail && (
-            <div style={{ marginBottom: "1rem" }}>
-              <div>
-                <strong>Order SN:</strong> {detail.order_sn}
-              </div>
-              <div>
-                <strong>Status:</strong> {detail.order_status || detail.status}
-              </div>
-              {detail.buyer_username && (
-                <div>
-                  <strong>Buyer:</strong> {detail.buyer_username}
-                </div>
-              )}
-              {detail.payment_method && (
-                <div>
-                  <strong>Payment:</strong> {detail.payment_method}
-                </div>
-              )}
-              {detail.total_amount !== undefined && (
-                <div>
-                  <strong>Total:</strong>{" "}
-                  {detail.total_amount.toLocaleString("id-ID", {
-                    style: "currency",
-                    currency: detail.currency || "IDR",
-                  })}
-                </div>
-              )}
-              {detail.item_list && detail.item_list.length > 0 && (
-                <div style={{ marginTop: "0.5rem" }}>
-                  <strong>Items:</strong>
-                  <ul>
-                    {detail.item_list.map((it) => (
-                      <li key={it.order_item_id}>
-                        {it.item_name} x {it.model_quantity_purchased}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {detail.recipient_address && (
-                <div style={{ marginTop: "0.5rem" }}>
-                  <strong>Recipient:</strong> {detail.recipient_address.name}, {" "}
-                  {detail.recipient_address.full_address}
-                </div>
-              )}
-            </div>
+            <pre style={{ whiteSpace: "pre-wrap" }}>
+              {JSON.stringify(detail, null, 2)}
+            </pre>
           )}
         </DialogContent>
         <DialogActions>

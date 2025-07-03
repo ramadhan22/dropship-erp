@@ -211,10 +211,10 @@ export interface ReconcileCandidate {
 }
 
 export interface ShopeeOrderDetail {
-  order_sn: string;
-  status: string;
-  checkout_time: number;
-  update_time: number;
+  order_sn?: string;
+  status?: string;
+  checkout_time?: number;
+  update_time?: number;
   order_status?: string;
   buyer_username?: string;
   payment_method?: string;
@@ -229,6 +229,7 @@ export interface ShopeeOrderDetail {
     name: string;
     full_address: string;
   };
+  [key: string]: any;
 }
 
 export interface ProductSales {

@@ -56,7 +56,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FetchShopeeOrderDetail error: %v", err)
 	}
-	if detail.OrderSN != "123" || detail.Status != "NEW" {
+	if (*detail)["order_sn"] != "123" || (*detail)["status"] != "NEW" {
 		t.Errorf("unexpected detail %+v", detail)
 	}
 }

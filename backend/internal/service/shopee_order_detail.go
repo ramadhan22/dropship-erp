@@ -1,13 +1,8 @@
 package service
 
-// ShopeeOrderDetail captures essential fields from Shopee order detail.
-type ShopeeOrderDetail struct {
-	OrderSN      string `json:"order_sn"`
-	Status       string `json:"status"`
-	CheckoutTime int64  `json:"checkout_time"`
-	UpdateTime   int64  `json:"update_time"`
-	// add other fields as needed...
-}
+// ShopeeOrderDetail represents the raw Shopee order detail object. We keep it
+// flexible so new fields from Shopee are automatically preserved.
+type ShopeeOrderDetail map[string]any
 
 // orderDetailAPIResponse maps the API JSON structure.
 type orderDetailAPIResponse struct {
