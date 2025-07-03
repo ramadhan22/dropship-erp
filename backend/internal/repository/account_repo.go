@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -19,6 +20,7 @@ func NewAccountRepo(db *sqlx.DB) *AccountRepo {
 
 // CreateAccount inserts a new account row and returns its ID.
 func (r *AccountRepo) CreateAccount(ctx context.Context, a *models.Account) (int64, error) {
+	log.Printf("AccountRepo.CreateAccount %s", a.AccountCode)
 	var id int64
 	err := r.db.QueryRowxContext(ctx,
 		`INSERT INTO accounts (account_code, account_name, account_type, parent_id)
@@ -26,8 +28,10 @@ func (r *AccountRepo) CreateAccount(ctx context.Context, a *models.Account) (int
 		a.AccountCode, a.AccountName, a.AccountType, a.ParentID,
 	).Scan(&id)
 	if err != nil {
+		log.Printf("AccountRepo.CreateAccount error: %v", err)
 		return 0, err
 	}
+	log.Printf("AccountRepo.CreateAccount id=%d", id)
 	return id, nil
 }
 
@@ -52,17 +56,25 @@ func (r *AccountRepo) ListAccounts(ctx context.Context) ([]models.Account, error
 
 // UpdateAccount updates an existing account by ID.
 func (r *AccountRepo) UpdateAccount(ctx context.Context, a *models.Account) error {
+	log.Printf("AccountRepo.UpdateAccount %d", a.AccountID)
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE accounts
          SET account_code=$1, account_name=$2, account_type=$3, parent_id=$4, updated_at=NOW()
          WHERE account_id=$5`,
 		a.AccountCode, a.AccountName, a.AccountType, a.ParentID, a.AccountID,
 	)
+	if err != nil {
+		log.Printf("AccountRepo.UpdateAccount error: %v", err)
+	}
 	return err
 }
 
 // DeleteAccount removes an account row.
 func (r *AccountRepo) DeleteAccount(ctx context.Context, id int64) error {
+	log.Printf("AccountRepo.DeleteAccount %d", id)
 	_, err := r.db.ExecContext(ctx, `DELETE FROM accounts WHERE account_id=$1`, id)
+	if err != nil {
+		log.Printf("AccountRepo.DeleteAccount error: %v", err)
+	}
 	return err
 }

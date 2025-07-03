@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -35,6 +36,7 @@ func NewDropshipRepo(db DBTX) *DropshipRepo {
 // InsertDropshipPurchase receives a *models.DropshipPurchase and executes an INSERT into dropship_purchases.
 // It uses NamedExecContext so the struct fields map to column names automatically (via db tags).
 func (r *DropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error {
+	log.Printf("DropshipRepo.InsertDropshipPurchase %s", p.KodePesanan)
 	query := `
         INSERT INTO dropship_purchases (
             kode_pesanan, kode_transaksi, waktu_pesanan_terbuat, status_pesanan_terakhir,
@@ -51,6 +53,9 @@ func (r *DropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.Dro
         )
         ON CONFLICT (kode_pesanan) DO NOTHING`
 	_, err := r.db.NamedExecContext(ctx, query, p)
+	if err != nil {
+		log.Printf("InsertDropshipPurchase error: %v", err)
+	}
 	return err
 }
 
@@ -66,6 +71,7 @@ func (r *DropshipRepo) ExistsDropshipPurchase(ctx context.Context, kodePesanan s
 
 // InsertDropshipPurchaseDetail inserts a record into dropship_purchase_details.
 func (r *DropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error {
+	log.Printf("DropshipRepo.InsertDropshipPurchaseDetail %s %s", d.KodePesanan, d.SKU)
 	query := `
         INSERT INTO dropship_purchase_details (
             kode_pesanan, sku, nama_produk, harga_produk, qty,
@@ -77,6 +83,9 @@ func (r *DropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *mode
             :potensi_keuntungan
         )`
 	_, err := r.db.NamedExecContext(ctx, query, d)
+	if err != nil {
+		log.Printf("InsertDropshipPurchaseDetail error: %v", err)
+	}
 	return err
 }
 
@@ -138,9 +147,13 @@ func (r *DropshipRepo) SumProductCostByInvoice(ctx context.Context, kodeInvoice 
 
 // UpdatePurchaseStatus sets status_pesanan_terakhir for the given kode_pesanan.
 func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, status string) error {
+	log.Printf("DropshipRepo.UpdatePurchaseStatus %s %s", kodePesanan, status)
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE dropship_purchases SET status_pesanan_terakhir=$2 WHERE kode_pesanan=$1`,
 		kodePesanan, status)
+	if err != nil {
+		log.Printf("UpdatePurchaseStatus error: %v", err)
+	}
 	return err
 }
 

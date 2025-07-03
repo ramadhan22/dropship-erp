@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -902,7 +903,9 @@ func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string,
 	form.Set("amount", fmt.Sprintf("%.2f", amount))
 	form.Set("access_token", cfg.Shopee.AccessToken)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.Shopee.BaseURL+"/api/v2/shop/withdraw", strings.NewReader(form.Encode()))
+	urlStr := cfg.Shopee.BaseURL + "/api/v2/shop/withdraw"
+	log.Printf("Shopee withdraw request: POST %s body=%s", urlStr, form.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
