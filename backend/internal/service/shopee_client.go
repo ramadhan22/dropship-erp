@@ -241,11 +241,14 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		logutil.Errorf("FetchShopeeOrderDetail request error: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("FetchShopeeOrderDetail unexpected status %d: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
@@ -254,6 +257,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 		return nil, err
 	}
 	if out.Error != "" {
+		logutil.Errorf("FetchShopeeOrderDetail API error: %s", out.Error)
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
 	if len(out.Response.OrderList) == 0 {
