@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
@@ -45,7 +46,7 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	}
 	e.Amount = total
 	if err := expRepo.Create(ctx, e); err != nil {
-		log.Printf("CreateExpense error: %v", err)
+		logutil.Errorf("CreateExpense error: %v", err)
 		return err
 	}
 	je := &models.JournalEntry{
@@ -59,20 +60,20 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	}
 	jid, err := jRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
-		log.Printf("CreateExpense journal error: %v", err)
+		logutil.Errorf("CreateExpense journal error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
 		l := e.Lines[i]
 		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
 		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
-			log.Printf("CreateExpense line error: %v", err)
+			logutil.Errorf("CreateExpense line error: %v", err)
 			return err
 		}
 	}
 	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
 	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
-		log.Printf("CreateExpense asset line error: %v", err)
+		logutil.Errorf("CreateExpense asset line error: %v", err)
 		return err
 	}
 	if tx != nil {
@@ -94,7 +95,7 @@ func (s *ExpenseService) DeleteExpense(ctx context.Context, id string) error {
 	log.Printf("DeleteExpense %s", id)
 	err := s.expenseRepo.Delete(ctx, id)
 	if err != nil {
-		log.Printf("DeleteExpense error: %v", err)
+		logutil.Errorf("DeleteExpense error: %v", err)
 	}
 	return err
 }
@@ -149,7 +150,7 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 	}
 	e.Amount = total
 	if err := expRepo.Update(ctx, e); err != nil {
-		log.Printf("UpdateExpense repo error: %v", err)
+		logutil.Errorf("UpdateExpense repo error: %v", err)
 		return err
 	}
 	je := &models.JournalEntry{
@@ -163,20 +164,20 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 	}
 	jid, err := jRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
-		log.Printf("UpdateExpense journal error: %v", err)
+		logutil.Errorf("UpdateExpense journal error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
 		l := e.Lines[i]
 		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
 		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
-			log.Printf("UpdateExpense line error: %v", err)
+			logutil.Errorf("UpdateExpense line error: %v", err)
 			return err
 		}
 	}
 	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
 	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
-		log.Printf("UpdateExpense asset line error: %v", err)
+		logutil.Errorf("UpdateExpense asset line error: %v", err)
 		return err
 	}
 	if tx != nil {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -29,7 +30,7 @@ func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
 	}
 	q = r.db.Rebind(q)
 	if err := r.db.QueryRowxContext(ctx, q, args...).Scan(&e.ID); err != nil {
-		log.Printf("ExpenseRepo.Create error: %v", err)
+		logutil.Errorf("ExpenseRepo.Create error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
@@ -126,12 +127,12 @@ func (r *ExpenseRepo) Update(ctx context.Context, e *models.Expense) error {
 	_, err := r.db.NamedExecContext(ctx,
 		`UPDATE expenses SET date=:date, description=:description, amount=:amount, asset_account_id=:asset_account_id WHERE id=:id`, e)
 	if err != nil {
-		log.Printf("ExpenseRepo.Update error: %v", err)
+		logutil.Errorf("ExpenseRepo.Update error: %v", err)
 		return err
 	}
 	_, err = r.db.ExecContext(ctx, `DELETE FROM expense_lines WHERE expense_id=$1`, e.ID)
 	if err != nil {
-		log.Printf("ExpenseRepo.Update delete lines error: %v", err)
+		logutil.Errorf("ExpenseRepo.Update delete lines error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
@@ -139,7 +140,7 @@ func (r *ExpenseRepo) Update(ctx context.Context, e *models.Expense) error {
 		l.ExpenseID = e.ID
 		if _, err := r.db.NamedExecContext(ctx,
 			`INSERT INTO expense_lines (expense_id, account_id, amount) VALUES (:expense_id,:account_id,:amount)`, l); err != nil {
-			log.Printf("ExpenseRepo.Update insert line error: %v", err)
+			logutil.Errorf("ExpenseRepo.Update insert line error: %v", err)
 			return err
 		}
 	}
@@ -151,7 +152,7 @@ func (r *ExpenseRepo) Delete(ctx context.Context, id string) error {
 	log.Printf("ExpenseRepo.Delete %s", id)
 	_, err := r.db.ExecContext(ctx, `DELETE FROM expenses WHERE id=$1`, id)
 	if err != nil {
-		log.Printf("ExpenseRepo.Delete error: %v", err)
+		logutil.Errorf("ExpenseRepo.Delete error: %v", err)
 	}
 	return err
 }

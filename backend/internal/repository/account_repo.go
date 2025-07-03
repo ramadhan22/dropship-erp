@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -28,7 +29,7 @@ func (r *AccountRepo) CreateAccount(ctx context.Context, a *models.Account) (int
 		a.AccountCode, a.AccountName, a.AccountType, a.ParentID,
 	).Scan(&id)
 	if err != nil {
-		log.Printf("AccountRepo.CreateAccount error: %v", err)
+		logutil.Errorf("AccountRepo.CreateAccount error: %v", err)
 		return 0, err
 	}
 	log.Printf("AccountRepo.CreateAccount id=%d", id)
@@ -64,7 +65,7 @@ func (r *AccountRepo) UpdateAccount(ctx context.Context, a *models.Account) erro
 		a.AccountCode, a.AccountName, a.AccountType, a.ParentID, a.AccountID,
 	)
 	if err != nil {
-		log.Printf("AccountRepo.UpdateAccount error: %v", err)
+		logutil.Errorf("AccountRepo.UpdateAccount error: %v", err)
 	}
 	return err
 }
@@ -74,7 +75,7 @@ func (r *AccountRepo) DeleteAccount(ctx context.Context, id int64) error {
 	log.Printf("AccountRepo.DeleteAccount %d", id)
 	_, err := r.db.ExecContext(ctx, `DELETE FROM accounts WHERE account_id=$1`, id)
 	if err != nil {
-		log.Printf("AccountRepo.DeleteAccount error: %v", err)
+		logutil.Errorf("AccountRepo.DeleteAccount error: %v", err)
 	}
 	return err
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
@@ -69,7 +70,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	log.Printf("ImportFromCSV channel=%s", channel)
 	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
-		log.Printf("ImportFromCSV header error: %v", err)
+		logutil.Errorf("ImportFromCSV header error: %v", err)
 		return 0, fmt.Errorf("read header: %w", err)
 	}
 
@@ -80,7 +81,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		var err error
 		tx, err = s.db.BeginTxx(ctx, nil)
 		if err != nil {
-			log.Printf("ImportFromCSV tx begin error: %v", err)
+			logutil.Errorf("ImportFromCSV tx begin error: %v", err)
 			return 0, err
 		}
 		defer tx.Rollback()
@@ -106,13 +107,13 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Printf("ImportFromCSV read row error: %v", err)
+			logutil.Errorf("ImportFromCSV read row error: %v", err)
 			return count, fmt.Errorf("read row: %w", err)
 		}
 
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
-			log.Printf("ImportFromCSV parse qty error: %v", err)
+			logutil.Errorf("ImportFromCSV parse qty error: %v", err)
 			return count, fmt.Errorf("parse qty '%s': %w", record[8], err)
 		}
 		hargaProduk, _ := strconv.ParseFloat(record[7], 64)
