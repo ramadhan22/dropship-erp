@@ -36,6 +36,9 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 		if r.URL.Query().Get("order_sn_list") != "123" {
 			t.Errorf("expected order_sn_list=123, got %s", r.URL.Query().Get("order_sn_list"))
 		}
+		if r.URL.Query().Get("shop_id") != shopID {
+			t.Errorf("expected shop_id=%s, got %s", shopID, r.URL.Query().Get("shop_id"))
+		}
 		fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"123","status":"NEW","checkout_time":1,"update_time":2}]}}`)
 	}))
 	defer srv.Close()
@@ -48,7 +51,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 	}
 	client := NewShopeeClient(cfg)
 
-	detail, err := client.FetchShopeeOrderDetail(context.Background(), "token", "123")
+	detail, err := client.FetchShopeeOrderDetail(context.Background(), "token", shopID, "123")
 	if err != nil {
 		t.Fatalf("FetchShopeeOrderDetail error: %v", err)
 	}
