@@ -324,5 +324,9 @@ func (s *ReconcileService) GetShopeeAccessToken(ctx context.Context, invoice str
 	if st.CodeID == nil || st.ShopID == nil {
 		return "", fmt.Errorf("store missing code or shop id")
 	}
-	return s.client.GetAccessToken(ctx, *st.CodeID, *st.ShopID)
+	tok, err := s.client.GetAccessToken(ctx, *st.CodeID, *st.ShopID)
+	if err != nil {
+		return "", err
+	}
+	return tok.AccessToken, nil
 }

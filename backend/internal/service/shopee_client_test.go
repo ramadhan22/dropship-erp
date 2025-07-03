@@ -96,12 +96,12 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 	}
 	c := NewShopeeClient(cfg)
 
-	tok, err := c.GetAccessToken(context.Background(), "abc", "shop")
+	resp, err := c.GetAccessToken(context.Background(), "abc", "shop")
 	if err != nil {
 		t.Fatalf("GetAccessToken err: %v", err)
 	}
-	if tok != "tok" {
-		t.Fatalf("unexpected token %s", tok)
+	if resp.AccessToken != "tok" {
+		t.Fatalf("unexpected token %s", resp.AccessToken)
 	}
 	if !called {
 		t.Fatal("token endpoint not called")

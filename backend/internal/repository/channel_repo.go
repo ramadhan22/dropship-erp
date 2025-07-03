@@ -112,8 +112,8 @@ func (r *ChannelRepo) ListAllStores(ctx context.Context) ([]models.StoreWithChan
 
 // UpdateStore modifies an existing store row.
 func (r *ChannelRepo) UpdateStore(ctx context.Context, s *models.Store) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE stores SET nama_toko=$1, jenis_channel_id=$2, code_id=$3, shop_id=$4 WHERE store_id=$5`,
-		s.NamaToko, s.JenisChannelID, s.CodeID, s.ShopID, s.StoreID)
+	_, err := r.db.ExecContext(ctx, `UPDATE stores SET nama_toko=$1, jenis_channel_id=$2, code_id=$3, shop_id=$4, access_token=$5, refresh_token=$6, expire_in=$7, request_id=$8 WHERE store_id=$9`,
+		s.NamaToko, s.JenisChannelID, s.CodeID, s.ShopID, s.AccessToken, s.RefreshToken, s.ExpireIn, s.RequestID, s.StoreID)
 	return err
 }
 

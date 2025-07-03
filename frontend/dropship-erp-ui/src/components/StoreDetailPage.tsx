@@ -42,8 +42,6 @@ export default function StoreDetailPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 300 }}>
       <h2>Store Detail</h2>
       <TextField label="Store" value={store.nama_toko} disabled size="small" />
-      <TextField label="Code ID" value={store.code_id ?? ""} disabled size="small" />
-      <TextField label="Shop ID" value={store.shop_id ?? ""} disabled size="small" />
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
     </div>
   );
