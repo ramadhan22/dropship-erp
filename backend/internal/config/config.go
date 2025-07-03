@@ -20,6 +20,7 @@ type Config struct {
 	Database DatabaseConfig
 	JWT      JWTConfig
 	Shopee   ShopeeAPIConfig `mapstructure:"shopee_api"`
+	Logging  LoggingConfig
 }
 
 // ServerConfig contains HTTP server settings.
@@ -37,6 +38,11 @@ type DatabaseConfig struct {
 // JWTConfig contains settings for JWT authentication.
 type JWTConfig struct {
 	Secret string
+}
+
+// LoggingConfig specifies where log files are stored.
+type LoggingConfig struct {
+	Dir string
 }
 
 // ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
@@ -67,6 +73,7 @@ func LoadConfig() (*Config, error) {
 	viper.AutomaticEnv()
 	// Default CORS origin for local development
 	viper.SetDefault("server.cors_origins", []string{"http://localhost:5173"})
+	viper.SetDefault("logging.dir", "logs")
 
 	// Read from config.yaml
 	if err := viper.ReadInConfig(); err != nil {
@@ -81,6 +88,7 @@ func LoadConfig() (*Config, error) {
 	}
 	// Handle slice parsing from env vars
 	cfg.Server.CorsOrigins = viper.GetStringSlice("server.cors_origins")
+	cfg.Logging.Dir = viper.GetString("logging.dir")
 
 	// Validate required fields
 	if cfg.Database.URL == "" {

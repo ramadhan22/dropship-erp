@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"time"
 
@@ -65,8 +66,10 @@ func NewDropshipService(db *sqlx.DB, repo DropshipRepoInterface, jr DropshipJour
 // Any parse error aborts the import and returns it.
 // ImportFromCSV inserts rows from a CSV reader and returns how many rows were inserted.
 func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
+	log.Printf("ImportFromCSV channel=%s", channel)
 	reader := csv.NewReader(r)
 	if _, err := reader.Read(); err != nil {
+		log.Printf("ImportFromCSV header error: %v", err)
 		return 0, fmt.Errorf("read header: %w", err)
 	}
 
@@ -77,6 +80,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		var err error
 		tx, err = s.db.BeginTxx(ctx, nil)
 		if err != nil {
+			log.Printf("ImportFromCSV tx begin error: %v", err)
 			return 0, err
 		}
 		defer tx.Rollback()
@@ -102,11 +106,13 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		if err == io.EOF {
 			break
 		} else if err != nil {
+			log.Printf("ImportFromCSV read row error: %v", err)
 			return count, fmt.Errorf("read row: %w", err)
 		}
 
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
+			log.Printf("ImportFromCSV parse qty error: %v", err)
 			return count, fmt.Errorf("parse qty '%s': %w", record[8], err)
 		}
 		hargaProduk, _ := strconv.ParseFloat(record[7], 64)
@@ -210,7 +216,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		if err := tx.Commit(); err != nil {
 			return count, err
 		}
+		log.Printf("ImportFromCSV committed %d rows", count)
 	}
+	log.Printf("ImportFromCSV done count=%d", count)
 	return count, nil
 }
 
