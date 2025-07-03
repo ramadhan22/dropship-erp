@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -74,6 +75,7 @@ func (s *JournalService) Create(
 	e *models.JournalEntry,
 	lines []models.JournalLine,
 ) (int64, error) {
+	log.Printf("JournalService.Create %s", e.SourceID)
 	var debit, credit float64
 	for _, l := range lines {
 		if l.IsDebit {
@@ -83,40 +85,49 @@ func (s *JournalService) Create(
 		}
 	}
 	if debit != credit {
+		log.Printf("JournalService.Create imbalance debit %.2f credit %.2f", debit, credit)
 		return 0, fmt.Errorf("debits %.2f do not equal credits %.2f", debit, credit)
 	}
 	if s.db == nil {
 		id, err := s.repo.CreateJournalEntry(ctx, e)
 		if err != nil {
+			log.Printf("JournalService.Create entry error: %v", err)
 			return 0, err
 		}
 		for i := range lines {
 			lines[i].JournalID = id
 			if err := s.repo.InsertJournalLine(ctx, &lines[i]); err != nil {
+				log.Printf("JournalService.Create line error: %v", err)
 				return 0, err
 			}
 		}
+		log.Printf("JournalService.Create done id=%d", id)
 		return id, nil
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
+		log.Printf("JournalService.Create tx begin error: %v", err)
 		return 0, err
 	}
 	defer tx.Rollback()
 	repoTx := repository.NewJournalRepo(tx)
 	id, err := repoTx.CreateJournalEntry(ctx, e)
 	if err != nil {
+		log.Printf("JournalService.Create entry error: %v", err)
 		return 0, err
 	}
 	for i := range lines {
 		lines[i].JournalID = id
 		if err := repoTx.InsertJournalLine(ctx, &lines[i]); err != nil {
+			log.Printf("JournalService.Create line error: %v", err)
 			return 0, err
 		}
 	}
 	if err := tx.Commit(); err != nil {
+		log.Printf("JournalService.Create commit error: %v", err)
 		return 0, err
 	}
+	log.Printf("JournalService.Create done id=%d", id)
 	return id, nil
 }

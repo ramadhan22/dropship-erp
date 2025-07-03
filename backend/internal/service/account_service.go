@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -26,7 +27,14 @@ func NewAccountService(r AccountRepoInterface) *AccountService {
 }
 
 func (s *AccountService) CreateAccount(ctx context.Context, a *models.Account) (int64, error) {
-	return s.repo.CreateAccount(ctx, a)
+	log.Printf("CreateAccount: %s", a.AccountCode)
+	id, err := s.repo.CreateAccount(ctx, a)
+	if err != nil {
+		log.Printf("CreateAccount error: %v", err)
+		return 0, err
+	}
+	log.Printf("CreateAccount done: %d", id)
+	return id, nil
 }
 
 func (s *AccountService) GetAccount(ctx context.Context, id int64) (*models.Account, error) {
@@ -38,9 +46,19 @@ func (s *AccountService) ListAccounts(ctx context.Context) ([]models.Account, er
 }
 
 func (s *AccountService) UpdateAccount(ctx context.Context, a *models.Account) error {
-	return s.repo.UpdateAccount(ctx, a)
+	log.Printf("UpdateAccount: %d", a.AccountID)
+	err := s.repo.UpdateAccount(ctx, a)
+	if err != nil {
+		log.Printf("UpdateAccount error: %v", err)
+	}
+	return err
 }
 
 func (s *AccountService) DeleteAccount(ctx context.Context, id int64) error {
-	return s.repo.DeleteAccount(ctx, id)
+	log.Printf("DeleteAccount: %d", id)
+	err := s.repo.DeleteAccount(ctx, id)
+	if err != nil {
+		log.Printf("DeleteAccount error: %v", err)
+	}
+	return err
 }

@@ -21,6 +21,11 @@ If a command cannot be executed in the environment, mention this in the pull req
 - When adding a new page or API endpoint, adjust the backend CORS
   configuration so the page can be accessed without cross-origin errors.
 
+## Logging
+- Use `log.Printf` for informational messages and `logutil.Errorf` for errors.
+- Log each outbound HTTP request in the backend before it is sent so requests can be traced.
+- Add start and completion logs for critical service and repository operations to aid debugging.
+
 ## Import Guidelines
 - When creating an import feature, first delete any existing data for the
   same key so repeated imports overwrite previous rows.

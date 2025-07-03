@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ type ExpenseRepo struct{ db DBTX }
 func NewExpenseRepo(db DBTX) *ExpenseRepo { return &ExpenseRepo{db: db} }
 
 func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
+	log.Printf("ExpenseRepo.Create %s", e.ID)
 	// Ensure an ID exists so that expense_lines can reference it
 	if e.ID == "" {
 		e.ID = uuid.NewString()
@@ -27,6 +29,7 @@ func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
 	}
 	q = r.db.Rebind(q)
 	if err := r.db.QueryRowxContext(ctx, q, args...).Scan(&e.ID); err != nil {
+		log.Printf("ExpenseRepo.Create error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
@@ -38,6 +41,7 @@ func (r *ExpenseRepo) Create(ctx context.Context, e *models.Expense) error {
 			return err
 		}
 	}
+	log.Printf("ExpenseRepo.Create done %s", e.ID)
 	return nil
 }
 
@@ -118,13 +122,16 @@ func (r *ExpenseRepo) List(ctx context.Context, accountID int64, sortBy, dir str
 }
 
 func (r *ExpenseRepo) Update(ctx context.Context, e *models.Expense) error {
+	log.Printf("ExpenseRepo.Update %s", e.ID)
 	_, err := r.db.NamedExecContext(ctx,
 		`UPDATE expenses SET date=:date, description=:description, amount=:amount, asset_account_id=:asset_account_id WHERE id=:id`, e)
 	if err != nil {
+		log.Printf("ExpenseRepo.Update error: %v", err)
 		return err
 	}
 	_, err = r.db.ExecContext(ctx, `DELETE FROM expense_lines WHERE expense_id=$1`, e.ID)
 	if err != nil {
+		log.Printf("ExpenseRepo.Update delete lines error: %v", err)
 		return err
 	}
 	for i := range e.Lines {
@@ -132,13 +139,19 @@ func (r *ExpenseRepo) Update(ctx context.Context, e *models.Expense) error {
 		l.ExpenseID = e.ID
 		if _, err := r.db.NamedExecContext(ctx,
 			`INSERT INTO expense_lines (expense_id, account_id, amount) VALUES (:expense_id,:account_id,:amount)`, l); err != nil {
+			log.Printf("ExpenseRepo.Update insert line error: %v", err)
 			return err
 		}
 	}
+	log.Printf("ExpenseRepo.Update done %s", e.ID)
 	return nil
 }
 
 func (r *ExpenseRepo) Delete(ctx context.Context, id string) error {
+	log.Printf("ExpenseRepo.Delete %s", id)
 	_, err := r.db.ExecContext(ctx, `DELETE FROM expenses WHERE id=$1`, id)
+	if err != nil {
+		log.Printf("ExpenseRepo.Delete error: %v", err)
+	}
 	return err
 }

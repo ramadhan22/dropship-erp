@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -77,6 +78,7 @@ func (s *ReconcileService) MatchAndJournal(
 	ctx context.Context,
 	purchaseID, orderID, shop string,
 ) error {
+	log.Printf("Reconciling purchase %s with order %s for shop %s", purchaseID, orderID, shop)
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
 	jrRepo := s.journalRepo
@@ -159,6 +161,7 @@ func (s *ReconcileService) MatchAndJournal(
 			return err
 		}
 	}
+	log.Printf("ReconcileService completed purchase %s order %s", purchaseID, orderID)
 	return nil
 }
 
@@ -187,6 +190,7 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order strin
 
 // BulkReconcile simply loops MatchAndJournal over pairs.
 func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error {
+	log.Printf("BulkReconcile %d pairs for shop %s", len(pairs), shop)
 	for _, p := range pairs {
 		if err := s.MatchAndJournal(ctx, p[0], p[1], shop); err != nil {
 			return err
@@ -198,6 +202,7 @@ func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string,
 // CheckAndMarkComplete verifies a purchase has a corresponding shopee_settled
 // entry and updates its status to "pesanan selesai" if found.
 func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan string) error {
+	log.Printf("CheckAndMarkComplete: %s", kodePesanan)
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
 	if s.db != nil {
@@ -229,12 +234,14 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 			return err
 		}
 	}
+	log.Printf("CheckAndMarkComplete done: %s", kodePesanan)
 	return nil
 }
 
 // CancelPurchase reverses pending sales journals for the given purchase except
 // for the Biaya Mitra amount which remains recorded.
 func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan string) error {
+	log.Printf("CancelPurchase started: %s", kodePesanan)
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
 	jrRepo := s.journalRepo
@@ -294,6 +301,7 @@ func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan strin
 			return err
 		}
 	}
+	log.Printf("CancelPurchase completed: %s", kodePesanan)
 	return nil
 }
 

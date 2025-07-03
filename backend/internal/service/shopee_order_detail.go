@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -72,7 +73,9 @@ func FetchShopeeOrderDetail(ctx context.Context, accessToken, orderSN string) (*
 	q.Set("access_token", accessToken)
 	q.Set("order_sn_list", orderSN)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path+"?"+q.Encode(), nil)
+	urlStr := baseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeOrderDetail request: GET %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err
 	}
