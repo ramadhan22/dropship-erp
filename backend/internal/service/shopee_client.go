@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -176,17 +177,23 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("code", code)
-	q.Set("shop_id", shopID)
 
-	body := q.Encode()
 	urlStr := c.BaseURL + path + "?" + q.Encode()
-	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
+
+	payload := map[string]string{
+		"shop_id": shopID,
+		"code":    code,
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
+	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, string(body))
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetAccessToken request error: %v", err)

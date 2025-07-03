@@ -49,7 +49,17 @@ config file. A new file named `YYYY-MM-DD.log` is created each day.
 
 Shopee API calls require credentials including a long-lived `refresh_token`.
 `ShopeeClient` automatically refreshes the short-lived access token on each
-request using this value.
+request using this value. To exchange the authorization `code` for tokens the
+client issues a POST request to `/api/v2/auth/token/get` with JSON payload:
+
+```json
+{
+  "shop_id": "<shop_id>",
+  "code": "<authorization_code>"
+}
+```
+
+Query parameters include `partner_id`, `sign` and `timestamp`.
 Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
 `SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
 signing API calls. `base_url_shopee` in `config.yaml` defines the Partner API
