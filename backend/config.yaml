@@ -14,11 +14,10 @@ jwt:
 
 # Credentials for calling Shopee Partner API
 shopee_api:
-  partner_id: "1280459"
-  partner_key: "7563544b4a464a4a7945784a564a456c6d4a6362456d654d6f634b42586a6368"
-  shop_id: "145194"
+  partner_id: "2011860"
+  partner_key: "shpk6e69744774664b4d6570446a79544361554950517563767146456967774e"
   access_token: ""
   # long-lived token used to refresh access_token
   refresh_token: ""
   # optional base url override
-  base_url_shopee: "https://partner.test-stable.shopeemobile.com"
+  base_url_shopee: "https://partner.shopeemobile.com"
