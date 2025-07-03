@@ -329,7 +329,10 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 	if st.AccessToken == nil {
 		return nil, fmt.Errorf("missing access token")
 	}
-	return FetchShopeeOrderDetail(ctx, *st.AccessToken, dp.KodeInvoiceChannel)
+	if s.client == nil {
+		return nil, fmt.Errorf("shopee client not configured")
+	}
+	return s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, dp.KodeInvoiceChannel)
 }
 
 // GetShopeeAccessToken obtains an access token for the store related to the given invoice.

@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+
+	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 )
 
 func TestFetchShopeeOrderDetail(t *testing.T) {
-	partnerID := int64(1)
+	partnerID := "1"
 	partnerKey := "secret"
-	shopID := int64(2)
+	shopID := "2"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v2/order/get_order_detail" {
@@ -39,18 +40,15 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	os.Setenv("SHOPEE_PARTNER_ID", fmt.Sprintf("%d", partnerID))
-	os.Setenv("SHOPEE_PARTNER_KEY", partnerKey)
-	os.Setenv("SHOPEE_SHOP_ID", fmt.Sprintf("%d", shopID))
-	os.Setenv("SHOPEE_BASE_URL", srv.URL)
-	defer func() {
-		os.Unsetenv("SHOPEE_PARTNER_ID")
-		os.Unsetenv("SHOPEE_PARTNER_KEY")
-		os.Unsetenv("SHOPEE_SHOP_ID")
-		os.Unsetenv("SHOPEE_BASE_URL")
-	}()
+	cfg := config.ShopeeAPIConfig{
+		BaseURLShopee: srv.URL,
+		PartnerID:     partnerID,
+		PartnerKey:    partnerKey,
+		ShopID:        shopID,
+	}
+	client := NewShopeeClient(cfg)
 
-	detail, err := FetchShopeeOrderDetail(context.Background(), "token", "123")
+	detail, err := client.FetchShopeeOrderDetail(context.Background(), "token", "123")
 	if err != nil {
 		t.Fatalf("FetchShopeeOrderDetail error: %v", err)
 	}
