@@ -40,12 +40,12 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 	defer srv.Close()
 
 	cfg := config.ShopeeAPIConfig{
-		BaseURL:      srv.URL,
-		PartnerID:    "pid",
-		PartnerKey:   "secret",
-		ShopID:       "shop",
-		AccessToken:  "oldtoken",
-		RefreshToken: "reftok",
+		BaseURLShopee: srv.URL,
+		PartnerID:     "pid",
+		PartnerKey:    "secret",
+		ShopID:        "shop",
+		AccessToken:   "oldtoken",
+		RefreshToken:  "reftok",
 	}
 	c := NewShopeeClient(cfg)
 
@@ -64,5 +64,46 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 	}
 	if c.AccessToken != "newtoken" {
 		t.Fatalf("token not updated: %s", c.AccessToken)
+	}
+}
+
+func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
+	var called bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/auth/token/get" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		called = true
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		r.ParseForm()
+		if r.URL.Query().Get("code") != "abc" {
+			t.Errorf("query code=abc missing, got %s", r.URL.Query().Get("code"))
+		}
+		if r.Form.Get("code") != "abc" {
+			t.Errorf("form code=abc missing, got %s", r.Form.Get("code"))
+		}
+		fmt.Fprint(w, `{"access_token":"tok"}`)
+	}))
+	defer srv.Close()
+
+	cfg := config.ShopeeAPIConfig{
+		BaseURLShopee: srv.URL,
+		PartnerID:     "pid",
+		PartnerKey:    "secret",
+	}
+	c := NewShopeeClient(cfg)
+
+	tok, err := c.GetAccessToken(context.Background(), "abc", "shop")
+	if err != nil {
+		t.Fatalf("GetAccessToken err: %v", err)
+	}
+	if tok != "tok" {
+		t.Fatalf("unexpected token %s", tok)
+	}
+	if !called {
+		t.Fatal("token endpoint not called")
 	}
 }
