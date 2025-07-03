@@ -2,10 +2,10 @@ import { api } from "./index";
 import type { Withdrawal } from "../types";
 
 export const createWithdrawal = (w: Partial<Withdrawal>) =>
-  api.post<Withdrawal>("/withdrawals", w);
+  api.post<Withdrawal>("/withdrawals/", w);
 
 export const listWithdrawals = () =>
-  api.get<Withdrawal[]>("/withdrawals");
+  api.get<Withdrawal[]>("/withdrawals/");
 
 export const importWithdrawals = (file: File) => {
   const data = new FormData();
