@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
 type ReconcileExtraService interface {
@@ -14,6 +15,7 @@ type ReconcileExtraService interface {
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
+	GetShopeeOrderDetail(ctx context.Context, invoice string) (*service.ShopeeOrderDetail, error)
 	GetShopeeAccessToken(ctx context.Context, invoice string) (string, error)
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 }
@@ -109,12 +111,12 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
 		return
 	}
-	status, err := h.svc.GetShopeeOrderStatus(context.Background(), invoice)
+	detail, err := h.svc.GetShopeeOrderDetail(context.Background(), invoice)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": status})
+	c.JSON(http.StatusOK, detail)
 }
 
 func (h *ReconcileExtraHandler) token(c *gin.Context) {

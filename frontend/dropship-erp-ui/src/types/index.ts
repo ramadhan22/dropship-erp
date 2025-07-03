@@ -210,6 +210,13 @@ export interface ReconcileCandidate {
   no_pesanan: string | null;
 }
 
+export interface ShopeeOrderDetail {
+  order_sn: string;
+  status: string;
+  checkout_time: number;
+  update_time: number;
+}
+
 export interface ProductSales {
   nama_produk: string;
   total_qty: number;
