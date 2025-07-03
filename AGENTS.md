@@ -25,6 +25,9 @@ If a command cannot be executed in the environment, mention this in the pull req
 - Use `log.Printf` for informational messages and `logutil.Errorf` for errors.
 - Log each outbound HTTP request in the backend before it is sent so requests can be traced.
 - For Shopee API calls (e.g. `FetchShopeeOrderDetail`), ensure a log entry is written for every request so integrations can be audited.
+- When an API requires an `access_token`, generate the `sign` value using
+  `partner_id + api path + timestamp + access_token + shop_id` hashed with the
+  `partner_key` via HMAC-SHA256.
 - Add start and completion logs for critical service and repository operations to aid debugging.
 - Always include the error message in each error log across all services and repositories, especially when hitting Shopee API endpoints.
 - Write application logs to `logs/YYYY-MM-DD.log` (configurable via `logging.dir`) with a new file created each day.
