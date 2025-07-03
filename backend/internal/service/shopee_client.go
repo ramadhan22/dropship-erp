@@ -134,12 +134,13 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	q.Set("refresh_token", c.RefreshToken)
 
 	body := q.Encode()
-	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(body))
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Printf("ShopeeClient request: POST %s body=%s", c.BaseURL+path, body)
+	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("RefreshAccessToken request error: %v", err)
@@ -179,12 +180,13 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 	q.Set("shop_id", shopID)
 
 	body := q.Encode()
-	req, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+path, strings.NewReader(body))
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Printf("ShopeeClient request: POST %s body=%s", c.BaseURL+path, body)
+	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetAccessToken request error: %v", err)
