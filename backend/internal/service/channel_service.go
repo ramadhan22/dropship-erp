@@ -22,12 +22,13 @@ type ChannelRepoInterface interface {
 
 // ChannelService provides master data operations for jenis_channels and stores.
 type ChannelService struct {
-	repo ChannelRepoInterface
+	repo   ChannelRepoInterface
+	client *ShopeeClient
 }
 
 // NewChannelService constructs a ChannelService.
-func NewChannelService(r ChannelRepoInterface) *ChannelService {
-	return &ChannelService{repo: r}
+func NewChannelService(r ChannelRepoInterface, c *ShopeeClient) *ChannelService {
+	return &ChannelService{repo: r, client: c}
 }
 
 func (s *ChannelService) CreateJenisChannel(ctx context.Context, jenis string) (int64, error) {
@@ -65,6 +66,16 @@ func (s *ChannelService) ListAllStores(ctx context.Context) ([]models.StoreWithC
 }
 
 func (s *ChannelService) UpdateStore(ctx context.Context, st *models.Store) error {
+	if st.CodeID != nil && st.ShopID != nil && s.client != nil {
+		tok, err := s.client.GetAccessToken(ctx, *st.CodeID, *st.ShopID)
+		if err != nil {
+			return err
+		}
+		st.AccessToken = &tok.AccessToken
+		st.RefreshToken = &tok.RefreshToken
+		st.ExpireIn = &tok.ExpireIn
+		st.RequestID = &tok.RequestID
+	}
 	return s.repo.UpdateStore(ctx, st)
 }
 

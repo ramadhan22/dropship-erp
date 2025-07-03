@@ -55,7 +55,7 @@ func main() {
 	taxSvc := service.NewTaxService(repo.DB, repo.TaxRepo, repo.JournalRepo, metricSvc)
 	expenseSvc := service.NewExpenseService(repo.DB, repository.NewExpenseRepo(repo.DB), repo.JournalRepo)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
-	channelSvc := service.NewChannelService(repo.ChannelRepo)
+	channelSvc := service.NewChannelService(repo.ChannelRepo, shClient)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
 	adsSvc := service.NewAdInvoiceService(repo.DB, repo.AdInvoiceRepo, repo.JournalRepo)
 	journalSvc := service.NewJournalService(repo.DB, repo.JournalRepo)

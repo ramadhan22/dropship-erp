@@ -167,7 +167,7 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 }
 
 // GetAccessToken retrieves a new access token using the authorization code and shop_id.
-func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) (string, error) {
+func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) (*tokenResp, error) {
 	path := "/api/v2/auth/token/get"
 	ts := time.Now().Unix()
 	sign := c.signSimple(path, ts)
@@ -183,30 +183,30 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetAccessToken request error: %v", err)
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		logutil.Errorf("GetAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
-		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out tokenResp
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return "", err
+		return nil, err
 	}
 	if out.Error != "" {
 		logutil.Errorf("GetAccessToken API error: %s", out.Error)
-		return "", fmt.Errorf("shopee error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
-	return out.AccessToken, nil
+	return &out, nil
 }
 
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.

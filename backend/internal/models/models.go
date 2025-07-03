@@ -179,6 +179,10 @@ type Store struct {
 	NamaToko       string  `db:"nama_toko" json:"nama_toko"`
 	CodeID         *string `db:"code_id" json:"code_id"`
 	ShopID         *string `db:"shop_id" json:"shop_id"`
+	AccessToken    *string `db:"access_token" json:"-"`
+	RefreshToken   *string `db:"refresh_token" json:"-"`
+	ExpireIn       *int    `db:"expire_in" json:"-"`
+	RequestID      *string `db:"request_id" json:"-"`
 }
 
 // StoreWithChannel joins a store with its channel name.
