@@ -216,6 +216,53 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 	return &out, nil
 }
 
+// FetchShopeeOrderDetail fetches detailed order info using the provided access
+// token. It mirrors the standalone FetchShopeeOrderDetail function but uses
+// credentials from the ShopeeClient, similar to GetAccessToken.
+func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, orderSN string) (*ShopeeOrderDetail, error) {
+	path := "/api/v2/order/get_order_detail"
+	ts := time.Now().Unix()
+	sign := c.signSimple(path, ts)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", c.ShopID)
+	q.Set("access_token", accessToken)
+	q.Set("order_sn_list", orderSN)
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var out orderDetailAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+	if len(out.Response.OrderList) == 0 {
+		return nil, fmt.Errorf("empty response")
+	}
+
+	return &out.Response.OrderList[0], nil
+}
+
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
 func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (string, error) {
 	if err := c.RefreshAccessToken(ctx); err != nil {
