@@ -313,6 +313,25 @@ func (s *ReconcileService) GetShopeeOrderStatus(ctx context.Context, invoice str
 	return s.client.GetOrderDetail(ctx, invoice)
 }
 
+// GetShopeeOrderDetail retrieves order detail using the store's saved access token.
+func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice string) (*ShopeeOrderDetail, error) {
+	if s.dropRepo == nil || s.storeRepo == nil {
+		return nil, fmt.Errorf("repos not configured")
+	}
+	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return nil, fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+	st, err := s.storeRepo.GetStoreByName(ctx, dp.NamaToko)
+	if err != nil || st == nil {
+		return nil, fmt.Errorf("fetch store %s: %w", dp.NamaToko, err)
+	}
+	if st.AccessToken == nil {
+		return nil, fmt.Errorf("missing access token")
+	}
+	return FetchShopeeOrderDetail(ctx, *st.AccessToken, dp.KodeInvoiceChannel)
+}
+
 // GetShopeeAccessToken obtains an access token for the store related to the given invoice.
 func (s *ReconcileService) GetShopeeAccessToken(ctx context.Context, invoice string) (string, error) {
 	if s.client == nil {

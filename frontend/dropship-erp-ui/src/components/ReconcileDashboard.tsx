@@ -6,11 +6,11 @@ import type { Column } from "./SortableTable";
 import {
   listCandidates,
   reconcileCheck,
-  fetchShopeeToken,
+  fetchShopeeDetail,
   cancelPurchase,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
-import type { ReconcileCandidate, Store } from "../types";
+import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
 import usePagination from "../usePagination";
 
 export default function ReconcileDashboard() {
@@ -22,8 +22,8 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [token, setToken] = useState("");
-  const [tokenOpen, setTokenOpen] = useState(false);
+  const [detail, setDetail] = useState<ShopeeOrderDetail | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
 
@@ -51,9 +51,9 @@ export default function ReconcileDashboard() {
 
   const handleCheckStatus = async (inv: string) => {
     try {
-      const res = await fetchShopeeToken(inv);
-      setToken(res.data.access_token);
-      setTokenOpen(true);
+      const res = await fetchShopeeDetail(inv);
+      setDetail(res.data);
+      setDetailOpen(true);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -162,11 +162,13 @@ export default function ReconcileDashboard() {
       )}
       <SortableTable columns={columns} data={paginated} />
       {controls}
-      <Dialog open={tokenOpen} onClose={() => setTokenOpen(false)}>
-        <DialogTitle>Access Token</DialogTitle>
-        <DialogContent>{token}</DialogContent>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+        <DialogTitle>Order Detail</DialogTitle>
+        <DialogContent>
+          <pre>{detail && JSON.stringify(detail, null, 2)}</pre>
+        </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTokenOpen(false)}>Close</Button>
+          <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </div>

@@ -1,5 +1,9 @@
 import { api } from "./index";
-import type { ReconciledTransaction, ReconcileCandidate } from "../types";
+import type {
+  ReconciledTransaction,
+  ReconcileCandidate,
+  ShopeeOrderDetail,
+} from "../types";
 
 export function listUnmatched(shop: string) {
   return api.get<ReconciledTransaction[]>(`/reconcile/unmatched?shop=${shop}`);
@@ -24,8 +28,8 @@ export function reconcileCheck(kodePesanan: string) {
   });
 }
 
-export function fetchShopeeStatus(invoice: string) {
-  return api.get<{ status: string }>(`/reconcile/status?invoice=${invoice}`);
+export function fetchShopeeDetail(invoice: string) {
+  return api.get<ShopeeOrderDetail>(`/reconcile/status?invoice=${invoice}`);
 }
 
 export function fetchShopeeToken(invoice: string) {
