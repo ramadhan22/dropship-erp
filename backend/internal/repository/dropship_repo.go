@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -54,7 +55,7 @@ func (r *DropshipRepo) InsertDropshipPurchase(ctx context.Context, p *models.Dro
         ON CONFLICT (kode_pesanan) DO NOTHING`
 	_, err := r.db.NamedExecContext(ctx, query, p)
 	if err != nil {
-		log.Printf("InsertDropshipPurchase error: %v", err)
+		logutil.Errorf("InsertDropshipPurchase error: %v", err)
 	}
 	return err
 }
@@ -84,7 +85,7 @@ func (r *DropshipRepo) InsertDropshipPurchaseDetail(ctx context.Context, d *mode
         )`
 	_, err := r.db.NamedExecContext(ctx, query, d)
 	if err != nil {
-		log.Printf("InsertDropshipPurchaseDetail error: %v", err)
+		logutil.Errorf("InsertDropshipPurchaseDetail error: %v", err)
 	}
 	return err
 }
@@ -152,7 +153,7 @@ func (r *DropshipRepo) UpdatePurchaseStatus(ctx context.Context, kodePesanan, st
 		`UPDATE dropship_purchases SET status_pesanan_terakhir=$2 WHERE kode_pesanan=$1`,
 		kodePesanan, status)
 	if err != nil {
-		log.Printf("UpdatePurchaseStatus error: %v", err)
+		logutil.Errorf("UpdatePurchaseStatus error: %v", err)
 	}
 	return err
 }

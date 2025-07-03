@@ -55,6 +55,15 @@ func (c *ShopeeClient) signWithToken(path string, ts int64, token string) string
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// signWithTokenShop generates a signature using the provided token and shop ID.
+// This matches Shopee's specification for endpoints that require an access token.
+func (c *ShopeeClient) signWithTokenShop(path string, ts int64, token, shopID string) string {
+	msg := fmt.Sprintf("%s%s%d%s%s", c.PartnerID, path, ts, token, shopID)
+	h := hmac.New(sha256.New, []byte(c.PartnerKey))
+	h.Write([]byte(msg))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func (c *ShopeeClient) sign(path string, ts int64) string {
 	return c.signWithToken(path, ts, c.AccessToken)
 }
@@ -222,7 +231,7 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeOrderDetail, error) {
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
-	sign := c.signSimple(path, ts)
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
 
 	q := url.Values{}
 	q.Set("partner_id", c.PartnerID)

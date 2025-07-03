@@ -17,6 +17,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 	partnerID := "1"
 	partnerKey := "secret"
 	shopID := "2"
+	token := "token"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v2/order/get_order_detail" {
@@ -26,7 +27,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 		ts := r.URL.Query().Get("timestamp")
 		pid := r.URL.Query().Get("partner_id")
 		sign := r.URL.Query().Get("sign")
-		stringToSign := fmt.Sprintf("%s%s%s", pid, r.URL.Path, ts)
+		stringToSign := fmt.Sprintf("%s%s%s%s%s", pid, r.URL.Path, ts, token, shopID)
 		h := hmac.New(sha256.New, []byte(partnerKey))
 		h.Write([]byte(stringToSign))
 		expSign := hex.EncodeToString(h.Sum(nil))
@@ -51,7 +52,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 	}
 	client := NewShopeeClient(cfg)
 
-	detail, err := client.FetchShopeeOrderDetail(context.Background(), "token", shopID, "123")
+	detail, err := client.FetchShopeeOrderDetail(context.Background(), token, shopID, "123")
 	if err != nil {
 		t.Fatalf("FetchShopeeOrderDetail error: %v", err)
 	}

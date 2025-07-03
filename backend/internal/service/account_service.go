@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -30,7 +31,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, a *models.Account) (
 	log.Printf("CreateAccount: %s", a.AccountCode)
 	id, err := s.repo.CreateAccount(ctx, a)
 	if err != nil {
-		log.Printf("CreateAccount error: %v", err)
+		logutil.Errorf("CreateAccount error: %v", err)
 		return 0, err
 	}
 	log.Printf("CreateAccount done: %d", id)
@@ -49,7 +50,7 @@ func (s *AccountService) UpdateAccount(ctx context.Context, a *models.Account) e
 	log.Printf("UpdateAccount: %d", a.AccountID)
 	err := s.repo.UpdateAccount(ctx, a)
 	if err != nil {
-		log.Printf("UpdateAccount error: %v", err)
+		logutil.Errorf("UpdateAccount error: %v", err)
 	}
 	return err
 }
@@ -58,7 +59,7 @@ func (s *AccountService) DeleteAccount(ctx context.Context, id int64) error {
 	log.Printf("DeleteAccount: %d", id)
 	err := s.repo.DeleteAccount(ctx, id)
 	if err != nil {
-		log.Printf("DeleteAccount error: %v", err)
+		logutil.Errorf("DeleteAccount error: %v", err)
 	}
 	return err
 }

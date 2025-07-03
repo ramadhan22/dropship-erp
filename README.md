@@ -63,9 +63,11 @@ client issues a POST request to `/api/v2/auth/token/get` with JSON payload:
 Query parameters include `partner_id`, `sign` and `timestamp`.
 Order detail requests use the `SHOPEE_PARTNER_ID`, `SHOPEE_PARTNER_KEY`,
 `SHOPEE_SHOP_ID` and optional `SHOPEE_BASE_URL` environment variables for
-signing API calls. `base_url_shopee` in `config.yaml` defines the Partner API
-host used when generating authorization links. As of this version, `ShopeeClient`
-no longer loads configuration inside `RefreshAccessToken`; all required values
+signing API calls. When an endpoint requires an access token, generate the
+signature as HMAC-SHA256 of `partner_id + api path + timestamp + access_token +
+shop_id` using the partner key. `base_url_shopee` in `config.yaml` defines the
+Partner API host used when generating authorization links. As of this version,
+`ShopeeClient` no longer loads configuration inside `RefreshAccessToken`; all required values
 are taken from the struct fields
 initialized in `NewShopeeClient`.
 
