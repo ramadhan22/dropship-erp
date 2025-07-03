@@ -215,6 +215,20 @@ export interface ShopeeOrderDetail {
   status: string;
   checkout_time: number;
   update_time: number;
+  order_status?: string;
+  buyer_username?: string;
+  payment_method?: string;
+  total_amount?: number;
+  currency?: string;
+  item_list?: {
+    order_item_id: number;
+    item_name: string;
+    model_quantity_purchased: number;
+  }[];
+  recipient_address?: {
+    name: string;
+    full_address: string;
+  };
 }
 
 export interface ProductSales {
