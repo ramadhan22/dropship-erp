@@ -14,7 +14,9 @@ jest.mock("../api", () => ({
 jest.mock("../api/reconcile", () => ({
   listCandidates: jest.fn().mockResolvedValue({ data: [] }),
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
-  fetchShopeeToken: jest.fn().mockResolvedValue({ data: { access_token: "TOK" } }),
+  fetchShopeeDetail: jest
+    .fn()
+    .mockResolvedValue({ data: { order_sn: "INV", status: "PROCESSED" } }),
 }));
 
 beforeEach(() => {
@@ -132,6 +134,6 @@ test("check status button", async () => {
   await screen.findByRole("button", { name: /Check Status/i });
   fireEvent.click(screen.getByRole("button", { name: /Check Status/i }));
   await waitFor(() =>
-    expect(api.fetchShopeeToken).toHaveBeenCalledWith("INV"),
+    expect(api.fetchShopeeDetail).toHaveBeenCalledWith("INV"),
   );
 });

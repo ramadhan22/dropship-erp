@@ -30,6 +30,7 @@ Main features:
   adjustments.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
+- Check Shopee order details from the Reconcile dashboard using the store's saved access token.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.
    Adjustments including shipping fee discrepancies are now factored into profit
