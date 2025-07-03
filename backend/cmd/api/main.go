@@ -25,6 +25,12 @@ func main() {
 	if err != nil {
 		logutil.Fatalf("Fatal error loading config: %v", err)
 	}
+	w, err := logutil.NewDailyFileWriter(cfg.Logging.Dir)
+	if err != nil {
+		logutil.Fatalf("open log file: %v", err)
+	}
+	defer w.Close()
+	log.SetOutput(w)
 
 	// 2) Initialize repositories (Postgres DB connection)
 	repo, err := repository.NewPostgresRepository(cfg.Database.URL)

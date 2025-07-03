@@ -25,6 +25,7 @@ If a command cannot be executed in the environment, mention this in the pull req
 - Use `log.Printf` for informational messages and `logutil.Errorf` for errors.
 - Log each outbound HTTP request in the backend before it is sent so requests can be traced.
 - Add start and completion logs for critical service and repository operations to aid debugging.
+- Write application logs to `logs/YYYY-MM-DD.log` (configurable via `logging.dir`) with a new file created each day.
 
 ## Import Guidelines
 - When creating an import feature, first delete any existing data for the

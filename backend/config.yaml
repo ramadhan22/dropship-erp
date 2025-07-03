@@ -6,6 +6,9 @@ server:
     - "http://localhost:5173"
     - "http://localhost:4173"
 
+logging:
+  dir: "logs"
+
 database:
   url: "postgres://erp_user:erp_pass@localhost:5432/dropship_erp?sslmode=disable"
 
