@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -78,12 +79,18 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		r.ParseForm()
-		if r.URL.Query().Get("code") != "abc" {
-			t.Errorf("query code=abc missing, got %s", r.URL.Query().Get("code"))
+		if r.URL.Query().Get("partner_id") != "pid" {
+			t.Errorf("missing partner_id query")
 		}
-		if r.Form.Get("code") != "abc" {
-			t.Errorf("form code=abc missing, got %s", r.Form.Get("code"))
+		var payload map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("invalid json: %v", err)
+		}
+		if payload["code"] != "abc" {
+			t.Errorf("code value missing")
+		}
+		if payload["shop_id"] != "shop" {
+			t.Errorf("shop_id value missing")
 		}
 		fmt.Fprint(w, `{"access_token":"tok"}`)
 	}))
