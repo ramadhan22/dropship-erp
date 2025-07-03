@@ -217,9 +217,9 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 }
 
 // FetchShopeeOrderDetail fetches detailed order info using the provided access
-// token. It mirrors the standalone FetchShopeeOrderDetail function but uses
-// credentials from the ShopeeClient, similar to GetAccessToken.
-func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, orderSN string) (*ShopeeOrderDetail, error) {
+// token and shop id. It mirrors the standalone FetchShopeeOrderDetail function
+// but uses credentials from the ShopeeClient, similar to GetAccessToken.
+func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeOrderDetail, error) {
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.signSimple(path, ts)
@@ -228,7 +228,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", c.ShopID)
+	q.Set("shop_id", shopID)
 	q.Set("access_token", accessToken)
 	q.Set("order_sn_list", orderSN)
 
