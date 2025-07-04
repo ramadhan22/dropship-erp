@@ -246,6 +246,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 	q.Set("shop_id", shopID)
 	q.Set("access_token", accessToken)
 	q.Set("order_sn_list", orderSN)
+	q.Set("response_optional_fields", "buyer_user_id,buyer_username,estimated_shipping_fee,recipient_address,actual_shipping_fee ,goods_to_declare,note,note_update_time,item_list,pay_time,dropshipper, dropshipper_phone,split_up,buyer_cancel_reason,cancel_by,cancel_reason,actual_shipping_fee_confirmed,buyer_cpf_id,fulfillment_flag,pickup_done_time,package_list,shipping_carrier,payment_method,total_amount,buyer_username,invoice_data,order_chargeable_weight_gram,return_request_due_date,edt")
 
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	log.Printf("ShopeeClient request: GET %s", urlStr)
