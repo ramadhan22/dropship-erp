@@ -49,8 +49,8 @@ Application logs are written to the directory specified by `logging.dir` in the
 config file. A new file named `YYYY-MM-DD.log` is created each day.
 
 Shopee API calls require credentials including a long-lived `refresh_token`.
-`ShopeeClient` automatically refreshes the short-lived access token on each
-request using this value. To exchange the authorization `code` for tokens the
+`ShopeeClient` refreshes the short-lived access token when it has expired rather
+than on every request. To exchange the authorization `code` for tokens the
 client issues a POST request to `/api/v2/auth/token/get` with JSON payload:
 
 ```json
