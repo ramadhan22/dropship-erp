@@ -39,3 +39,7 @@ export function fetchShopeeToken(invoice: string) {
 export function cancelPurchase(kodePesanan: string) {
   return api.post("/reconcile/cancel", { kode_pesanan: kodePesanan });
 }
+
+export function updateShopeeStatus(invoice: string) {
+  return api.post("/reconcile/update_status", { invoice });
+}

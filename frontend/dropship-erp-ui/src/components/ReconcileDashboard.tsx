@@ -15,6 +15,7 @@ import {
   reconcileCheck,
   fetchShopeeDetail,
   cancelPurchase,
+  updateShopeeStatus,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
@@ -45,6 +46,7 @@ export default function ReconcileDashboard() {
   } | null>(null);
   const [detail, setDetail] = useState<ShopeeOrderDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailInvoice, setDetailInvoice] = useState("");
   const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
 
@@ -74,7 +76,18 @@ export default function ReconcileDashboard() {
     try {
       const res = await fetchShopeeDetail(inv);
       setDetail(res.data);
+      setDetailInvoice(inv);
       setDetailOpen(true);
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    try {
+      await updateShopeeStatus(detailInvoice);
+      setMsg({ type: "success", text: "Updated" });
+      fetchData();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -223,6 +236,7 @@ export default function ReconcileDashboard() {
           )}
         </DialogContent>
         <DialogActions>
+          <Button onClick={handleUpdateStatus}>Update Status Shopee</Button>
           <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -243,6 +244,12 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 // CancelPurchase reverses pending sales journals for the given purchase except
 // for the Biaya Mitra amount which remains recorded.
 func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan string) error {
+	return s.CancelPurchaseAt(ctx, kodePesanan, time.Now(), "Pesanan dibatalkan")
+}
+
+// CancelPurchaseAt performs the cancel journal reversal at the given entry date
+// and updates the purchase status to the provided status string.
+func (s *ReconcileService) CancelPurchaseAt(ctx context.Context, kodePesanan string, entryDate time.Time, status string) error {
 	log.Printf("CancelPurchase started: %s", kodePesanan)
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
@@ -267,7 +274,7 @@ func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan strin
 	prod, _ := dropRepo.SumProductCostByInvoice(ctx, dp.KodeInvoiceChannel)
 
 	je := &models.JournalEntry{
-		EntryDate:    time.Now(),
+		EntryDate:    entryDate,
 		Description:  ptrString("Cancel " + dp.KodeInvoiceChannel),
 		SourceType:   "reconcile_cancel",
 		SourceID:     dp.KodeInvoiceChannel,
@@ -295,7 +302,7 @@ func (s *ReconcileService) CancelPurchase(ctx context.Context, kodePesanan strin
 		}
 	}
 
-	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan dibatalkan"); err != nil {
+	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, status); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
 	if tx != nil {
@@ -406,4 +413,44 @@ func (s *ReconcileService) GetShopeeAccessToken(ctx context.Context, invoice str
 		return "", err
 	}
 	return tok.AccessToken, nil
+}
+
+// UpdateShopeeStatus checks the current Shopee order status and performs
+// cancellation logic when the status is cancelled.
+func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice string) error {
+	detail, err := s.GetShopeeOrderDetail(ctx, invoice)
+	if err != nil {
+		return err
+	}
+	statusVal, ok := (*detail)["order_status"]
+	if !ok {
+		statusVal = (*detail)["status"]
+	}
+	statusStr, _ := statusVal.(string)
+	if strings.ToLower(statusStr) != "cancelled" {
+		return nil
+	}
+	var updateTime time.Time
+	if ts, ok := (*detail)["update_time"]; ok {
+		switch v := ts.(type) {
+		case float64:
+			updateTime = time.Unix(int64(v), 0)
+		case int64:
+			updateTime = time.Unix(v, 0)
+		case int:
+			updateTime = time.Unix(int64(v), 0)
+		case string:
+			if t, err := strconv.ParseInt(v, 10, 64); err == nil {
+				updateTime = time.Unix(t, 0)
+			}
+		}
+	}
+	if updateTime.IsZero() {
+		updateTime = time.Now()
+	}
+	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+	return s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee")
 }
