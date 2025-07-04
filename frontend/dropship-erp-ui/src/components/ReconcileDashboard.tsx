@@ -27,6 +27,13 @@ function formatLabel(label: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function formatValue(val: any): string {
+  if (typeof val === "number" && val > 1e10) {
+    return new Date(val * 1000).toLocaleString();
+  }
+  return String(val);
+}
+
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [order, setOrder] = useState("");
@@ -176,7 +183,12 @@ export default function ReconcileDashboard() {
       )}
       <SortableTable columns={columns} data={paginated} />
       {controls}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}>
+      <Dialog
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Order Detail</DialogTitle>
         <DialogContent>
           {detail && (
@@ -201,7 +213,7 @@ export default function ReconcileDashboard() {
                           {JSON.stringify(value, null, 2)}
                         </pre>
                       ) : (
-                        String(value)
+                        formatValue(value)
                       )}
                     </td>
                   </tr>
