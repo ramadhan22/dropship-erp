@@ -353,12 +353,17 @@ func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models
 	if st.RefreshToken == nil {
 		return fmt.Errorf("missing refresh token")
 	}
+	if st.ShopID == nil || *st.ShopID == "" {
+		return fmt.Errorf("missing shop id")
+	}
 	if st.ExpireIn != nil && st.LastUpdated != nil {
 		exp := st.LastUpdated.Add(time.Duration(*st.ExpireIn) * time.Second)
 		if time.Now().Before(exp) {
 			return nil
 		}
 	}
+	s.client.ShopID = *st.ShopID
+	s.client.RefreshToken = *st.RefreshToken
 	resp, err := s.client.RefreshAccessToken(ctx)
 	if err != nil {
 		return err

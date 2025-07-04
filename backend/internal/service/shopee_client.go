@@ -135,6 +135,9 @@ type tokenResp struct {
 
 // RefreshAccessToken fetches a new access token using the refresh token.
 func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, error) {
+	if c.ShopID == "" {
+		return nil, fmt.Errorf("shop_id is empty")
+	}
 	path := "/api/v2/auth/access_token/get"
 	ts := time.Now().Unix()
 	sign := c.signWithToken(path, ts, c.RefreshToken)
@@ -143,10 +146,13 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", c.ShopID)
-	q.Set("refresh_token", c.RefreshToken)
 
-	body := q.Encode()
+	bodyForm := url.Values{}
+	bodyForm.Set("partner_id", c.PartnerID)
+	bodyForm.Set("shop_id", c.ShopID)
+	bodyForm.Set("refresh_token", c.RefreshToken)
+
+	body := bodyForm.Encode()
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {

@@ -21,8 +21,20 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 			}
 			refreshCalled = true
 			r.ParseForm()
-			if r.Form.Get("refresh_token") != "reftok" {
-				t.Errorf("expected refresh_token=reftok, got %s", r.Form.Get("refresh_token"))
+			if r.URL.Query().Get("partner_id") != "pid" {
+				t.Errorf("missing partner_id query")
+			}
+			if r.PostForm.Get("partner_id") != "pid" {
+				t.Errorf("missing partner_id body")
+			}
+			if r.PostForm.Get("refresh_token") != "reftok" {
+				t.Errorf("expected refresh_token=reftok, got %s", r.PostForm.Get("refresh_token"))
+			}
+			if r.PostForm.Get("shop_id") != "shop" {
+				t.Errorf("expected shop_id=shop, got %s", r.PostForm.Get("shop_id"))
+			}
+			if r.PostForm.Get("timestamp") != "" || r.PostForm.Get("sign") != "" {
+				t.Errorf("unexpected query fields in body")
 			}
 			fmt.Fprint(w, `{"response":{"access_token":"newtoken"}}`)
 		case "/api/v2/order/get_order_detail":
