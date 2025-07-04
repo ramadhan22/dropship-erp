@@ -65,18 +65,20 @@ func (r *ReconcileRepo) ListUnmatched(ctx context.Context, shop string) ([]model
 // shopee_settled or have a matching row but the purchase status is not
 // "pesanan selesai". Optional shop filter matches nama_toko.
 func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error) {
-        query := `SELECT dp.kode_pesanan, dp.kode_invoice_channel, dp.nama_toko, dp.status_pesanan_terakhir,
+	query := `SELECT dp.kode_pesanan, dp.kode_invoice_channel, dp.nama_toko, dp.status_pesanan_terakhir,
                ss.no_pesanan
                FROM dropship_purchases dp
                LEFT JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
                WHERE ($1 = '' OR dp.nama_toko = $1)
                  AND ($2 = '' OR dp.kode_invoice_channel ILIKE '%' || $2 || '%')
-                 AND (dp.status_pesanan_terakhir <> 'Pesanan selesai' and dp.status_pesanan_terakhir <> 'Pesanan dibatalkan')
+                 AND (dp.status_pesanan_terakhir <> 'Pesanan selesai'
+                      AND dp.status_pesanan_terakhir <> 'Pesanan dibatalkan'
+                      AND dp.status_pesanan_terakhir <> 'Cancelled Shopee')
                ORDER BY dp.waktu_pesanan_terbuat DESC`
-        var list []models.ReconcileCandidate
-        err := r.db.SelectContext(ctx, &list, query, shop, order)
-        if list == nil {
-                list = []models.ReconcileCandidate{}
-        }
-        return list, err
+	var list []models.ReconcileCandidate
+	err := r.db.SelectContext(ctx, &list, query, shop, order)
+	if list == nil {
+		list = []models.ReconcileCandidate{}
+	}
+	return list, err
 }
