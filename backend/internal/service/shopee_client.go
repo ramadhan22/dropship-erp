@@ -140,7 +140,10 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 	}
 	path := "/api/v2/auth/access_token/get"
 	ts := time.Now().Unix()
-	sign := c.signWithToken(path, ts, c.RefreshToken)
+	// Shopee's access_token/get endpoint signs only with partner_id, path and
+	// timestamp. The refresh token is included in the POST body, not the
+	// signature calculation.
+	sign := c.signSimple(path, ts)
 
 	q := url.Values{}
 	q.Set("partner_id", c.PartnerID)
