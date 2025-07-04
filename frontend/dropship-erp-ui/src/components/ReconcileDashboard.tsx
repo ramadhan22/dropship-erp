@@ -166,9 +166,32 @@ export default function ReconcileDashboard() {
         <DialogTitle>Order Detail</DialogTitle>
         <DialogContent>
           {detail && (
-            <pre style={{ whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(detail, null, 2)}
-            </pre>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                {Object.entries(detail).map(([key, value]) => (
+                  <tr key={key}>
+                    <td
+                      style={{
+                        fontWeight: "bold",
+                        verticalAlign: "top",
+                        paddingRight: "0.5rem",
+                      }}
+                    >
+                      {key}
+                    </td>
+                    <td>
+                      {typeof value === "object" ? (
+                        <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                          {JSON.stringify(value, null, 2)}
+                        </pre>
+                      ) : (
+                        String(value)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </DialogContent>
         <DialogActions>
