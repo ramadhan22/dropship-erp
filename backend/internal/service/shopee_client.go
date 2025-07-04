@@ -114,7 +114,10 @@ type orderListResp struct {
 // refreshResp captures the access_token response.
 type refreshResp struct {
 	Response struct {
-		AccessToken string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpireIn     int    `json:"expire_in"`
+		RequestID    string `json:"request_id"`
 	} `json:"response"`
 	Error   string `json:"error"`
 	Message string `json:"message"`
@@ -131,7 +134,7 @@ type tokenResp struct {
 }
 
 // RefreshAccessToken fetches a new access token using the refresh token.
-func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
+func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, error) {
 	path := "/api/v2/auth/access_token/get"
 	ts := time.Now().Unix()
 	sign := c.signWithToken(path, ts, c.RefreshToken)
@@ -147,33 +150,36 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) error {
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("RefreshAccessToken request error: %v", err)
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		logutil.Errorf("RefreshAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	var out refreshResp
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return err
+		return nil, err
 	}
 	if out.Error != "" {
 		logutil.Errorf("RefreshAccessToken API error: %s", out.Error)
-		return fmt.Errorf("shopee error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
 	if out.Response.AccessToken != "" {
 		c.AccessToken = out.Response.AccessToken
 	}
-	return nil
+	if out.Response.RefreshToken != "" {
+		c.RefreshToken = out.Response.RefreshToken
+	}
+	return &out, nil
 }
 
 // GetAccessToken retrieves a new access token using the authorization code and shop_id.
@@ -278,7 +284,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
 func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (string, error) {
-	if err := c.RefreshAccessToken(ctx); err != nil {
+	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return "", err
 	}
 	path := "/api/v2/order/get_order_detail"
@@ -323,7 +329,7 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 
 // getOrderDetailExt fetches additional order fields for pending balance.
 func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*orderDetailExtResp, error) {
-	if err := c.RefreshAccessToken(ctx); err != nil {
+	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return nil, err
 	}
 	path := "/api/v2/order/get_order_detail"
@@ -377,7 +383,7 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 	var total float64
 
 	for {
-		if err := c.RefreshAccessToken(ctx); err != nil {
+		if _, err := c.RefreshAccessToken(ctx); err != nil {
 			return 0, err
 		}
 		path := "/api/v2/order/get_order_list"
