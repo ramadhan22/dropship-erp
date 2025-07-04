@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
@@ -12,6 +19,13 @@ import {
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
 import usePagination from "../usePagination";
+import JsonTabs from "./JsonTabs";
+
+function formatLabel(label: string): string {
+  return label
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
@@ -177,10 +191,12 @@ export default function ReconcileDashboard() {
                         paddingRight: "0.5rem",
                       }}
                     >
-                      {key}
+                      {formatLabel(key)}
                     </td>
                     <td>
-                      {typeof value === "object" ? (
+                      {Array.isArray(value) ? (
+                        <JsonTabs items={value} />
+                      ) : typeof value === "object" && value !== null ? (
                         <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                           {JSON.stringify(value, null, 2)}
                         </pre>

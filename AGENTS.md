@@ -42,6 +42,9 @@ If a command cannot be executed in the environment, mention this in the pull req
 - Use the `SortableTable` component for displaying tabular data.
 - Paginate long lists with the `usePagination` hook or `Pagination` component.
 - Provide filter controls on pages that list data so users can refine results.
+- Display JSON or array values in modals with the `JsonTabs` component and
+  format field labels by replacing underscores with spaces and capitalizing
+  each word.
 
 ## Feature ↔ Table Mapping
 The backend tables drive distinct pages and APIs in the frontend. When changing
