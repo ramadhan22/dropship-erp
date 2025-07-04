@@ -149,6 +149,7 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
+	q.Set("shop_id", c.ShopID)
 
 	bodyForm := url.Values{}
 	bodyForm.Set("partner_id", c.PartnerID)
