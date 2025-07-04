@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -75,6 +76,8 @@ func (s *ChannelService) UpdateStore(ctx context.Context, st *models.Store) erro
 		st.RefreshToken = &tok.RefreshToken
 		st.ExpireIn = &tok.ExpireIn
 		st.RequestID = &tok.RequestID
+		now := time.Now()
+		st.LastUpdated = &now
 	}
 	return s.repo.UpdateStore(ctx, st)
 }

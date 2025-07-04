@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -35,6 +36,7 @@ type ReconcileServiceRecRepo interface {
 }
 type ReconcileServiceStoreRepo interface {
 	GetStoreByName(ctx context.Context, name string) (*models.Store, error)
+	UpdateStore(ctx context.Context, s *models.Store) error
 }
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
@@ -332,7 +334,47 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 	if s.client == nil {
 		return nil, fmt.Errorf("shopee client not configured")
 	}
-	return s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
+
+	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+		return nil, err
+	}
+
+	detail, err := s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
+	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+		if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+			return nil, err
+		}
+		detail, err = s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
+	}
+	return detail, err
+}
+
+func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models.Store) error {
+	if st.RefreshToken == nil {
+		return fmt.Errorf("missing refresh token")
+	}
+	if st.ExpireIn != nil && st.LastUpdated != nil {
+		exp := st.LastUpdated.Add(time.Duration(*st.ExpireIn) * time.Second)
+		if time.Now().Before(exp) {
+			return nil
+		}
+	}
+	resp, err := s.client.RefreshAccessToken(ctx)
+	if err != nil {
+		return err
+	}
+	st.AccessToken = &resp.Response.AccessToken
+	if resp.Response.RefreshToken != "" {
+		st.RefreshToken = &resp.Response.RefreshToken
+	}
+	st.ExpireIn = &resp.Response.ExpireIn
+	st.RequestID = &resp.Response.RequestID
+	now := time.Now()
+	st.LastUpdated = &now
+	if uerr := s.storeRepo.UpdateStore(ctx, st); uerr != nil {
+		log.Printf("update store token: %v", uerr)
+	}
+	return nil
 }
 
 // GetShopeeAccessToken obtains an access token for the store related to the given invoice.

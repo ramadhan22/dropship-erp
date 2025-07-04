@@ -174,15 +174,16 @@ type JenisChannel struct {
 
 // Store represents a store/shop under a jenis channel.
 type Store struct {
-	StoreID        int64   `db:"store_id" json:"store_id"`
-	JenisChannelID int64   `db:"jenis_channel_id" json:"jenis_channel_id"`
-	NamaToko       string  `db:"nama_toko" json:"nama_toko"`
-	CodeID         *string `db:"code_id" json:"code_id"`
-	ShopID         *string `db:"shop_id" json:"shop_id"`
-	AccessToken    *string `db:"access_token" json:"-"`
-	RefreshToken   *string `db:"refresh_token" json:"-"`
-	ExpireIn       *int    `db:"expire_in" json:"-"`
-	RequestID      *string `db:"request_id" json:"-"`
+	StoreID        int64      `db:"store_id" json:"store_id"`
+	JenisChannelID int64      `db:"jenis_channel_id" json:"jenis_channel_id"`
+	NamaToko       string     `db:"nama_toko" json:"nama_toko"`
+	CodeID         *string    `db:"code_id" json:"code_id"`
+	ShopID         *string    `db:"shop_id" json:"shop_id"`
+	AccessToken    *string    `db:"access_token" json:"-"`
+	RefreshToken   *string    `db:"refresh_token" json:"-"`
+	ExpireIn       *int       `db:"expire_in" json:"-"`
+	RequestID      *string    `db:"request_id" json:"-"`
+	LastUpdated    *time.Time `db:"last_updated" json:"-"`
 }
 
 // StoreWithChannel joins a store with its channel name.
