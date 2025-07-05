@@ -56,13 +56,28 @@ export default function ReconcileDashboard() {
   const [detailInvoice, setDetailInvoice] = useState("");
   const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
+  const [statusMap, setStatusMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
   }, []);
 
-  const fetchData = () => {
-    listCandidates(shop, order, from, to).then((r) => setData(r.data));
+  const fetchData = async () => {
+    const res = await listCandidates(shop, order, from, to);
+    setData(res.data);
+    const entries = await Promise.all(
+      res.data.map(async (row) => {
+        try {
+          const det = await fetchShopeeDetail(row.kode_invoice_channel);
+          const status =
+            det.data.order_status || det.data.status || "Not Found";
+          return [row.kode_invoice_channel, status] as [string, string];
+        } catch {
+          return [row.kode_invoice_channel, "Not Found"] as [string, string];
+        }
+      }),
+    );
+    setStatusMap(Object.fromEntries(entries));
   };
 
   useEffect(() => {
@@ -130,6 +145,10 @@ export default function ReconcileDashboard() {
     { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
     { label: "Status", key: "status_pesanan_terakhir" },
     { label: "No Pesanan Shopee", key: "no_pesanan" },
+    {
+      label: "Shopee Order Status",
+      render: (_, row) => statusMap[row.kode_invoice_channel] || "Not Found",
+    },
     {
       label: "Dropship",
       render: (_, row) => (
