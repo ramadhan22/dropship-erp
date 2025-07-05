@@ -182,11 +182,11 @@ func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]mo
 }
 
 // ListCandidates proxies to the repo to fetch transactions that need attention.
-func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error) {
+func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from, to string) ([]models.ReconcileCandidate, error) {
 	if repo, ok := s.recRepo.(interface {
-		ListCandidates(context.Context, string, string) ([]models.ReconcileCandidate, error)
+		ListCandidates(context.Context, string, string, string, string) ([]models.ReconcileCandidate, error)
 	}); ok {
-		return repo.ListCandidates(ctx, shop, order)
+		return repo.ListCandidates(ctx, shop, order, from, to)
 	}
 	return nil, fmt.Errorf("not implemented")
 }

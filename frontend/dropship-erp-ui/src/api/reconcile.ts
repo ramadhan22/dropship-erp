@@ -9,10 +9,17 @@ export function listUnmatched(shop: string) {
   return api.get<ReconciledTransaction[]>(`/reconcile/unmatched?shop=${shop}`);
 }
 
-export function listCandidates(shop: string, order?: string) {
+export function listCandidates(
+  shop: string,
+  order?: string,
+  from?: string,
+  to?: string,
+) {
   const q = new URLSearchParams();
   if (shop) q.append("shop", shop);
   if (order) q.append("order", order);
+  if (from) q.append("from", from);
+  if (to) q.append("to", to);
   const qs = q.toString();
   const url = qs ? `/reconcile/candidates?${qs}` : "/reconcile/candidates";
   return api.get<ReconcileCandidate[]>(url);
