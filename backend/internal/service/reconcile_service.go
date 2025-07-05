@@ -357,18 +357,33 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 }
 
 func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models.Store) error {
+	log.Printf("TEST: ensureStoreTokenValid for store %s", st.StoreID)
+	// New location (e.g., Asia/Jakarta)
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+
+	// Reinterpret the time as if it were in the new location
+	reinterpreted := time.Date(
+		st.LastUpdated.Year(), st.LastUpdated.Month(), st.LastUpdated.Day(),
+		st.LastUpdated.Hour(), st.LastUpdated.Minute(), st.LastUpdated.Second(), st.LastUpdated.Nanosecond(),
+		loc,
+	)
+	exp := reinterpreted.Add(time.Duration(*st.ExpireIn) * time.Second)
 	if st.RefreshToken == nil {
+		log.Fatalf("ensureStoreTokenValid: missing refresh token for store %s", st.StoreID)
 		return fmt.Errorf("missing refresh token")
 	}
 	if st.ShopID == nil || *st.ShopID == "" {
+		log.Fatalf("ensureStoreTokenValid: missing shop id for store %s", st.StoreID)
 		return fmt.Errorf("missing shop id")
 	}
 	if st.ExpireIn != nil && st.LastUpdated != nil {
-		exp := st.LastUpdated.Add(time.Duration(*st.ExpireIn) * time.Second)
-		if time.Now().Before(exp) {
+		if time.Now().Before(exp.Local()) {
+			log.Printf("Token for store %s is still valid until %v and current time is %t", st.StoreID, exp, time.Now())
+			log.Printf("current time: %v", time.Now())
 			return nil
 		}
 	}
+	log.Printf("exp: %v", exp)
 	s.client.ShopID = *st.ShopID
 	s.client.RefreshToken = *st.RefreshToken
 	resp, err := s.client.RefreshAccessToken(ctx)

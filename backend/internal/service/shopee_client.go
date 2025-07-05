@@ -135,6 +135,7 @@ type tokenResp struct {
 
 // RefreshAccessToken fetches a new access token using the refresh token.
 func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, error) {
+	log.Printf("Refreshing access token for shop %s", c.ShopID)
 	if c.ShopID == "" {
 		return nil, fmt.Errorf("shop_id is empty")
 	}

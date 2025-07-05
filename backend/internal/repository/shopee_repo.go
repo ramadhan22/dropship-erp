@@ -523,7 +523,7 @@ func (r *ShopeeRepo) ListSalesProfit(
 	if len(conds) > 0 {
 		query += " AND " + strings.Join(conds, " AND ")
 	}
-	query += " GROUP BY je.source_id, dp.waktu_pesanan_terbuat, aff.aff"
+	query += " GROUP BY je.source_id, dp.waktu_pesanan_terbuat, aff.aff, adj.refund, adj.selisih, adj.income"
 	countQuery := "SELECT COUNT(*) FROM (" + query + ") AS sub"
 	var count int
 	if err := r.db.GetContext(ctx, &count, countQuery, args...); err != nil {
