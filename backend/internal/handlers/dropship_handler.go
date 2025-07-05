@@ -21,6 +21,7 @@ type DropshipServiceInterface interface {
 	TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error)
 	DailyTotals(ctx context.Context, channel, store, from, to string) ([]repository.DailyPurchaseTotal, error)
 	MonthlyTotals(ctx context.Context, channel, store, from, to string) ([]repository.MonthlyPurchaseTotal, error)
+	CancelledSummary(ctx context.Context, channel, store, from, to string) (repository.CancelledSummary, error)
 }
 
 type DropshipHandler struct {
@@ -150,6 +151,20 @@ func (h *DropshipHandler) HandleMonthlyTotals(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 	res, err := h.svc.MonthlyTotals(c.Request.Context(), channel, store, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// HandleCancelledSummary returns cancellation count and Biaya Mitra totals.
+func (h *DropshipHandler) HandleCancelledSummary(c *gin.Context) {
+	channel := c.Query("channel")
+	store := c.Query("store")
+	from := c.Query("from")
+	to := c.Query("to")
+	res, err := h.svc.CancelledSummary(c.Request.Context(), channel, store, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

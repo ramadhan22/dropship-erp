@@ -29,6 +29,12 @@ type MonthlyPurchaseTotal struct {
 	Count int     `db:"count" json:"count"`
 }
 
+// CancelledSummary represents aggregated stats for cancelled orders.
+type CancelledSummary struct {
+	Count int     `db:"count" json:"count"`
+	Biaya float64 `db:"biaya" json:"biaya_mitra"`
+}
+
 // NewDropshipRepo constructs a DropshipRepo given an *sqlx.DB connection.
 func NewDropshipRepo(db DBTX) *DropshipRepo {
 	return &DropshipRepo{db: db}
@@ -352,4 +358,25 @@ func (r *DropshipRepo) MonthlyTotals(
 		list = []MonthlyPurchaseTotal{}
 	}
 	return list, nil
+}
+
+// CancelledSummary returns count of cancelled orders and total Biaya Mitra
+// filtered by optional channel, store and date range.
+func (r *DropshipRepo) CancelledSummary(
+	ctx context.Context,
+	channel, store, from, to string,
+) (CancelledSummary, error) {
+	query := `SELECT COUNT(*) AS count,
+                COALESCE(SUM(biaya_mitra_jakmall),0) AS biaya
+                FROM dropship_purchases
+                WHERE status_pesanan_terakhir = 'Cancelled Shopee'
+                  AND ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)`
+	var res CancelledSummary
+	if err := r.db.GetContext(ctx, &res, query, channel, store, from, to); err != nil {
+		return CancelledSummary{}, err
+	}
+	return res, nil
 }

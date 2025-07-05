@@ -387,6 +387,22 @@ export function fetchTopProducts(params: {
   if (params.limit) q.append("limit", String(params.limit));
   return api.get<ProductSales[]>(`/dropship/top-products?${q.toString()}`);
 }
+
+export function fetchCancelledSummary(params: {
+  channel?: string;
+  store?: string;
+  from?: string;
+  to?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.from) q.append("from", params.from);
+  if (params.to) q.append("to", params.to);
+  return api.get<{ count: number; biaya_mitra: number }>(
+    `/dropship/cancellations/summary?${q.toString()}`,
+  );
+}
 // === Accounts CRUD ===
 export function createAccount(acc: Partial<Account>) {
   return api.post("/accounts", acc);

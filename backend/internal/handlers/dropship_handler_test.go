@@ -59,6 +59,10 @@ func (f *fakeDropshipService) MonthlyTotals(ctx context.Context, channel, store,
 	return nil, nil
 }
 
+func (f *fakeDropshipService) CancelledSummary(ctx context.Context, channel, store, from, to string) (repository.CancelledSummary, error) {
+	return repository.CancelledSummary{}, nil
+}
+
 func TestHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{}

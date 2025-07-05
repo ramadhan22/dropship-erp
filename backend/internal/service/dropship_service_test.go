@@ -66,6 +66,10 @@ func (f *fakeDropshipRepo) MonthlyTotals(ctx context.Context, channel, store, fr
 	return nil, nil
 }
 
+func (f *fakeDropshipRepo) CancelledSummary(ctx context.Context, channel, store, from, to string) (repository.CancelledSummary, error) {
+	return repository.CancelledSummary{}, nil
+}
+
 type fakeJournalRepoDrop struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine

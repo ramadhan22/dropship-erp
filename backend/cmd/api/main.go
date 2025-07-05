@@ -91,6 +91,7 @@ func main() {
 		apiGroup.GET("/dropship/purchases/summary", handlers.NewDropshipHandler(dropshipSvc).HandleSum)
 		apiGroup.GET("/dropship/purchases/daily", handlers.NewDropshipHandler(dropshipSvc).HandleDailyTotals)
 		apiGroup.GET("/dropship/purchases/monthly", handlers.NewDropshipHandler(dropshipSvc).HandleMonthlyTotals)
+		apiGroup.GET("/dropship/cancellations/summary", handlers.NewDropshipHandler(dropshipSvc).HandleCancelledSummary)
 		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
 		apiGroup.GET("/dropship/top-products", handlers.NewDropshipHandler(dropshipSvc).HandleTopProducts)
 		shHandler := handlers.NewShopeeHandler(shopeeSvc)
