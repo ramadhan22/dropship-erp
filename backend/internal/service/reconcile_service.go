@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
@@ -186,7 +187,29 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from
 	if repo, ok := s.recRepo.(interface {
 		ListCandidates(context.Context, string, string, string, string) ([]models.ReconcileCandidate, error)
 	}); ok {
-		return repo.ListCandidates(ctx, shop, order, from, to)
+		list, err := repo.ListCandidates(ctx, shop, order, from, to)
+		if err != nil {
+			return nil, err
+		}
+		for i := range list {
+			log.Printf("Fetching Shopee order detail for %s", list[i].KodeInvoiceChannel)
+			detail, err := s.GetShopeeOrderDetail(ctx, list[i].KodeInvoiceChannel)
+			if err != nil {
+				logutil.Errorf("GetShopeeOrderDetail %s: %v", list[i].KodeInvoiceChannel, err)
+				list[i].ShopeeOrderStatus = "Not Found"
+				continue
+			}
+			status := (*detail)["order_status"]
+			if status == nil {
+				status = (*detail)["status"]
+			}
+			if str, ok := status.(string); ok {
+				list[i].ShopeeOrderStatus = str
+			} else {
+				list[i].ShopeeOrderStatus = "Not Found"
+			}
+		}
+		return list, nil
 	}
 	return nil, fmt.Errorf("not implemented")
 }

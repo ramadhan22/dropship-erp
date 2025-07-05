@@ -31,6 +31,7 @@ Main features:
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Check Shopee order details from the Reconcile dashboard using the store's saved access token.
+- Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.

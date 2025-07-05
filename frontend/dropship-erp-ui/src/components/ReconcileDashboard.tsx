@@ -16,7 +16,6 @@ import type { Column } from "./SortableTable";
 import {
   listCandidates,
   reconcileCheck,
-  fetchShopeeDetail,
   cancelPurchase,
   updateShopeeStatus,
 } from "../api/reconcile";
@@ -56,7 +55,6 @@ export default function ReconcileDashboard() {
   const [detailInvoice, setDetailInvoice] = useState("");
   const navigate = useNavigate();
   const { paginated, controls } = usePagination(data);
-  const [statusMap, setStatusMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
@@ -65,19 +63,6 @@ export default function ReconcileDashboard() {
   const fetchData = async () => {
     const res = await listCandidates(shop, order, from, to);
     setData(res.data);
-    const entries = await Promise.all(
-      res.data.map(async (row) => {
-        try {
-          const det = await fetchShopeeDetail(row.kode_invoice_channel);
-          const status =
-            det.data.order_status || det.data.status || "Not Found";
-          return [row.kode_invoice_channel, status] as [string, string];
-        } catch {
-          return [row.kode_invoice_channel, "Not Found"] as [string, string];
-        }
-      }),
-    );
-    setStatusMap(Object.fromEntries(entries));
   };
 
   useEffect(() => {
@@ -147,7 +132,7 @@ export default function ReconcileDashboard() {
     { label: "No Pesanan Shopee", key: "no_pesanan" },
     {
       label: "Shopee Order Status",
-      render: (_, row) => statusMap[row.kode_invoice_channel] || "Not Found",
+      key: "shopee_order_status",
     },
     {
       label: "Dropship",
