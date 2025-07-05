@@ -16,7 +16,7 @@ jest.mock("../api/reconcile", () => ({
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
   fetchShopeeDetail: jest
     .fn()
-    .mockResolvedValue({ data: { order_sn: "INV", status: "PROCESSED" } }),
+    .mockResolvedValue({ data: { order_sn: "INV", order_status: "PROCESSED" } }),
 }));
 
 beforeEach(() => {
@@ -134,4 +134,25 @@ test("check status button", async () => {
   await waitFor(() =>
     expect(api.fetchShopeeDetail).toHaveBeenCalledWith("INV"),
   );
+});
+
+test("show shopee status column", async () => {
+  (api.listCandidates as jest.Mock).mockResolvedValueOnce({
+    data: [
+      {
+        kode_pesanan: "A",
+        kode_invoice_channel: "INV",
+        nama_toko: "X",
+        status_pesanan_terakhir: "diproses",
+        no_pesanan: "INV",
+      },
+    ],
+  });
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
+  await screen.findByText("PROCESSED");
+  expect(api.fetchShopeeDetail).toHaveBeenCalledWith("INV");
 });
