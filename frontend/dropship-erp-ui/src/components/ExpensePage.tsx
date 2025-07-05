@@ -24,11 +24,19 @@ import {
 import { getJournalLinesBySource } from "../api/journal";
 import { listAccounts } from "../api";
 import type { Expense, Account, JournalEntryWithLines } from "../types";
-import usePagination from "../usePagination";
+import useServerPagination from "../useServerPagination";
 
 export default function ExpensePage() {
-  const [list, setList] = useState<Expense[]>([]);
-  const { paginated, controls } = usePagination(list);
+  const {
+    data: list,
+    controls,
+    page,
+    setPage,
+    pageSize,
+    reload,
+  } = useServerPagination((params) =>
+    listExpenses({ page: params.page, page_size: params.pageSize }).then((r) => r.data),
+  );
   const [desc, setDesc] = useState("");
   const [asset, setAsset] = useState("");
   const [date, setDate] = useState(
@@ -50,12 +58,10 @@ export default function ExpensePage() {
     text: string;
   } | null>(null);
 
-  const fetchData = () => listExpenses().then((r) => setList(r.data.data));
-
   useEffect(() => {
-    fetchData();
+    reload();
     listAccounts().then((r) => setAccounts(r.data));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     try {
@@ -85,7 +91,7 @@ export default function ExpensePage() {
       setLines([{ account: "", amount: "" }]);
       setOpen(false);
       setEditing(null);
-      fetchData();
+      reload();
       setMsg({ type: "success", text: "saved" });
     } catch (e: any) {
       setMsg({ type: "error", text: e.message });
@@ -142,7 +148,7 @@ export default function ExpensePage() {
           <Button
             size="small"
             onClick={() => {
-              deleteExpense(e.id).then(fetchData);
+              deleteExpense(e.id).then(() => reload());
             }}
           >
             Del
@@ -172,7 +178,7 @@ export default function ExpensePage() {
       {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
       <SortableTable
         columns={columns}
-        data={paginated}
+        data={list}
         defaultSort={{ key: "date", direction: "desc" }}
       />
       {controls}

@@ -34,7 +34,8 @@ export default function ShopeeAffiliatePage() {
   const [total, setTotal] = useState(0);
   const [pageTotal, setPageTotal] = useState(0);
   const [allTotal, setAllTotal] = useState(0);
-  const pageSize = 10;
+  const pageSizeOptions = [10, 20, 50, 100, 250, 500, 1000];
+  const [pageSize, setPageSize] = useState(20);
   const [importOpen, setImportOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [msg, setMsg] = useState<{
@@ -159,6 +160,10 @@ export default function ShopeeAffiliatePage() {
       });
       setData(res.data.data);
       setTotal(res.data.total);
+      const pages = Math.max(1, Math.ceil(res.data.total / pageSize));
+      if (page > pages) {
+        setPage(pages);
+      }
       const sum = res.data.data.reduce(
         (acc, cur) => acc + cur.estimasi_komisi_affiliate_per_pesanan,
         0,
@@ -179,7 +184,7 @@ export default function ShopeeAffiliatePage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, from, to, page]);
+  }, [order, from, to, page, pageSize]);
 
   const handleImport = async () => {
     try {
@@ -273,12 +278,36 @@ export default function ShopeeAffiliatePage() {
           defaultSort={{ key: "waktu_pesanan", direction: "desc" }}
         />
       </div>
-      <Pagination
-        sx={{ mt: 2 }}
-        page={page}
-        count={Math.max(1, Math.ceil(total / pageSize))}
-        onChange={(_, val) => setPage(val)}
-      />
+      <div
+        style={{
+          marginTop: "1rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>Total: {total}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <Pagination
+            page={page}
+            count={Math.max(1, Math.ceil(total / pageSize))}
+            onChange={(_, val) => setPage(val)}
+          />
+        </div>
+      </div>
       <Dialog open={importOpen} onClose={() => setImportOpen(false)}>
         <DialogTitle>Import Shopee Affiliate CSV</DialogTitle>
         <DialogContent>

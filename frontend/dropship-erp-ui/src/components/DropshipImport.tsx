@@ -10,6 +10,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Pagination,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -55,7 +56,8 @@ export default function DropshipImport() {
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSizeOptions = [10, 20, 50, 100, 250, 500, 1000];
+  const [pageSize, setPageSize] = useState(20);
 
   const columns: Column<DropshipPurchase>[] = [
     { label: "Kode Pesanan", key: "kode_pesanan" },
@@ -166,6 +168,10 @@ export default function DropshipImport() {
     });
     setData(res.data.data);
     setTotal(res.data.total);
+    const pages = Math.max(1, Math.ceil(res.data.total / pageSize));
+    if (page > pages) {
+      setPage(pages);
+    }
     const sum = res.data.data.reduce(
       (acc, cur) => acc + cur.total_transaksi,
       0,
@@ -182,7 +188,7 @@ export default function DropshipImport() {
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, from, to, page, order, sortKey, sortDir]);
+  }, [channel, store, from, to, page, order, sortKey, sortDir, pageSize]);
 
   useEffect(() => {
     const ord = searchParams.get("order");
@@ -405,22 +411,35 @@ export default function DropshipImport() {
           }}
         />
       </div>
-      <div style={{ marginTop: "0.5rem" }}>
-        <Button
-          variant="outlined"
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          sx={{ mr: 1 }}
-        >
-          Prev
-        </Button>
-        <Button
-          variant="outlined"
-          disabled={page * pageSize >= total}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </Button>
+      <div
+        style={{
+          marginTop: "1rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>Total: {total}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <Pagination
+            page={page}
+            count={Math.max(1, Math.ceil(total / pageSize))}
+            onChange={(_, val) => setPage(val)}
+          />
+        </div>
       </div>
 
       <Dialog open={open} onClose={() => setOpen(false)}>

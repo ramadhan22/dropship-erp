@@ -5,7 +5,7 @@ export function createExpense(exp: Partial<Expense>) {
   return api.post<Expense>("/expenses/", exp);
 }
 
-export function listExpenses(params?: Record<string, any>) {
+export function listExpenses(params?: { page?: number; page_size?: number }) {
   return api.get<{ data: Expense[]; total: number }>("/expenses/", { params });
 }
 

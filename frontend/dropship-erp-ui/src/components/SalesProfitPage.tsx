@@ -42,7 +42,7 @@ export default function SalesProfitPage() {
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [data, setData] = useState<SalesProfit[]>([]);
   const [total, setTotal] = useState(0);
   const [msg, setMsg] = useState<{
@@ -169,6 +169,10 @@ export default function SalesProfitPage() {
       });
       setData(res.data.data);
       setTotal(res.data.total);
+      const pages = Math.max(1, Math.ceil(res.data.total / pageSize));
+      if (page > pages) {
+        setPage(pages);
+      }
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -257,9 +261,11 @@ export default function SalesProfitPage() {
             setPage(1);
           }}
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
+          {[10, 20, 50, 100, 250, 500, 1000].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
         </select>
       </div>
       {msg && (
