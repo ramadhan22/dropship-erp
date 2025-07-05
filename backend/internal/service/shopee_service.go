@@ -182,53 +182,32 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	storeUsername, _ := f.GetCellValue(sheet, "A2")
 	namaToko := formatNamaToko(storeUsername)
 
-	useNew := false
-	headerIndex := -1
-	for i, row := range rows {
-		if len(row) > 1 && strings.TrimSpace(row[1]) == expectedHeaders[0] {
-			headerIndex = i
-			break
-		}
-	}
-	if headerIndex == -1 {
+	headerIndex := 5 // headers are always on row 6
+	if len(rows) <= headerIndex {
 		return 0, nil, fmt.Errorf("header row not found")
 	}
 	header := rows[headerIndex]
-	if len(header) >= len(expectedHeaders)+1 {
-		match := true
-		for i, name := range expectedHeaders {
-			if strings.TrimSpace(header[i+1]) != name {
-				match = false
-				break
-			}
-		}
-		if match {
-			useNew = true
-		}
+	headerMap := make(map[string]int, len(header))
+	for i, h := range header {
+		headerMap[strings.TrimSpace(h)] = i
 	}
-	if !useNew {
-		if len(header) < len(expectedHeadersOld)+1 {
-			return 0, nil, fmt.Errorf("invalid header length")
-		}
-		for i, name := range expectedHeadersOld {
-			if strings.TrimSpace(header[i+1]) != name {
-				return 0, nil, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
-			}
-		}
+	if _, ok := headerMap["No. Pesanan"]; !ok {
+		return 0, nil, fmt.Errorf("No. Pesanan column not found")
 	}
 
 	entries := []*models.ShopeeSettled{}
 	orderNos := []string{}
 	for i := headerIndex + 1; i < len(rows); i++ {
 		row := rows[i]
-		if len(row) < 37 {
+		idx := headerMap["No. Pesanan"]
+		if idx >= len(row) {
 			continue
 		}
-		if strings.TrimSpace(row[1]) == "" || strings.Contains(strings.ToLower(row[1]), "total") || strings.Contains(strings.ToLower(row[1]), "summary") {
+		if strings.TrimSpace(row[idx]) == "" || strings.Contains(strings.ToLower(row[idx]), "total") || strings.Contains(strings.ToLower(row[idx]), "summary") {
 			continue
 		}
 
-		entry, err := parseShopeeRow(row, namaToko, useNew)
+		entry, err := parseShopeeRow(row, headerMap, namaToko)
 		if err != nil {
 			continue
 		}
@@ -412,121 +391,115 @@ func parseFloat(s string) (float64, error) {
 	return strconv.ParseFloat(s, 64)
 }
 
-func parseShopeeRow(row []string, namaToko string, newFmt bool) (*models.ShopeeSettled, error) {
+func parseShopeeRow(row []string, header map[string]int, namaToko string) (*models.ShopeeSettled, error) {
 	var err error
+	get := func(name string) string {
+		idx, ok := header[name]
+		if !ok || idx >= len(row) {
+			return ""
+		}
+		return row[idx]
+	}
 	res := &models.ShopeeSettled{NamaToko: namaToko}
-	res.NoPesanan = row[1]
-	res.NoPengajuan = row[2]
-	res.UsernamePembeli = row[3]
-	if res.WaktuPesananDibuat, err = parseDate(row[4]); err != nil {
+	res.NoPesanan = get("No. Pesanan")
+	res.NoPengajuan = get("No. Pengajuan")
+	res.UsernamePembeli = get("Username (Pembeli)")
+	if res.WaktuPesananDibuat, err = parseDate(get("Waktu Pesanan Dibuat")); err != nil {
 		return nil, err
 	}
-	res.MetodePembayaranPembeli = row[5]
-	if res.TanggalDanaDilepaskan, err = parseDate(row[6]); err != nil {
+	res.MetodePembayaranPembeli = get("Metode pembayaran pembeli")
+	if res.TanggalDanaDilepaskan, err = parseDate(get("Tanggal Dana Dilepaskan")); err != nil {
 		return nil, err
 	}
-	if res.HargaAsliProduk, err = parseFloat(row[7]); err != nil {
+	if res.HargaAsliProduk, err = parseFloat(get("Harga Asli Produk")); err != nil {
 		return nil, err
 	}
-	if res.TotalDiskonProduk, err = parseFloat(row[8]); err != nil {
+	if res.TotalDiskonProduk, err = parseFloat(get("Total Diskon Produk")); err != nil {
 		return nil, err
 	}
-	if res.JumlahPengembalianDanaKePembeli, err = parseFloat(row[9]); err != nil {
+	if res.JumlahPengembalianDanaKePembeli, err = parseFloat(get("Jumlah Pengembalian Dana ke Pembeli")); err != nil {
 		return nil, err
 	}
-	if res.KomisiShopee, err = parseFloat(row[10]); err != nil {
+	if res.KomisiShopee, err = parseFloat(get("Diskon Produk dari Shopee")); err != nil {
 		return nil, err
 	}
-	if res.BiayaAdminShopee, err = parseFloat(row[11]); err != nil {
+	if res.BiayaAdminShopee, err = parseFloat(get("Diskon Voucher Ditanggung Penjual")); err != nil {
 		return nil, err
 	}
-	if res.BiayaLayanan, err = parseFloat(row[12]); err != nil {
+	if res.BiayaLayanan, err = parseFloat(get("Cashback Koin yang Ditanggung Penjual")); err != nil {
 		return nil, err
 	}
-	if res.BiayaLayananEkstra, err = parseFloat(row[13]); err != nil {
+	if res.BiayaLayananEkstra, err = parseFloat(get("Ongkir Dibayar Pembeli")); err != nil {
 		return nil, err
 	}
-	if res.BiayaPenyediaPembayaran, err = parseFloat(row[14]); err != nil {
+	if res.BiayaPenyediaPembayaran, err = parseFloat(get("Diskon Ongkir Ditanggung Jasa Kirim")); err != nil {
 		return nil, err
 	}
-	if res.Asuransi, err = parseFloat(row[15]); err != nil {
+	if res.Asuransi, err = parseFloat(get("Gratis Ongkir dari Shopee")); err != nil {
 		return nil, err
 	}
-	if res.TotalBiayaTransaksi, err = parseFloat(row[16]); err != nil {
+	if res.TotalBiayaTransaksi, err = parseFloat(get("Ongkir yang Diteruskan oleh Shopee ke Jasa Kirim")); err != nil {
 		return nil, err
 	}
-	if res.BiayaPengiriman, err = parseFloat(row[17]); err != nil {
+	if res.BiayaPengiriman, err = parseFloat(get("Ongkos Kirim Pengembalian Barang")); err != nil {
 		return nil, err
 	}
-	if res.TotalDiskonPengiriman, err = parseFloat(row[18]); err != nil {
+	if res.TotalDiskonPengiriman, err = parseFloat(get("Pengembalian Biaya Kirim")); err != nil {
 		return nil, err
 	}
-	if res.PromoGratisOngkirShopee, err = parseFloat(row[19]); err != nil {
+	if res.PromoGratisOngkirShopee, err = parseFloat(get("Biaya Komisi AMS")); err != nil {
 		return nil, err
 	}
-	if res.PromoGratisOngkirPenjual, err = parseFloat(row[20]); err != nil {
+	if res.PromoGratisOngkirPenjual, err = parseFloat(get("Biaya Administrasi")); err != nil {
 		return nil, err
 	}
-	if res.PromoDiskonShopee, err = parseFloat(row[21]); err != nil {
+	if res.PromoDiskonShopee, err = parseFloat(get("Biaya Layanan (termasuk PPN 11%)")); err != nil {
 		return nil, err
 	}
-	if res.PromoDiskonPenjual, err = parseFloat(row[22]); err != nil {
+	if res.PromoDiskonPenjual, err = parseFloat(get("Premi")); err != nil {
 		return nil, err
 	}
-	if res.CashbackShopee, err = parseFloat(row[23]); err != nil {
+	if res.CashbackShopee, err = parseFloat(get("Biaya Program")); err != nil {
 		return nil, err
 	}
-	if res.CashbackPenjual, err = parseFloat(row[24]); err != nil {
+	if res.CashbackPenjual, err = parseFloat(get("Biaya Kartu Kredit")); err != nil {
 		return nil, err
 	}
-	idx := 25
-	if newFmt {
+	if idx, ok := header["Biaya Transaksi"]; ok && idx < len(row) {
 		if res.BiayaTransaksi, err = parseFloat(row[idx]); err != nil {
 			return nil, err
 		}
-		idx++
 	}
-	if res.KoinShopee, err = parseFloat(row[idx]); err != nil {
+	if res.KoinShopee, err = parseFloat(get("Biaya Kampanye")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.PotonganLainnya, err = parseFloat(row[idx]); err != nil {
+	if res.PotonganLainnya, err = parseFloat(get("Bea Masuk, PPN & PPh")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.TotalPenerimaan, err = parseFloat(row[idx]); err != nil {
+	if res.TotalPenerimaan, err = parseFloat(get("Total Penghasilan")); err != nil {
 		return nil, err
 	}
-	idx++ // skip Kode Voucher
-	if res.Kompensasi, err = parseFloat(row[idx]); err != nil {
+	if res.Kompensasi, err = parseFloat(get("Kompensasi")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[idx]); err != nil {
+	if res.PromoGratisOngkirDariPenjual, err = parseFloat(get("Promo Gratis Ongkir dari Penjual")); err != nil {
 		return nil, err
 	}
-	idx++
-	res.JasaKirim = row[idx]
-	idx++
-	res.NamaKurir = row[idx]
-	idx++ // column blank
-	if res.PengembalianDanaKePembeli, err = parseFloat(row[idx]); err != nil {
+	res.JasaKirim = get("Jasa Kirim")
+	res.NamaKurir = get("Nama Kurir")
+	if res.PengembalianDanaKePembeli, err = parseFloat(get("Pengembalian Dana ke Pembeli")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[idx]); err != nil {
+	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(get("Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[idx]); err != nil {
+	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(get("Pro-rata Voucher Shopee untuk Pengembalian Barang")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[idx]); err != nil {
+	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(get("Pro-rated Bank Payment Channel Promotion  for return refund Items")); err != nil {
 		return nil, err
 	}
-	idx++
-	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[idx]); err != nil {
+	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(get("Pro-rated Shopee Payment Channel Promotion  for return refund Items")); err != nil {
 		return nil, err
 	}
 	return res, nil
