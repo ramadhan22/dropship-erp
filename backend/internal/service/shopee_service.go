@@ -52,6 +52,49 @@ var expectedHeaders = []string{
 	"Premi",
 	"Biaya Program",
 	"Biaya Kartu Kredit",
+	"Biaya Transaksi",
+	"Biaya Kampanye",
+	"Bea Masuk, PPN & PPh",
+	"Total Penghasilan",
+	"Kode Voucher",
+	"Kompensasi",
+	"Promo Gratis Ongkir dari Penjual",
+	"Jasa Kirim",
+	"Nama Kurir",
+	"",
+	"Pengembalian Dana ke Pembeli",
+	"Pro-rata Koin yang Ditukarkan untuk Pengembalian Barang",
+	"Pro-rata Voucher Shopee untuk Pengembalian Barang",
+	"Pro-rated Bank Payment Channel Promotion  for return refund Items",
+	"Pro-rated Shopee Payment Channel Promotion  for return refund Items",
+}
+
+// expectedHeadersOld retains the previous column order without Biaya Transaksi.
+var expectedHeadersOld = []string{
+	"No. Pesanan",
+	"No. Pengajuan",
+	"Username (Pembeli)",
+	"Waktu Pesanan Dibuat",
+	"Metode pembayaran pembeli",
+	"Tanggal Dana Dilepaskan",
+	"Harga Asli Produk",
+	"Total Diskon Produk",
+	"Jumlah Pengembalian Dana ke Pembeli",
+	"Diskon Produk dari Shopee",
+	"Diskon Voucher Ditanggung Penjual",
+	"Cashback Koin yang Ditanggung Penjual",
+	"Ongkir Dibayar Pembeli",
+	"Diskon Ongkir Ditanggung Jasa Kirim",
+	"Gratis Ongkir dari Shopee",
+	"Ongkir yang Diteruskan oleh Shopee ke Jasa Kirim",
+	"Ongkos Kirim Pengembalian Barang",
+	"Pengembalian Biaya Kirim",
+	"Biaya Komisi AMS",
+	"Biaya Administrasi",
+	"Biaya Layanan (termasuk PPN 11%)",
+	"Premi",
+	"Biaya Program",
+	"Biaya Kartu Kredit",
 	"Biaya Kampanye",
 	"Bea Masuk, PPN & PPh",
 	"Total Penghasilan",
@@ -139,6 +182,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 	storeUsername, _ := f.GetCellValue(sheet, "A2")
 	namaToko := formatNamaToko(storeUsername)
 
+	useNew := false
 	headerIndex := -1
 	for i, row := range rows {
 		if len(row) > 1 && strings.TrimSpace(row[1]) == expectedHeaders[0] {
@@ -150,12 +194,26 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 		return 0, nil, fmt.Errorf("header row not found")
 	}
 	header := rows[headerIndex]
-	if len(header) < len(expectedHeaders)+1 { // +1 for the \"No.\" column
-		return 0, nil, fmt.Errorf("invalid header length")
+	if len(header) >= len(expectedHeaders)+1 {
+		match := true
+		for i, name := range expectedHeaders {
+			if strings.TrimSpace(header[i+1]) != name {
+				match = false
+				break
+			}
+		}
+		if match {
+			useNew = true
+		}
 	}
-	for i, name := range expectedHeaders {
-		if strings.TrimSpace(header[i+1]) != name {
-			return 0, nil, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
+	if !useNew {
+		if len(header) < len(expectedHeadersOld)+1 {
+			return 0, nil, fmt.Errorf("invalid header length")
+		}
+		for i, name := range expectedHeadersOld {
+			if strings.TrimSpace(header[i+1]) != name {
+				return 0, nil, fmt.Errorf("unexpected header %q at column %d", header[i+1], i+2)
+			}
 		}
 	}
 
@@ -170,7 +228,7 @@ func (s *ShopeeService) ImportSettledOrdersXLSX(ctx context.Context, r io.Reader
 			continue
 		}
 
-		entry, err := parseShopeeRow(row, namaToko)
+		entry, err := parseShopeeRow(row, namaToko, useNew)
 		if err != nil {
 			continue
 		}
@@ -354,7 +412,7 @@ func parseFloat(s string) (float64, error) {
 	return strconv.ParseFloat(s, 64)
 }
 
-func parseShopeeRow(row []string, namaToko string) (*models.ShopeeSettled, error) {
+func parseShopeeRow(row []string, namaToko string, newFmt bool) (*models.ShopeeSettled, error) {
 	var err error
 	res := &models.ShopeeSettled{NamaToko: namaToko}
 	res.NoPesanan = row[1]
@@ -421,38 +479,54 @@ func parseShopeeRow(row []string, namaToko string) (*models.ShopeeSettled, error
 	if res.CashbackPenjual, err = parseFloat(row[24]); err != nil {
 		return nil, err
 	}
-	if res.KoinShopee, err = parseFloat(row[25]); err != nil {
+	idx := 25
+	if newFmt {
+		if res.BiayaTransaksi, err = parseFloat(row[idx]); err != nil {
+			return nil, err
+		}
+		idx++
+	}
+	if res.KoinShopee, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.PotonganLainnya, err = parseFloat(row[26]); err != nil {
+	idx++
+	if res.PotonganLainnya, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.TotalPenerimaan, err = parseFloat(row[27]); err != nil {
+	idx++
+	if res.TotalPenerimaan, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	// column 28 is "Kode Voucher" and is ignored
-	if res.Kompensasi, err = parseFloat(row[29]); err != nil {
+	idx++ // skip Kode Voucher
+	if res.Kompensasi, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[30]); err != nil {
+	idx++
+	if res.PromoGratisOngkirDariPenjual, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	res.JasaKirim = row[31]
-	res.NamaKurir = row[32]
-	// column 33 is blank
-	if res.PengembalianDanaKePembeli, err = parseFloat(row[34]); err != nil {
+	idx++
+	res.JasaKirim = row[idx]
+	idx++
+	res.NamaKurir = row[idx]
+	idx++ // column blank
+	if res.PengembalianDanaKePembeli, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[35]); err != nil {
+	idx++
+	if res.ProRataKoinYangDitukarkanUntukPengembalianBarang, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[36]); err != nil {
+	idx++
+	if res.ProRataVoucherShopeeUntukPengembalianBarang, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[37]); err != nil {
+	idx++
+	if res.ProRatedBankPaymentChannelPromotionForReturns, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
-	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[38]); err != nil {
+	idx++
+	if res.ProRatedShopeePaymentChannelPromotionForReturns, err = parseFloat(row[idx]); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -662,7 +736,8 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	admin := abs(entry.PromoGratisOngkirPenjual)
 	layanan := abs(entry.PromoDiskonShopee)
 	affiliateAmt := abs(affiliate)
-	saldo := netSale - disc - voucher - admin - layanan - affiliateAmt
+	transFee := abs(entry.BiayaTransaksi)
+	saldo := netSale - disc - voucher - admin - layanan - affiliateAmt - transFee
 
 	je := &models.JournalEntry{
 		EntryDate:    entry.TanggalDanaDilepaskan,
@@ -684,6 +759,7 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 		{JournalID: id, AccountID: 52006, IsDebit: true, Amount: admin, Memo: ptrString("Biaya Administrasi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52004, IsDebit: true, Amount: layanan, Memo: ptrString("Biaya Layanan " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52005, IsDebit: true, Amount: affiliateAmt, Memo: ptrString("Biaya Affiliate " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 52011, IsDebit: true, Amount: transFee, Memo: ptrString("Biaya Transaksi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: saldoShopeeAccountID(entry.NamaToko), IsDebit: true, Amount: saldo, Memo: ptrString("Saldo Shopee " + entry.NoPesanan)},
 	}
 	for i := range lines {
