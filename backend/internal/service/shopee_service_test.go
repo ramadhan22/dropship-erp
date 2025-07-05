@@ -207,7 +207,7 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 	sheet, _ := f.NewSheet("Data")
 	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
 		f.SetCellValue("Data", cell, h)
 	}
 	data := []interface{}{
@@ -221,7 +221,7 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 		1, 1, 1, 1, 1,
 	}
 	for i, v := range data {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 7)
 		f.SetCellValue("Data", cell, v)
 	}
 	f.SetActiveSheet(sheet)
@@ -265,7 +265,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 	sheet, _ := f.NewSheet("Data")
 	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
 		f.SetCellValue("Data", cell, h)
 	}
 	data := []interface{}{
@@ -279,7 +279,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 		1, 1, 1, 1, 1,
 	}
 	for i, v := range data {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 7)
 		f.SetCellValue("Data", cell, v)
 	}
 	f.SetActiveSheet(sheet)
@@ -304,7 +304,7 @@ func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
 	sheet, _ := f.NewSheet("Data")
 	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
 		f.SetCellValue("Data", cell, h)
 	}
 	data := []interface{}{
@@ -318,7 +318,7 @@ func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
 		1, 1, 1, 1, 1,
 	}
 	for i, v := range data {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 7)
 		f.SetCellValue("Data", cell, v)
 	}
 	f.SetActiveSheet(sheet)
@@ -530,7 +530,7 @@ func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 	sheet, _ := f.NewSheet("Data")
 	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
 		f.SetCellValue("Data", cell, h)
 	}
 	data := []interface{}{
@@ -544,7 +544,7 @@ func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 		1, 1, 1, 1, 1,
 	}
 	for i, v := range data {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 7)
 		f.SetCellValue("Data", cell, v)
 	}
 	f.SetActiveSheet(sheet)
@@ -579,7 +579,7 @@ func TestImportSettledOrdersXLSX_AutoAdjustMismatch(t *testing.T) {
 	sheet, _ := f.NewSheet("Data")
 	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
 		f.SetCellValue("Data", cell, h)
 	}
 	data := []interface{}{
@@ -593,7 +593,7 @@ func TestImportSettledOrdersXLSX_AutoAdjustMismatch(t *testing.T) {
 		1, 1, 1, 1, 1,
 	}
 	for i, v := range data {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 6)
+		cell, _ := excelize.CoordinatesToCellName(i+1, 7)
 		f.SetCellValue("Data", cell, v)
 	}
 	f.SetActiveSheet(sheet)
