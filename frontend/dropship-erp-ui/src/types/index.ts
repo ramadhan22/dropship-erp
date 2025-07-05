@@ -208,6 +208,7 @@ export interface ReconcileCandidate {
   nama_toko: string;
   status_pesanan_terakhir: string;
   no_pesanan: string | null;
+  shopee_order_status: string;
 }
 
 export interface ShopeeOrderDetail {

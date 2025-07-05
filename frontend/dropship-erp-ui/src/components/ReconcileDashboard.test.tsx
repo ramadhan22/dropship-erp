@@ -70,6 +70,7 @@ test("click reconcile button", async () => {
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
         no_pesanan: "INV",
+        shopee_order_status: "PROCESSED",
       },
     ],
   });
@@ -92,6 +93,7 @@ test("reconcile all button", async () => {
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
         no_pesanan: "INV",
+        shopee_order_status: "PROCESSED",
       },
       {
         kode_pesanan: "B",
@@ -99,6 +101,7 @@ test("reconcile all button", async () => {
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
         no_pesanan: "INV2",
+        shopee_order_status: "PROCESSED",
       },
     ],
   });
@@ -121,6 +124,7 @@ test("check status button", async () => {
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
         no_pesanan: "INV",
+        shopee_order_status: "PROCESSED",
       },
     ],
   });
@@ -145,6 +149,7 @@ test("show shopee status column", async () => {
         nama_toko: "X",
         status_pesanan_terakhir: "diproses",
         no_pesanan: "INV",
+        shopee_order_status: "PROCESSED",
       },
     ],
   });
@@ -154,5 +159,5 @@ test("show shopee status column", async () => {
     </MemoryRouter>,
   );
   await screen.findByText("PROCESSED");
-  expect(api.fetchShopeeDetail).toHaveBeenCalledWith("INV");
+  expect(api.fetchShopeeDetail).not.toHaveBeenCalled();
 });

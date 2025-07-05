@@ -152,6 +152,7 @@ type ReconcileCandidate struct {
 	NamaToko              string  `db:"nama_toko" json:"nama_toko"`
 	StatusPesananTerakhir string  `db:"status_pesanan_terakhir" json:"status_pesanan_terakhir"`
 	NoPesanan             *string `db:"no_pesanan" json:"no_pesanan"`
+	ShopeeOrderStatus     string  `json:"shopee_order_status"`
 }
 
 // CachedMetric represents the D5 table: cached_metrics
