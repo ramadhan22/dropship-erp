@@ -316,6 +316,11 @@ export interface SalesProfit {
   profit_percent: number;
 }
 
+export interface CancelledSummary {
+  count: number;
+  biaya_mitra: number;
+}
+
 export interface ShopeeAdjustment {
   id: number;
   nama_toko: string;

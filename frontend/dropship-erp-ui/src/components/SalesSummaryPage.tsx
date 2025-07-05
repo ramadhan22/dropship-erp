@@ -19,6 +19,7 @@ import {
   fetchDailyPurchaseTotals,
   fetchMonthlyPurchaseTotals,
   fetchTopProducts,
+  fetchCancelledSummary,
   getShopeeSettleDetail,
 } from "../api";
 import type {
@@ -28,6 +29,7 @@ import type {
   ShopeeAdjustment,
   JournalLineDetail,
   ShopeeSettled,
+  CancelledSummary,
 } from "../types";
 import {
   LineChart,
@@ -56,6 +58,10 @@ export default function SalesSummaryPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
+  const [cancelSummary, setCancelSummary] = useState<CancelledSummary>({
+    count: 0,
+    biaya_mitra: 0,
+  });
   const [adjustments, setAdjustments] = useState<ShopeeAdjustment[]>([]);
   const [lines, setLines] = useState<JournalLineDetail[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -120,6 +126,13 @@ export default function SalesSummaryPage() {
         limit: 5,
       });
       setTopProducts(topRes.data);
+      const cancelRes = await fetchCancelledSummary({
+        channel: channel || undefined,
+        store,
+        from,
+        to,
+      });
+      setCancelSummary(cancelRes.data);
       const adjRes = await listShopeeAdjustments({ from, to });
       setAdjustments(adjRes.data);
       setMsg(null);
@@ -225,6 +238,14 @@ export default function SalesSummaryPage() {
           currency: "IDR",
         })}{" "}
         | <strong>Total Orders:</strong> {totalOrders}
+      </div>
+      <div style={{ marginBottom: "1rem" }}>
+        <strong>Cancelled Orders:</strong> {cancelSummary.count} |{" "}
+        <strong>Biaya Mitra:</strong>{" "}
+        {cancelSummary.biaya_mitra.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        })}
       </div>
       <h3>Total Sales by Amount</h3>
       <LineChart

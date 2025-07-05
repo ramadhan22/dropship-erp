@@ -38,6 +38,7 @@ Main features:
    calculations.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses. Expenses can be edited with a selectable date and the previous journal is reversed automatically.
+- Sales Summary dashboard now shows cancelled order count and total Biaya Mitra posted for those cancellations.
 - Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.
   The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 - Pay UMKM final tax (0.5% of revenue) per store and period on the **Tax Payment** page. Journal entries are created automatically when paying.
