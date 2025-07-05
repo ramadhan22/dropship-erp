@@ -68,7 +68,7 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             diskon_ongkir_ditanggung_jasa_kirim, gratis_ongkir_dari_shopee, ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim,
             ongkos_kirim_pengembalian_barang, pengembalian_biaya_kirim, biaya_komisi_ams,
             biaya_administrasi, biaya_layanan_termasuk_ppn_11, premi,
-            biaya_program, biaya_kartu_kredit, biaya_kampanye, bea_masuk_ppn_pph,
+           biaya_program, biaya_kartu_kredit, biaya_transaksi, biaya_kampanye, bea_masuk_ppn_pph,
             total_penghasilan, kompensasi, promo_gratis_ongkir_dari_penjual,
             jasa_kirim, nama_kurir, pengembalian_dana_ke_pembeli,
             pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
@@ -85,7 +85,7 @@ func (r *ShopeeRepo) InsertShopeeSettled(ctx context.Context, s *models.ShopeeSe
             :diskon_ongkir_ditanggung_jasa_kirim, :gratis_ongkir_dari_shopee, :ongkir_yang_diteruskan_oleh_shopee_ke_jasa_kirim,
             :ongkos_kirim_pengembalian_barang, :pengembalian_biaya_kirim, :biaya_komisi_ams,
             :biaya_administrasi, :biaya_layanan_termasuk_ppn_11, :premi,
-            :biaya_program, :biaya_kartu_kredit, :biaya_kampanye, :bea_masuk_ppn_pph,
+           :biaya_program, :biaya_kartu_kredit, :biaya_transaksi, :biaya_kampanye, :bea_masuk_ppn_pph,
             :total_penghasilan, :kompensasi, :promo_gratis_ongkir_dari_penjual,
             :jasa_kirim, :nama_kurir, :pengembalian_dana_ke_pembeli,
             :pro_rata_koin_yang_ditukarkan_untuk_pengembalian_barang,
@@ -430,6 +430,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END) AS biaya_mitra_jakmall,
                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
+               SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END) AS biaya_transaksi,
                SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
                SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
                COALESCE(adj.refund,0) AS biaya_refund,
@@ -441,6 +442,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                    + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
                    + COALESCE(adj.refund,0)
@@ -453,6 +455,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                            + SUM(CASE WHEN jl.account_id = 52007 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
                            + COALESCE(adj.refund,0)

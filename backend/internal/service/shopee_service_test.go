@@ -205,7 +205,7 @@ func (f *fakeShopeeRepo) ListSalesProfit(ctx context.Context, channel, store, fr
 func TestImportSettledOrdersXLSX(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
-	headers := append([]string{"No."}, expectedHeaders...)
+	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
 		f.SetCellValue("Data", cell, h)
@@ -263,7 +263,7 @@ func TestImportSettledOrdersXLSX_HeaderMismatch(t *testing.T) {
 func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
-	headers := append([]string{"No."}, expectedHeaders...)
+	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
 		f.SetCellValue("Data", cell, h)
@@ -302,7 +302,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
-	headers := append([]string{"No."}, expectedHeaders...)
+	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
 		f.SetCellValue("Data", cell, h)
@@ -528,7 +528,7 @@ func TestConfirmSettleMismatchCreatesAdjustment(t *testing.T) {
 func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
-	headers := append([]string{"No."}, expectedHeaders...)
+	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
 		f.SetCellValue("Data", cell, h)
@@ -577,7 +577,7 @@ func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 func TestImportSettledOrdersXLSX_AutoAdjustMismatch(t *testing.T) {
 	f := excelize.NewFile()
 	sheet, _ := f.NewSheet("Data")
-	headers := append([]string{"No."}, expectedHeaders...)
+	headers := append([]string{"No."}, expectedHeadersOld...)
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 5)
 		f.SetCellValue("Data", cell, h)

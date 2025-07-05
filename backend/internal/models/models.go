@@ -94,6 +94,7 @@ type ShopeeSettled struct {
 	PromoDiskonPenjual                               float64   `db:"premi" json:"premi"`
 	CashbackShopee                                   float64   `db:"biaya_program" json:"biaya_program"`
 	CashbackPenjual                                  float64   `db:"biaya_kartu_kredit" json:"biaya_kartu_kredit"`
+	BiayaTransaksi                                   float64   `db:"biaya_transaksi" json:"biaya_transaksi"`
 	KoinShopee                                       float64   `db:"biaya_kampanye" json:"biaya_kampanye"`
 	PotonganLainnya                                  float64   `db:"bea_masuk_ppn_pph" json:"bea_masuk_ppn_pph"`
 	TotalPenerimaan                                  float64   `db:"total_penghasilan" json:"total_penghasilan"`
