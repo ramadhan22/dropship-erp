@@ -11,7 +11,7 @@ import (
 
 type ReconcileExtraService interface {
 	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
-	ListCandidates(ctx context.Context, shop, order string) ([]models.ReconcileCandidate, error)
+	ListCandidates(ctx context.Context, shop, order, from, to string) ([]models.ReconcileCandidate, error)
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
@@ -52,7 +52,9 @@ func (h *ReconcileExtraHandler) list(c *gin.Context) {
 func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
 	shop := c.Query("shop")
 	order := c.Query("order")
-	res, err := h.svc.ListCandidates(context.Background(), shop, order)
+	from := c.Query("from")
+	to := c.Query("to")
+	res, err := h.svc.ListCandidates(context.Background(), shop, order, from, to)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

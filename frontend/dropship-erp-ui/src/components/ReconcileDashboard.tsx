@@ -7,6 +7,9 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useNavigate } from "react-router-dom";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
@@ -19,6 +22,7 @@ import {
 } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
+import { getCurrentMonthRange } from "../utils/date";
 import usePagination from "../usePagination";
 import JsonTabs from "./JsonTabs";
 
@@ -38,6 +42,9 @@ function formatValue(val: any): string {
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [order, setOrder] = useState("");
+  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
+  const [from, setFrom] = useState(firstOfMonth);
+  const [to, setTo] = useState(lastOfMonth);
   const [stores, setStores] = useState<Store[]>([]);
   const [data, setData] = useState<ReconcileCandidate[]>([]);
   const [msg, setMsg] = useState<{
@@ -55,12 +62,12 @@ export default function ReconcileDashboard() {
   }, []);
 
   const fetchData = () => {
-    listCandidates(shop, order).then((r) => setData(r.data));
+    listCandidates(shop, order, from, to).then((r) => setData(r.data));
   };
 
   useEffect(() => {
     fetchData();
-  }, [shop, order]);
+  }, [shop, order, from, to]);
 
   const handleReconcile = async (kode: string) => {
     try {
@@ -104,13 +111,16 @@ export default function ReconcileDashboard() {
   };
 
   const handleReconcileAll = async () => {
-    for (const row of data) {
-      try {
-        await reconcileCheck(row.kode_pesanan);
-      } catch {
-        // ignore individual errors and continue
-      }
-    }
+    await Promise.all(
+      data.map(async (row) => {
+        try {
+          await updateShopeeStatus(row.kode_invoice_channel);
+          await reconcileCheck(row.kode_pesanan);
+        } catch {
+          // ignore individual errors
+        }
+      }),
+    );
     setMsg({ type: "success", text: "Completed" });
     fetchData();
   };
@@ -185,6 +195,30 @@ export default function ReconcileDashboard() {
         onChange={(e) => setOrder(e.target.value)}
         style={{ height: "2rem", marginRight: "0.5rem" }}
       />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="From"
+          format="yyyy-MM-dd"
+          value={new Date(from)}
+          onChange={(date) => {
+            if (!date) return;
+            setFrom(date.toISOString().split("T")[0]);
+          }}
+          slotProps={{ textField: { size: "small" } }}
+        />
+      </LocalizationProvider>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="To"
+          format="yyyy-MM-dd"
+          value={new Date(to)}
+          onChange={(date) => {
+            if (!date) return;
+            setTo(date.toISOString().split("T")[0]);
+          }}
+          slotProps={{ textField: { size: "small" } }}
+        />
+      </LocalizationProvider>
       <Button onClick={fetchData}>Refresh</Button>
       <Button onClick={handleReconcileAll} sx={{ ml: 1 }}>
         Reconcile All
