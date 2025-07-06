@@ -76,20 +76,23 @@ func TestListCandidates(t *testing.T) {
 	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
 
-	list, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "")
+	list, total, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "", 10, 0)
 	if err != nil {
 		t.Fatalf("ListCandidates error: %v", err)
 	}
-	if len(list) < 2 {
-		t.Errorf("expected at least 2 candidates, got %d", len(list))
+	if total < 2 {
+		t.Errorf("expected total >= 2, got %d", total)
+	}
+	if len(list) == 0 {
+		t.Errorf("expected some candidates")
 	}
 
-	list2, err := recRepo.ListCandidates(ctx, "", kode1, "", "")
+	list2, total2, err := recRepo.ListCandidates(ctx, "", kode1, "", "", 10, 0)
 	if err != nil {
 		t.Fatalf("ListCandidates by order error: %v", err)
 	}
-	if len(list2) != 1 {
-		t.Errorf("expected 1 candidate, got %d", len(list2))
+	if len(list2) != 1 || total2 != 1 {
+		t.Errorf("expected 1 candidate, got %d total %d", len(list2), total2)
 	}
 
 	// cleanup

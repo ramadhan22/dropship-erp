@@ -22,13 +22,11 @@ import {
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
 import { getCurrentMonthRange } from "../utils/date";
-import usePagination from "../usePagination";
+import useServerPagination from "../useServerPagination";
 import JsonTabs from "./JsonTabs";
 
 function formatLabel(label: string): string {
-  return label
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatValue(val: any): string {
@@ -45,7 +43,11 @@ export default function ReconcileDashboard() {
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [stores, setStores] = useState<Store[]>([]);
-  const [data, setData] = useState<ReconcileCandidate[]>([]);
+  const { data, controls, reload } = useServerPagination((params) =>
+    listCandidates(shop, order, from, to, params.page, params.pageSize).then(
+      (r) => r.data,
+    ),
+  );
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -54,26 +56,21 @@ export default function ReconcileDashboard() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInvoice, setDetailInvoice] = useState("");
   const navigate = useNavigate();
-  const { paginated, controls } = usePagination(data);
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
   }, []);
 
-  const fetchData = async () => {
-    const res = await listCandidates(shop, order, from, to);
-    setData(res.data);
-  };
-
   useEffect(() => {
-    fetchData();
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shop, order, from, to]);
 
   const handleReconcile = async (kode: string) => {
     try {
       const res = await reconcileCheck(kode);
       setMsg({ type: "success", text: res.data.message });
-      fetchData();
+      reload();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.message || e.message });
     }
@@ -94,7 +91,7 @@ export default function ReconcileDashboard() {
     try {
       await updateShopeeStatus(detailInvoice);
       setMsg({ type: "success", text: "Updated" });
-      fetchData();
+      reload();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -104,7 +101,7 @@ export default function ReconcileDashboard() {
     try {
       await cancelPurchase(kode);
       setMsg({ type: "success", text: "Canceled" });
-      fetchData();
+      reload();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -122,7 +119,7 @@ export default function ReconcileDashboard() {
       }),
     );
     setMsg({ type: "success", text: "Completed" });
-    fetchData();
+    reload();
   };
 
   const columns: Column<ReconcileCandidate>[] = [
@@ -223,7 +220,7 @@ export default function ReconcileDashboard() {
           slotProps={{ textField: { size: "small" } }}
         />
       </LocalizationProvider>
-      <Button onClick={fetchData}>Refresh</Button>
+      <Button onClick={() => reload()}>Refresh</Button>
       <Button onClick={handleReconcileAll} sx={{ ml: 1 }}>
         Reconcile All
       </Button>
@@ -232,7 +229,7 @@ export default function ReconcileDashboard() {
           {msg.text}
         </Alert>
       )}
-      <SortableTable columns={columns} data={paginated} />
+      <SortableTable columns={columns} data={data} />
       {controls}
       <Dialog
         open={detailOpen}

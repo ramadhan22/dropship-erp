@@ -11,18 +11,22 @@ export function listUnmatched(shop: string) {
 
 export function listCandidates(
   shop: string,
-  order?: string,
-  from?: string,
-  to?: string,
+  order: string,
+  from: string,
+  to: string,
+  page: number,
+  pageSize: number,
 ) {
   const q = new URLSearchParams();
   if (shop) q.append("shop", shop);
   if (order) q.append("order", order);
   if (from) q.append("from", from);
   if (to) q.append("to", to);
+  q.append("page", String(page));
+  q.append("page_size", String(pageSize));
   const qs = q.toString();
   const url = qs ? `/reconcile/candidates?${qs}` : "/reconcile/candidates";
-  return api.get<ReconcileCandidate[]>(url);
+  return api.get<{ data: ReconcileCandidate[]; total: number }>(url);
 }
 
 export function bulkReconcile(pairs: [string, string][], shop: string) {
@@ -40,7 +44,9 @@ export function fetchShopeeDetail(invoice: string) {
 }
 
 export function fetchShopeeToken(invoice: string) {
-  return api.get<{ access_token: string }>(`/reconcile/token?invoice=${invoice}`);
+  return api.get<{ access_token: string }>(
+    `/reconcile/token?invoice=${invoice}`,
+  );
 }
 
 export function cancelPurchase(kodePesanan: string) {

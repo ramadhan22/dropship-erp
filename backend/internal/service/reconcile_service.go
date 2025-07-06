@@ -183,13 +183,13 @@ func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]mo
 }
 
 // ListCandidates proxies to the repo to fetch transactions that need attention.
-func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from, to string) ([]models.ReconcileCandidate, error) {
+func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error) {
 	if repo, ok := s.recRepo.(interface {
-		ListCandidates(context.Context, string, string, string, string) ([]models.ReconcileCandidate, error)
+		ListCandidates(context.Context, string, string, string, string, int, int) ([]models.ReconcileCandidate, int, error)
 	}); ok {
-		list, err := repo.ListCandidates(ctx, shop, order, from, to)
+		list, total, err := repo.ListCandidates(ctx, shop, order, from, to, limit, offset)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		for i := range list {
 			log.Printf("Fetching Shopee order detail for %s", list[i].KodeInvoiceChannel)
@@ -209,9 +209,9 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from
 				list[i].ShopeeOrderStatus = "Not Found"
 			}
 		}
-		return list, nil
+		return list, total, nil
 	}
-	return nil, fmt.Errorf("not implemented")
+	return nil, 0, fmt.Errorf("not implemented")
 }
 
 // BulkReconcile simply loops MatchAndJournal over pairs.
