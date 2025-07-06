@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -11,7 +12,7 @@ import (
 
 type ReconcileExtraService interface {
 	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
-	ListCandidates(ctx context.Context, shop, order, from, to string) ([]models.ReconcileCandidate, error)
+	ListCandidates(ctx context.Context, shop, order, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error)
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
@@ -54,12 +55,21 @@ func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
 	order := c.Query("order")
 	from := c.Query("from")
 	to := c.Query("to")
-	res, err := h.svc.ListCandidates(context.Background(), shop, order, from, to)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if size <= 0 {
+		size = 20
+	}
+	offset := (page - 1) * size
+	list, total, err := h.svc.ListCandidates(context.Background(), shop, order, from, to, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, res)
+	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
 }
 
 func (h *ReconcileExtraHandler) bulk(c *gin.Context) {

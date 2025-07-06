@@ -12,11 +12,11 @@ jest.mock("../api", () => ({
 }));
 
 jest.mock("../api/reconcile", () => ({
-  listCandidates: jest.fn().mockResolvedValue({ data: [] }),
+  listCandidates: jest.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
-  fetchShopeeDetail: jest
-    .fn()
-    .mockResolvedValue({ data: { order_sn: "INV", order_status: "PROCESSED" } }),
+  fetchShopeeDetail: jest.fn().mockResolvedValue({
+    data: { order_sn: "INV", order_status: "PROCESSED" },
+  }),
 }));
 
 beforeEach(() => {
@@ -63,16 +63,19 @@ test("filter by invoice", async () => {
 
 test("click reconcile button", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
-    data: [
-      {
-        kode_pesanan: "A",
-        kode_invoice_channel: "INV",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: "INV",
-        shopee_order_status: "PROCESSED",
-      },
-    ],
+    data: {
+      data: [
+        {
+          kode_pesanan: "A",
+          kode_invoice_channel: "INV",
+          nama_toko: "X",
+          status_pesanan_terakhir: "diproses",
+          no_pesanan: "INV",
+          shopee_order_status: "PROCESSED",
+        },
+      ],
+      total: 1,
+    },
   });
   render(
     <MemoryRouter>
@@ -86,24 +89,27 @@ test("click reconcile button", async () => {
 
 test("reconcile all button", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
-    data: [
-      {
-        kode_pesanan: "A",
-        kode_invoice_channel: "INV",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: "INV",
-        shopee_order_status: "PROCESSED",
-      },
-      {
-        kode_pesanan: "B",
-        kode_invoice_channel: "INV2",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: "INV2",
-        shopee_order_status: "PROCESSED",
-      },
-    ],
+    data: {
+      data: [
+        {
+          kode_pesanan: "A",
+          kode_invoice_channel: "INV",
+          nama_toko: "X",
+          status_pesanan_terakhir: "diproses",
+          no_pesanan: "INV",
+          shopee_order_status: "PROCESSED",
+        },
+        {
+          kode_pesanan: "B",
+          kode_invoice_channel: "INV2",
+          nama_toko: "X",
+          status_pesanan_terakhir: "diproses",
+          no_pesanan: "INV2",
+          shopee_order_status: "PROCESSED",
+        },
+      ],
+      total: 2,
+    },
   });
   render(
     <MemoryRouter>
@@ -117,16 +123,19 @@ test("reconcile all button", async () => {
 
 test("check status button", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
-    data: [
-      {
-        kode_pesanan: "A",
-        kode_invoice_channel: "INV",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: "INV",
-        shopee_order_status: "PROCESSED",
-      },
-    ],
+    data: {
+      data: [
+        {
+          kode_pesanan: "A",
+          kode_invoice_channel: "INV",
+          nama_toko: "X",
+          status_pesanan_terakhir: "diproses",
+          no_pesanan: "INV",
+          shopee_order_status: "PROCESSED",
+        },
+      ],
+      total: 1,
+    },
   });
   render(
     <MemoryRouter>
@@ -142,16 +151,19 @@ test("check status button", async () => {
 
 test("show shopee status column", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
-    data: [
-      {
-        kode_pesanan: "A",
-        kode_invoice_channel: "INV",
-        nama_toko: "X",
-        status_pesanan_terakhir: "diproses",
-        no_pesanan: "INV",
-        shopee_order_status: "PROCESSED",
-      },
-    ],
+    data: {
+      data: [
+        {
+          kode_pesanan: "A",
+          kode_invoice_channel: "INV",
+          nama_toko: "X",
+          status_pesanan_terakhir: "diproses",
+          no_pesanan: "INV",
+          shopee_order_status: "PROCESSED",
+        },
+      ],
+      total: 1,
+    },
   });
   render(
     <MemoryRouter>
