@@ -180,7 +180,7 @@ type Store struct {
 	JenisChannelID int64      `db:"jenis_channel_id" json:"jenis_channel_id"`
 	NamaToko       string     `db:"nama_toko" json:"nama_toko"`
 	CodeID         *string    `db:"code_id" json:"code_id"`
-	ShopID         *string    `db:"shop_id" json:"shop_id"`
+	ShopID         *int64     `db:"shop_id" json:"shop_id"`
 	AccessToken    *string    `db:"access_token" json:"-"`
 	RefreshToken   *string    `db:"refresh_token" json:"-"`
 	ExpireIn       *int       `db:"expire_in" json:"-"`

@@ -140,7 +140,7 @@ func (h *ChannelHandler) HandleUpdateStore(c *gin.Context) {
 		JenisChannelID int64   `json:"jenis_channel_id"`
 		NamaToko       string  `json:"nama_toko"`
 		CodeID         *string `json:"code_id"`
-		ShopID         *string `json:"shop_id"`
+		ShopID         *int64  `json:"shop_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

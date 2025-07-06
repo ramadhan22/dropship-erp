@@ -47,9 +47,9 @@ type LoggingConfig struct {
 
 // ShopeeAPIConfig holds credentials for calling the Shopee Partner API.
 type ShopeeAPIConfig struct {
-	PartnerID     string `mapstructure:"partner_id"`
+	PartnerID     int64  `mapstructure:"partner_id"`
 	PartnerKey    string `mapstructure:"partner_key"`
-	ShopID        string `mapstructure:"shop_id"`
+	ShopID        int64  `mapstructure:"shop_id"`
 	AccessToken   string `mapstructure:"access_token"`
 	RefreshToken  string `mapstructure:"refresh_token"`
 	BaseURL       string `mapstructure:"base_url"`
