@@ -6,10 +6,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
 
 func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 	var refreshCalled, detailCalled bool
@@ -20,23 +27,20 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 				t.Errorf("expected POST, got %s", r.Method)
 			}
 			refreshCalled = true
-			r.ParseForm()
-			if r.URL.Query().Get("partner_id") != "pid" {
+			if r.URL.Query().Get("partner_id") != "12345" {
 				t.Errorf("missing partner_id query")
 			}
-			if r.PostForm.Get("partner_id") != "pid" {
-				t.Errorf("missing partner_id body")
+			var payload map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Errorf("invalid json: %v", err)
 			}
-			if r.PostForm.Get("refresh_token") != "reftok" {
-				t.Errorf("expected refresh_token=reftok, got %s", r.PostForm.Get("refresh_token"))
+			if payload["refresh_token"] != "reftok" {
+				t.Errorf("expected refresh_token=reftok, got %v", payload["refresh_token"])
 			}
-			if r.PostForm.Get("shop_id") != "shop" {
-				t.Errorf("expected shop_id=shop, got %s", r.PostForm.Get("shop_id"))
+			if payload["shop_id"] != float64(2) {
+				t.Errorf("expected shop_id=2, got %v", payload["shop_id"])
 			}
-			if r.PostForm.Get("timestamp") != "" || r.PostForm.Get("sign") != "" {
-				t.Errorf("unexpected query fields in body")
-			}
-			fmt.Fprint(w, `{"response":{"access_token":"newtoken"}}`)
+			fmt.Fprint(w, `{"access_token":"newtoken"}`)
 		case "/api/v2/order/get_order_detail":
 			detailCalled = true
 			if r.URL.Query().Get("access_token") != "newtoken" {
@@ -52,11 +56,19 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(srv.URL, "http://")
+		return oldTransport.RoundTrip(req)
+	})
+	defer func() { http.DefaultTransport = oldTransport }()
+
 	cfg := config.ShopeeAPIConfig{
 		BaseURLShopee: srv.URL,
-		PartnerID:     "pid",
+		PartnerID:     "12345",
 		PartnerKey:    "secret",
-		ShopID:        "shop",
+		ShopID:        "2",
 		AccessToken:   "oldtoken",
 		RefreshToken:  "reftok",
 	}
@@ -91,7 +103,7 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		if r.URL.Query().Get("partner_id") != "pid" {
+		if r.URL.Query().Get("partner_id") != "12345" {
 			t.Errorf("missing partner_id query")
 		}
 		var payload map[string]string
@@ -101,7 +113,7 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 		if payload["code"] != "abc" {
 			t.Errorf("code value missing")
 		}
-		if payload["shop_id"] != "shop" {
+		if payload["shop_id"] != "2" {
 			t.Errorf("shop_id value missing")
 		}
 		fmt.Fprint(w, `{"access_token":"tok"}`)
@@ -110,12 +122,12 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 
 	cfg := config.ShopeeAPIConfig{
 		BaseURLShopee: srv.URL,
-		PartnerID:     "pid",
+		PartnerID:     "12345",
 		PartnerKey:    "secret",
 	}
 	c := NewShopeeClient(cfg)
 
-	resp, err := c.GetAccessToken(context.Background(), "abc", "shop")
+	resp, err := c.GetAccessToken(context.Background(), "abc", "2")
 	if err != nil {
 		t.Fatalf("GetAccessToken err: %v", err)
 	}

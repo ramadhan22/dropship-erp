@@ -18,6 +18,7 @@ import (
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
+	shopeego "github.com/teacat/shopeego"
 )
 
 // ShopeeClient handles calls to Shopee partner API.
@@ -139,56 +140,49 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 	if c.ShopID == "" {
 		return nil, fmt.Errorf("shop_id is empty")
 	}
-	path := "/api/v2/auth/access_token/get"
-	ts := time.Now().Unix()
-	// Shopee's access_token/get endpoint signs only with partner_id, path and
-	// timestamp. The refresh token is included in the POST body, not the
-	// signature calculation.
-	sign := c.signSimple(path, ts)
 
-	q := url.Values{}
-	q.Set("partner_id", c.PartnerID)
-	q.Set("timestamp", fmt.Sprintf("%d", ts))
-	q.Set("sign", sign)
-	q.Set("shop_id", c.ShopID)
-
-	bodyForm := url.Values{}
-	bodyForm.Set("partner_id", c.PartnerID)
-	bodyForm.Set("shop_id", c.ShopID)
-	bodyForm.Set("refresh_token", c.RefreshToken)
-
-	body := bodyForm.Encode()
-	urlStr := c.BaseURL + path + "?" + q.Encode()
-	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
+	partnerID, err := strconv.ParseInt(c.PartnerID, 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid partner id: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
-	resp, err := c.httpClient.Do(req)
+	shopID, err := strconv.ParseInt(c.ShopID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shop id: %w", err)
+	}
+
+	reqData := &shopeego.RefreshAccessTokenRequest{
+		RefreshToken: c.RefreshToken,
+		ShopID:       shopID,
+		PartnerID:    partnerID,
+		Timestamp:    int(time.Now().Unix()),
+	}
+	body, _ := json.Marshal(reqData)
+	urlStr := c.BaseURL + "/api/v2/auth/access_token/get"
+	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, string(body))
+
+	opts := &shopeego.ClientOptions{
+		Secret:    c.PartnerKey,
+		IsSandbox: strings.Contains(c.BaseURL, "uat") || strings.Contains(c.BaseURL, "test"),
+		Version:   shopeego.ClientVersionV2,
+	}
+	sc := shopeego.NewClient(opts)
+	resp, err := sc.RefreshAccessToken(reqData)
 	if err != nil {
 		logutil.Errorf("RefreshAccessToken request error: %v", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		logutil.Errorf("RefreshAccessToken unexpected status %d: %s", resp.StatusCode, string(body))
-		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	out := refreshResp{}
+	out.Response.AccessToken = resp.AccessToken
+	out.Response.RefreshToken = resp.RefreshToken
+	out.Response.ExpireIn = resp.ExpireIn
+	out.Response.RequestID = resp.RequestID
+	out.Error = resp.Error
+
+	if resp.AccessToken != "" {
+		c.AccessToken = resp.AccessToken
 	}
-	var out refreshResp
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
-	}
-	if out.Error != "" {
-		logutil.Errorf("RefreshAccessToken API error: %s", out.Error)
-		return nil, fmt.Errorf("shopee error: %s", out.Error)
-	}
-	if out.Response.AccessToken != "" {
-		c.AccessToken = out.Response.AccessToken
-	}
-	if out.Response.RefreshToken != "" {
-		c.RefreshToken = out.Response.RefreshToken
+	if resp.RefreshToken != "" {
+		c.RefreshToken = resp.RefreshToken
 	}
 	return &out, nil
 }
