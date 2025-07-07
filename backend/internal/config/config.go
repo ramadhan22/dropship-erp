@@ -126,11 +126,11 @@ func (c *Config) ShopeeAuthURL(storeID int64) string {
 	}
 	path := "/api/v2/shop/auth_partner"
 	ts := time.Now().Unix()
-	msg := fmt.Sprintf("%d%s%d", c.Shopee.PartnerID, path, ts)
+	msg := fmt.Sprintf("%s%s%d", c.Shopee.PartnerID, path, ts)
 	h := hmac.New(sha256.New, []byte(c.Shopee.PartnerKey))
 	h.Write([]byte(msg))
 	sign := hex.EncodeToString(h.Sum(nil))
 	redirect := fmt.Sprintf("%s/stores/%d", strings.TrimSuffix(c.Server.CorsOrigins[0], "/"), storeID)
-	return fmt.Sprintf("%s%s?partner_id=%d&timestamp=%d&sign=%s&redirect=%s",
+	return fmt.Sprintf("%s%s?partner_id=%s&timestamp=%d&sign=%s&redirect=%s",
 		base, path, c.Shopee.PartnerID, ts, sign, url.QueryEscape(redirect))
 }
