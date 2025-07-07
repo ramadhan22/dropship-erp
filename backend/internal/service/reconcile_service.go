@@ -411,6 +411,7 @@ func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice st
 		}
 		detail, err = s.client.GetEscrowDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
 	}
+	log.Printf("GetShopeeEscrowDetail: detail: %+v, err: %v", detail, err)
 	return detail, err
 }
 

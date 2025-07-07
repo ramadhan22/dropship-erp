@@ -319,6 +319,11 @@ func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID,
 		return nil, err
 	}
 	defer resp.Body.Close()
+	log.Printf("GetEscrowDetail response status: %d", resp.StatusCode)
+	log.Printf("GetEscrowDetail response headers: %v", resp.Header)
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	log.Printf("GetEscrowDetail response body: %s", string(bodyBytes))
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // Reset body for decoder
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -327,11 +332,9 @@ func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID,
 	}
 
 	var out struct {
-		Response struct {
-			Order ShopeeEscrowDetail `json:"order"`
-		} `json:"response"`
-		Error   string `json:"error"`
-		Message string `json:"message"`
+		Response ShopeeEscrowDetail `json:"response"`
+		Error    string             `json:"error"`
+		Message  string             `json:"message"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
@@ -340,7 +343,8 @@ func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID,
 		logutil.Errorf("GetEscrowDetail API error: %s", out.Error)
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
-	return &out.Response.Order, nil
+	log.Printf("GetEscrowDetail response: %+v", out.Response)
+	return &out.Response, nil
 }
 
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
