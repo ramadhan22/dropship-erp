@@ -3,6 +3,7 @@ import type {
   ReconciledTransaction,
   ReconcileCandidate,
   ShopeeOrderDetail,
+  ShopeeEscrowDetail,
 } from "../types";
 
 export function listUnmatched(shop: string) {
@@ -44,7 +45,7 @@ export function fetchShopeeDetail(invoice: string) {
 }
 
 export function fetchEscrowDetail(invoice: string) {
-  return api.get<ShopeeOrderDetail>(`/reconcile/escrow?invoice=${invoice}`);
+  return api.get<ShopeeEscrowDetail>(`/reconcile/escrow?invoice=${invoice}`);
 }
 
 export function fetchShopeeToken(invoice: string) {
