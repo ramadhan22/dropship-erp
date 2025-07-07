@@ -22,7 +22,12 @@ import {
   fetchShopeeDetail,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
-import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
+import type {
+  ReconcileCandidate,
+  Store,
+  ShopeeOrderDetail,
+  ShopeeEscrowDetail,
+} from "../types";
 import { getCurrentMonthRange } from "../utils/date";
 import useServerPagination from "../useServerPagination";
 import JsonTabs from "./JsonTabs";
@@ -36,6 +41,35 @@ function formatValue(val: any): string {
     return new Date(val * 1000).toLocaleString();
   }
   return String(val);
+}
+
+function renderValue(value: any): JSX.Element {
+  if (Array.isArray(value)) {
+    return <JsonTabs items={value} />;
+  }
+  if (typeof value === "object" && value !== null) {
+    return (
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <tbody>
+          {Object.entries(value).map(([k, v]) => (
+            <tr key={k}>
+              <td
+                style={{
+                  fontWeight: "bold",
+                  verticalAlign: "top",
+                  paddingRight: "0.5rem",
+                }}
+              >
+                {formatLabel(k)}
+              </td>
+              <td>{renderValue(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  return <>{formatValue(value)}</>;
 }
 
 export default function ReconcileDashboard() {
@@ -54,7 +88,9 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [detail, setDetail] = useState<ShopeeOrderDetail | null>(null);
+  const [detail, setDetail] = useState<
+    ShopeeOrderDetail | ShopeeEscrowDetail | null
+  >(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInvoice, setDetailInvoice] = useState("");
   const navigate = useNavigate();
@@ -256,17 +292,7 @@ export default function ReconcileDashboard() {
                     >
                       {formatLabel(key)}
                     </td>
-                    <td>
-                      {Array.isArray(value) ? (
-                        <JsonTabs items={value} />
-                      ) : typeof value === "object" && value !== null ? (
-                        <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                          {JSON.stringify(value, null, 2)}
-                        </pre>
-                      ) : (
-                        formatValue(value)
-                      )}
-                    </td>
+                    <td>{renderValue(value)}</td>
                   </tr>
                 ))}
               </tbody>
