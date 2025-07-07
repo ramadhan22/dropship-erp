@@ -288,52 +288,59 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 	return &out.Response.OrderList[0], nil
 }
 
-// GetEscrowDetail retrieves escrow information for an order using the shopeego
-// client library. The accessToken and shopID parameters should belong to the
-// store that owns the order.
+// GetEscrowDetail retrieves escrow information for an order using a direct HTTP
+// call. The accessToken and shopID parameters should belong to the store that
+// owns the order.
 func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeEscrowDetail, error) {
 	log.Printf("ShopeeClient GetEscrowDetail order=%s shop=%s", orderSN, shopID)
 
-	partnerID, err := strconv.ParseInt(c.PartnerID, 10, 64)
+	path := "/api/v2/payment/get_escrow_detail"
+	ts := time.Now().Unix()
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", shopID)
+	q.Set("access_token", accessToken)
+	q.Set("order_sn", orderSN)
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("invalid partner id: %w", err)
-	}
-	sid, err := strconv.ParseInt(shopID, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid shop id: %w", err)
+		return nil, err
 	}
 
-	req := &shopeego.GetEscrowDetailsRequest{
-		OrderSN:   orderSN,
-		PartnerID: partnerID,
-		ShopID:    sid,
-		Timestamp: int(time.Now().Unix()),
-	}
-
-	opts := &shopeego.ClientOptions{
-		Secret:    c.PartnerKey,
-		IsSandbox: strings.Contains(c.BaseURL, "uat") || strings.Contains(c.BaseURL, "test"),
-		Version:   shopeego.ClientVersionV2,
-	}
-	sc := shopeego.NewClient(opts).(*shopeego.ShopeeClient)
-	sc.SetAccessToken(accessToken)
-
-	resp, err := sc.GetEscrowDetails(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		logutil.Errorf("GetEscrowDetail request error: %v", err)
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	b, err := json.Marshal(resp.Order)
-	if err != nil {
-		return nil, err
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("GetEscrowDetail unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	var out ShopeeEscrowDetail
-	if err := json.Unmarshal(b, &out); err != nil {
+	var out struct {
+		Response struct {
+			Order ShopeeEscrowDetail `json:"order"`
+		} `json:"response"`
+		Error   string `json:"error"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
-	return &out, nil
+	if out.Error != "" {
+		logutil.Errorf("GetEscrowDetail API error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+	return &out.Response.Order, nil
 }
 
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
