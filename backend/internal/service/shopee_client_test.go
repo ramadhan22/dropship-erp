@@ -20,21 +20,21 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 				t.Errorf("expected POST, got %s", r.Method)
 			}
 			refreshCalled = true
-			r.ParseForm()
-			if r.URL.Query().Get("partner_id") != "pid" {
+			if r.URL.Query().Get("partner_id") != "123" {
 				t.Errorf("missing partner_id query")
 			}
-			if r.PostForm.Get("partner_id") != "pid" {
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Errorf("invalid json: %v", err)
+			}
+			if payload["partner_id"] != float64(123) {
 				t.Errorf("missing partner_id body")
 			}
-			if r.PostForm.Get("refresh_token") != "reftok" {
-				t.Errorf("expected refresh_token=reftok, got %s", r.PostForm.Get("refresh_token"))
+			if payload["refresh_token"] != "reftok" {
+				t.Errorf("expected refresh_token=reftok, got %v", payload["refresh_token"])
 			}
-			if r.PostForm.Get("shop_id") != "shop" {
-				t.Errorf("expected shop_id=shop, got %s", r.PostForm.Get("shop_id"))
-			}
-			if r.PostForm.Get("timestamp") != "" || r.PostForm.Get("sign") != "" {
-				t.Errorf("unexpected query fields in body")
+			if payload["shop_id"] != float64(456) {
+				t.Errorf("expected shop_id=456, got %v", payload["shop_id"])
 			}
 			fmt.Fprint(w, `{"response":{"access_token":"newtoken"}}`)
 		case "/api/v2/order/get_order_detail":
@@ -54,9 +54,9 @@ func TestShopeeClientRefreshAndGetOrderDetail(t *testing.T) {
 
 	cfg := config.ShopeeAPIConfig{
 		BaseURLShopee: srv.URL,
-		PartnerID:     "pid",
-		PartnerKey:    "secret",
-		ShopID:        "shop",
+		PartnerID:     123,
+		PartnerKey:    "deadbeef",
+		ShopID:        456,
 		AccessToken:   "oldtoken",
 		RefreshToken:  "reftok",
 	}
@@ -91,7 +91,7 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
-		if r.URL.Query().Get("partner_id") != "pid" {
+		if r.URL.Query().Get("partner_id") != "123" {
 			t.Errorf("missing partner_id query")
 		}
 		var payload map[string]string
@@ -101,7 +101,7 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 		if payload["code"] != "abc" {
 			t.Errorf("code value missing")
 		}
-		if payload["shop_id"] != "shop" {
+		if payload["shop_id"] != "456" {
 			t.Errorf("shop_id value missing")
 		}
 		fmt.Fprint(w, `{"access_token":"tok"}`)
@@ -110,12 +110,12 @@ func TestShopeeClientGetAccessTokenIncludesBody(t *testing.T) {
 
 	cfg := config.ShopeeAPIConfig{
 		BaseURLShopee: srv.URL,
-		PartnerID:     "pid",
-		PartnerKey:    "secret",
+		PartnerID:     123,
+		PartnerKey:    "deadbeef",
 	}
 	c := NewShopeeClient(cfg)
 
-	resp, err := c.GetAccessToken(context.Background(), "abc", "shop")
+	resp, err := c.GetAccessToken(context.Background(), "abc", 456)
 	if err != nil {
 		t.Fatalf("GetAccessToken err: %v", err)
 	}
