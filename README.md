@@ -71,8 +71,11 @@ signature as HMAC-SHA256 of `partner_id + api path + timestamp + access_token +
 shop_id` using the partner key. `base_url_shopee` in `config.yaml` defines the
 Partner API host used when generating authorization links. As of this version,
 `ShopeeClient` no longer loads configuration inside `RefreshAccessToken`; all required values
-are taken from the struct fields
-initialized in `NewShopeeClient`.
+are taken from the struct fields initialized in `NewShopeeClient`.
+For integrations that prefer using the community
+[shopeego](https://github.com/teacat/shopeego) SDK, a helper method
+`RefreshAccessTokenShopeeGo` is available. It wraps the library's
+`RefreshAccessToken` call and updates the client tokens.
 
 To start the backend:
 

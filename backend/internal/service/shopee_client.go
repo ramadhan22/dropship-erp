@@ -49,7 +49,7 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 }
 
 func (c *ShopeeClient) signWithToken(path string, ts int64, token string) string {
-	msg := fmt.Sprintf("%s%s%d%s%s", c.PartnerID, path, ts, token, c.ShopID)
+	msg := fmt.Sprintf("%d%s%d%s%d", c.PartnerID, path, ts, token, c.ShopID)
 	h := hmac.New(sha256.New, []byte(c.PartnerKey))
 	h.Write([]byte(msg))
 	return hex.EncodeToString(h.Sum(nil))
@@ -58,7 +58,7 @@ func (c *ShopeeClient) signWithToken(path string, ts int64, token string) string
 // signWithTokenShop generates a signature using the provided token and shop ID.
 // This matches Shopee's specification for endpoints that require an access token.
 func (c *ShopeeClient) signWithTokenShop(path string, ts int64, token string, shopID int64) string {
-	msg := fmt.Sprintf("%s%s%d%s%s", c.PartnerID, path, ts, token, shopID)
+	msg := fmt.Sprintf("%d%s%d%s%d", c.PartnerID, path, ts, token, shopID)
 	h := hmac.New(sha256.New, []byte(c.PartnerKey))
 	h.Write([]byte(msg))
 	return hex.EncodeToString(h.Sum(nil))
@@ -151,7 +151,7 @@ type tokenResp struct {
 
 // RefreshAccessToken fetches a new access token using the refresh token.
 func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, error) {
-	log.Printf("Refreshing access token for shop %s", c.ShopID)
+	log.Printf("Refreshing access token for shop %d", c.ShopID)
 
 	type RefreshBody struct {
 		RefreshToken string `json:"refresh_token"`
@@ -232,7 +232,7 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code string, shopID i
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 
 	payload := map[string]string{
-		"shop_id": string(shopID),
+		"shop_id": fmt.Sprintf("%d", shopID),
 		"code":    code,
 	}
 	body, err := json.Marshal(payload)
@@ -279,7 +279,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken s
 	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", string(shopID))
+	q.Set("shop_id", fmt.Sprintf("%d", shopID))
 	q.Set("access_token", accessToken)
 	q.Set("order_sn_list", orderSN)
 	q.Set("response_optional_fields", "buyer_user_id,buyer_username,estimated_shipping_fee,recipient_address,actual_shipping_fee ,goods_to_declare,note,note_update_time,item_list,pay_time,dropshipper, dropshipper_phone,split_up,buyer_cancel_reason,cancel_by,cancel_reason,actual_shipping_fee_confirmed,buyer_cpf_id,fulfillment_flag,pickup_done_time,package_list,shipping_carrier,payment_method,total_amount,buyer_username,invoice_data,order_chargeable_weight_gram,return_request_due_date,edt")

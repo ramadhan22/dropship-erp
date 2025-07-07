@@ -948,7 +948,7 @@ func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string,
 	cfg := config.MustLoadConfig()
 
 	form := url.Values{}
-	form.Set("shopid", string(cfg.Shopee.ShopID))
+	form.Set("shopid", fmt.Sprintf("%d", cfg.Shopee.ShopID))
 	form.Set("amount", fmt.Sprintf("%.2f", amount))
 	form.Set("access_token", cfg.Shopee.AccessToken)
 
