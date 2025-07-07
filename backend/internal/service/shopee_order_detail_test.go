@@ -14,9 +14,9 @@ import (
 )
 
 func TestFetchShopeeOrderDetail(t *testing.T) {
-	partnerID := int64(1)
-	partnerKey := "deadbeef"
-	shopID := int64(2)
+	partnerID := "1"
+	partnerKey := "secret"
+	shopID := "2"
 	token := "token"
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 		ts := r.URL.Query().Get("timestamp")
 		pid := r.URL.Query().Get("partner_id")
 		sign := r.URL.Query().Get("sign")
-		stringToSign := fmt.Sprintf("%s%s%s%s%d", pid, r.URL.Path, ts, token, shopID)
+		stringToSign := fmt.Sprintf("%s%s%s%s%s", pid, r.URL.Path, ts, token, shopID)
 		h := hmac.New(sha256.New, []byte(partnerKey))
 		h.Write([]byte(stringToSign))
 		expSign := hex.EncodeToString(h.Sum(nil))
@@ -37,8 +37,8 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 		if r.URL.Query().Get("order_sn_list") != "123" {
 			t.Errorf("expected order_sn_list=123, got %s", r.URL.Query().Get("order_sn_list"))
 		}
-		if r.URL.Query().Get("shop_id") != fmt.Sprintf("%d", shopID) {
-			t.Errorf("expected shop_id=%d, got %s", shopID, r.URL.Query().Get("shop_id"))
+		if r.URL.Query().Get("shop_id") != shopID {
+			t.Errorf("expected shop_id=%s, got %s", shopID, r.URL.Query().Get("shop_id"))
 		}
 		fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"123","status":"NEW","checkout_time":1,"update_time":2}]}}`)
 	}))
