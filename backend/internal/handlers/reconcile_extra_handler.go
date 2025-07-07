@@ -17,6 +17,7 @@ type ReconcileExtraService interface {
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
 	GetShopeeOrderDetail(ctx context.Context, invoice string) (*service.ShopeeOrderDetail, error)
+	GetShopeeEscrowDetail(ctx context.Context, invoice string) (*service.ShopeeEscrowDetail, error)
 	GetShopeeAccessToken(ctx context.Context, invoice string) (string, error)
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
@@ -37,6 +38,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.POST("/cancel", h.cancel)
 	grp.POST("/update_status", h.updateStatus)
 	grp.GET("/status", h.status)
+	grp.GET("/escrow", h.escrow)
 	grp.GET("/token", h.token)
 }
 
@@ -126,6 +128,20 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		return
 	}
 	detail, err := h.svc.GetShopeeOrderDetail(context.Background(), invoice)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, detail)
+}
+
+func (h *ReconcileExtraHandler) escrow(c *gin.Context) {
+	invoice := c.Query("invoice")
+	if invoice == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
+		return
+	}
+	detail, err := h.svc.GetShopeeEscrowDetail(context.Background(), invoice)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

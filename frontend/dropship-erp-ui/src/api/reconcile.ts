@@ -43,6 +43,10 @@ export function fetchShopeeDetail(invoice: string) {
   return api.get<ShopeeOrderDetail>(`/reconcile/status?invoice=${invoice}`);
 }
 
+export function fetchEscrowDetail(invoice: string) {
+  return api.get<ShopeeOrderDetail>(`/reconcile/escrow?invoice=${invoice}`);
+}
+
 export function fetchShopeeToken(invoice: string) {
   return api.get<{ access_token: string }>(
     `/reconcile/token?invoice=${invoice}`,

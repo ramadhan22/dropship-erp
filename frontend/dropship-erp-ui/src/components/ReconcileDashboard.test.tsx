@@ -17,6 +17,9 @@ jest.mock("../api/reconcile", () => ({
   fetchShopeeDetail: jest.fn().mockResolvedValue({
     data: { order_sn: "INV", order_status: "PROCESSED" },
   }),
+  fetchEscrowDetail: jest.fn().mockResolvedValue({
+    data: { order_sn: "INV", escrow_amount: 1000 },
+  }),
 }));
 
 beforeEach(() => {
@@ -146,6 +149,34 @@ test("check status button", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Check Status/i }));
   await waitFor(() =>
     expect(api.fetchShopeeDetail).toHaveBeenCalledWith("INV"),
+  );
+});
+
+test("check status completed uses escrow endpoint", async () => {
+  (api.listCandidates as jest.Mock).mockResolvedValueOnce({
+    data: {
+      data: [
+        {
+          kode_pesanan: "A",
+          kode_invoice_channel: "INV",
+          nama_toko: "X",
+          status_pesanan_terakhir: "selesai",
+          no_pesanan: "INV",
+          shopee_order_status: "COMPLETED",
+        },
+      ],
+      total: 1,
+    },
+  });
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
+  await screen.findByRole("button", { name: /Check Status/i });
+  fireEvent.click(screen.getByRole("button", { name: /Check Status/i }));
+  await waitFor(() =>
+    expect(api.fetchEscrowDetail).toHaveBeenCalledWith("INV"),
   );
 });
 

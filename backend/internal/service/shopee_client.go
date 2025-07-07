@@ -288,6 +288,54 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 	return &out.Response.OrderList[0], nil
 }
 
+// GetEscrowDetail retrieves escrow information for an order using the shopeego
+// client library. The accessToken and shopID parameters should belong to the
+// store that owns the order.
+func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeEscrowDetail, error) {
+	log.Printf("ShopeeClient GetEscrowDetail order=%s shop=%s", orderSN, shopID)
+
+	partnerID, err := strconv.ParseInt(c.PartnerID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid partner id: %w", err)
+	}
+	sid, err := strconv.ParseInt(shopID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shop id: %w", err)
+	}
+
+	req := &shopeego.GetEscrowDetailsRequest{
+		OrderSN:   orderSN,
+		PartnerID: partnerID,
+		ShopID:    sid,
+		Timestamp: int(time.Now().Unix()),
+	}
+
+	opts := &shopeego.ClientOptions{
+		Secret:    c.PartnerKey,
+		IsSandbox: strings.Contains(c.BaseURL, "uat") || strings.Contains(c.BaseURL, "test"),
+		Version:   shopeego.ClientVersionV2,
+	}
+	sc := shopeego.NewClient(opts).(*shopeego.ShopeeClient)
+	sc.SetAccessToken(accessToken)
+
+	resp, err := sc.GetEscrowDetails(req)
+	if err != nil {
+		logutil.Errorf("GetEscrowDetail request error: %v", err)
+		return nil, err
+	}
+
+	b, err := json.Marshal(resp.Order)
+	if err != nil {
+		return nil, err
+	}
+
+	var out ShopeeEscrowDetail
+	if err := json.Unmarshal(b, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
 func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (string, error) {
 	if _, err := c.RefreshAccessToken(ctx); err != nil {
