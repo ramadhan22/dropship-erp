@@ -18,6 +18,8 @@ import {
   reconcileCheck,
   cancelPurchase,
   updateShopeeStatus,
+  fetchEscrowDetail,
+  fetchShopeeDetail,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type { ReconcileCandidate, Store, ShopeeOrderDetail } from "../types";
@@ -76,9 +78,10 @@ export default function ReconcileDashboard() {
     }
   };
 
-  const handleCheckStatus = async (inv: string) => {
+  const handleCheckStatus = async (inv: string, status: string) => {
     try {
-      const res = await fetchShopeeDetail(inv);
+      const apiCall = status.toLowerCase() === "completed" ? fetchEscrowDetail : fetchShopeeDetail;
+      const res = await apiCall(inv);
       setDetail(res.data);
       setDetailInvoice(inv);
       setDetailOpen(true);
@@ -165,7 +168,7 @@ export default function ReconcileDashboard() {
       render: (_, row) => (
         <Button
           size="small"
-          onClick={() => handleCheckStatus(row.kode_invoice_channel)}
+          onClick={() => handleCheckStatus(row.kode_invoice_channel, row.shopee_order_status)}
         >
           Check Status
         </Button>

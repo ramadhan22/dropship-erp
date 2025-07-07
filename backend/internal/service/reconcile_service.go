@@ -379,6 +379,41 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 	return detail, err
 }
 
+// GetShopeeEscrowDetail returns escrow information for the given invoice using
+// the store's saved access token. It refreshes the token when needed.
+func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice string) (*ShopeeEscrowDetail, error) {
+	if s.dropRepo == nil || s.storeRepo == nil {
+		return nil, fmt.Errorf("repos not configured")
+	}
+	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return nil, fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+	st, err := s.storeRepo.GetStoreByName(ctx, dp.NamaToko)
+	if err != nil || st == nil {
+		return nil, fmt.Errorf("fetch store %s: %w", dp.NamaToko, err)
+	}
+	if st.AccessToken == nil || st.ShopID == nil {
+		return nil, fmt.Errorf("missing access token or shop id")
+	}
+	if s.client == nil {
+		return nil, fmt.Errorf("shopee client not configured")
+	}
+
+	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+		return nil, err
+	}
+
+	detail, err := s.client.GetEscrowDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
+	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+		if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+			return nil, err
+		}
+		detail, err = s.client.GetEscrowDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
+	}
+	return detail, err
+}
+
 func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models.Store) error {
 	log.Printf("TEST: ensureStoreTokenValid for store %d", st.StoreID)
 	// New location (e.g., Asia/Jakarta)
