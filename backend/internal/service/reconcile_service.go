@@ -395,7 +395,7 @@ func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models
 		log.Fatalf("ensureStoreTokenValid: missing refresh token for store %d", st.StoreID)
 		return fmt.Errorf("missing refresh token")
 	}
-	if st.ShopID == nil || *st.ShopID == 0 {
+	if st.ShopID == nil || *st.ShopID == "" {
 		log.Fatalf("ensureStoreTokenValid: missing shop id for store %d", st.StoreID)
 		return fmt.Errorf("missing shop id")
 	}

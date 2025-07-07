@@ -23,9 +23,9 @@ import (
 // ShopeeClient handles calls to Shopee partner API.
 type ShopeeClient struct {
 	BaseURL      string
-	PartnerID    int64
+	PartnerID    string
 	PartnerKey   string
-	ShopID       int64
+	ShopID       string
 	AccessToken  string
 	RefreshToken string
 	httpClient   *http.Client
@@ -57,7 +57,7 @@ func (c *ShopeeClient) signWithToken(path string, ts int64, token string) string
 
 // signWithTokenShop generates a signature using the provided token and shop ID.
 // This matches Shopee's specification for endpoints that require an access token.
-func (c *ShopeeClient) signWithTokenShop(path string, ts int64, token string, shopID int64) string {
+func (c *ShopeeClient) signWithTokenShop(path string, ts int64, token, shopID string) string {
 	msg := fmt.Sprintf("%s%s%d%s%s", c.PartnerID, path, ts, token, shopID)
 	h := hmac.New(sha256.New, []byte(c.PartnerKey))
 	h.Write([]byte(msg))
@@ -69,24 +69,8 @@ func (c *ShopeeClient) sign(path string, ts int64) string {
 }
 
 func (c *ShopeeClient) signSimple(path string, ts int64) string {
-	msg := fmt.Sprintf("%d%s%d", c.PartnerID, path, ts)
-	log.Printf("ShopeeClient signSimple msg: %s", msg)
-	keyBytes, err := hex.DecodeString(c.PartnerKey)
-	if err != nil {
-		log.Fatalf("PartnerKey hex decode error: %v", err)
-	}
-	h := hmac.New(sha256.New, keyBytes)
-	h.Write([]byte(msg))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func (c *ShopeeClient) signWithBody(path string, ts int64, body string) string {
-	msg := fmt.Sprintf("%d%s%d%s", c.PartnerID, path, ts, body)
-	keyBytes, err := hex.DecodeString(c.PartnerKey)
-	if err != nil {
-		log.Fatalf("PartnerKey hex decode error: %v", err)
-	}
-	h := hmac.New(sha256.New, keyBytes)
+	msg := fmt.Sprintf("%s%s%d", c.PartnerID, path, ts)
+	h := hmac.New(sha256.New, []byte(c.PartnerKey))
 	h.Write([]byte(msg))
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -152,21 +136,7 @@ type tokenResp struct {
 // RefreshAccessToken fetches a new access token using the refresh token.
 func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, error) {
 	log.Printf("Refreshing access token for shop %s", c.ShopID)
-
-	type RefreshBody struct {
-		RefreshToken string `json:"refresh_token"`
-		PartnerID    int64  `json:"partner_id"`
-		ShopID       int64  `json:"shop_id"`
-	}
-	bodyStruct := RefreshBody{
-		RefreshToken: c.RefreshToken,
-		PartnerID:    c.PartnerID,
-		ShopID:       c.ShopID,
-	}
-	bodyBytes, _ := json.Marshal(bodyStruct)
-	body := string(bodyBytes)
-
-	if c.ShopID == 0 {
+	if c.ShopID == "" {
 		return nil, fmt.Errorf("shop_id is empty")
 	}
 	path := "/api/v2/auth/access_token/get"
@@ -174,21 +144,26 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 	// Shopee's access_token/get endpoint signs only with partner_id, path and
 	// timestamp. The refresh token is included in the POST body, not the
 	// signature calculation.
-	log.Printf("ShopeeClient RefreshAccessToken request: %s", body)
 	sign := c.signSimple(path, ts)
 
 	q := url.Values{}
-	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	// q.Set("shop_id", c.ShopID)
+	q.Set("shop_id", c.ShopID)
 
+	bodyForm := url.Values{}
+	bodyForm.Set("partner_id", c.PartnerID)
+	bodyForm.Set("shop_id", c.ShopID)
+	bodyForm.Set("refresh_token", c.RefreshToken)
+
+	body := bodyForm.Encode()
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, "POST", urlStr, strings.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	log.Printf("ShopeeClient request: POST %s body=%s", urlStr, body)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -219,20 +194,20 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 }
 
 // GetAccessToken retrieves a new access token using the authorization code and shop_id.
-func (c *ShopeeClient) GetAccessToken(ctx context.Context, code string, shopID int64) (*tokenResp, error) {
+func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) (*tokenResp, error) {
 	path := "/api/v2/auth/token/get"
 	ts := time.Now().Unix()
 	sign := c.signSimple(path, ts)
 
 	q := url.Values{}
-	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
 
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 
 	payload := map[string]string{
-		"shop_id": string(shopID),
+		"shop_id": shopID,
 		"code":    code,
 	}
 	body, err := json.Marshal(payload)
@@ -270,16 +245,16 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code string, shopID i
 // FetchShopeeOrderDetail fetches detailed order info using the provided access
 // token and shop id. It mirrors the standalone FetchShopeeOrderDetail function
 // but uses credentials from the ShopeeClient, similar to GetAccessToken.
-func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken string, shopID int64, orderSN string) (*ShopeeOrderDetail, error) {
+func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeOrderDetail, error) {
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
 
 	q := url.Values{}
-	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", string(shopID))
+	q.Set("shop_id", shopID)
 	q.Set("access_token", accessToken)
 	q.Set("order_sn_list", orderSN)
 	q.Set("response_optional_fields", "buyer_user_id,buyer_username,estimated_shipping_fee,recipient_address,actual_shipping_fee ,goods_to_declare,note,note_update_time,item_list,pay_time,dropshipper, dropshipper_phone,split_up,buyer_cancel_reason,cancel_by,cancel_reason,actual_shipping_fee_confirmed,buyer_cpf_id,fulfillment_flag,pickup_done_time,package_list,shipping_carrier,payment_method,total_amount,buyer_username,invoice_data,order_chargeable_weight_gram,return_request_due_date,edt")
@@ -329,10 +304,10 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	sign := c.sign(path, ts)
 
 	q := url.Values{}
-	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", fmt.Sprintf("%d", c.ShopID))
+	q.Set("shop_id", c.ShopID)
 	q.Set("access_token", c.AccessToken)
 	q.Set("order_sn_list", orderSn)
 
@@ -374,10 +349,10 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 	sign := c.sign(path, ts)
 
 	q := url.Values{}
-	q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+	q.Set("partner_id", c.PartnerID)
 	q.Set("timestamp", fmt.Sprintf("%d", ts))
 	q.Set("sign", sign)
-	q.Set("shop_id", fmt.Sprintf("%d", c.ShopID))
+	q.Set("shop_id", c.ShopID)
 	q.Set("access_token", c.AccessToken)
 	q.Set("order_sn_list", orderSn)
 
@@ -428,10 +403,10 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 		sign := c.sign(path, ts)
 
 		q := url.Values{}
-		q.Set("partner_id", fmt.Sprintf("%d", c.PartnerID))
+		q.Set("partner_id", c.PartnerID)
 		q.Set("timestamp", fmt.Sprintf("%d", ts))
 		q.Set("sign", sign)
-		q.Set("shop_id", fmt.Sprintf("%d", c.ShopID))
+		q.Set("shopid", c.ShopID)
 		q.Set("access_token", c.AccessToken)
 		q.Set("order_statuses", "[\"READY_TO_SHIP\",\"SHIPPED\",\"COMPLETED\"]")
 		q.Set("pagination_offset", strconv.Itoa(offset))
