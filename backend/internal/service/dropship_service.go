@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -51,7 +50,7 @@ type DropshipServiceStoreRepo interface {
 
 // DropshipServiceDetailRepo persists raw Shopee order details and items.
 type DropshipServiceDetailRepo interface {
-	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow) error
+	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) error
 }
 
 // DropshipService handles CSV‐import and any Dropship‐related business logic.
@@ -391,16 +390,13 @@ func (s *DropshipService) fetchAndStoreDetail(ctx context.Context, header *model
 		}
 	}
 	if s.detailRepo != nil {
-		b, _ := json.Marshal(det)
-		row := &models.ShopeeOrderDetailRow{OrderSN: header.KodeInvoiceChannel, NamaToko: header.NamaToko, Detail: b, CreatedAt: time.Now()}
-		var items []models.ShopeeOrderItemRow
-		if list, ok := (*det)["item_list"].([]interface{}); ok {
-			for _, it := range list {
-				j, _ := json.Marshal(it)
-				items = append(items, models.ShopeeOrderItemRow{OrderSN: header.KodeInvoiceChannel, Item: j})
+		row, items, packages := normalizeOrderDetail(header.KodeInvoiceChannel, header.NamaToko, *det)
+		for _, it := range items {
+			if it.ModelOriginalPrice != nil && it.ModelQuantityPurchased != nil {
+				total += *it.ModelOriginalPrice * float64(*it.ModelQuantityPurchased)
 			}
 		}
-		if err := s.detailRepo.SaveOrderDetail(ctx, row, items); err != nil {
+		if err := s.detailRepo.SaveOrderDetail(ctx, row, items, packages); err != nil {
 			log.Printf("save order detail %s: %v", header.KodeInvoiceChannel, err)
 		}
 	}

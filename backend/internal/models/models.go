@@ -302,17 +302,91 @@ type ShopeeAdjustment struct {
 	CreatedAt          time.Time `db:"created_at" json:"created_at"`
 }
 
-// ShopeeOrderDetailRow stores Shopee order detail as raw JSON.
+// ShopeeOrderDetailRow stores key fields from Shopee order detail.
 type ShopeeOrderDetailRow struct {
-	OrderSN   string    `db:"order_sn" json:"order_sn"`
-	NamaToko  string    `db:"nama_toko" json:"nama_toko"`
-	Detail    []byte    `db:"detail" json:"detail"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	OrderSN                    string     `db:"order_sn" json:"order_sn"`
+	NamaToko                   string     `db:"nama_toko" json:"nama_toko"`
+	Status                     *string    `db:"status" json:"status,omitempty"`
+	OrderStatus                *string    `db:"order_status" json:"order_status,omitempty"`
+	CheckoutTime               *time.Time `db:"checkout_time" json:"checkout_time,omitempty"`
+	UpdateTime                 *time.Time `db:"update_time" json:"update_time,omitempty"`
+	PayTime                    *time.Time `db:"pay_time" json:"pay_time,omitempty"`
+	TotalAmount                *float64   `db:"total_amount" json:"total_amount,omitempty"`
+	Currency                   *string    `db:"currency" json:"currency,omitempty"`
+	ActualShippingFeeConfirmed *bool      `db:"actual_shipping_fee_confirmed" json:"actual_shipping_fee_confirmed,omitempty"`
+	BuyerCancelReason          *string    `db:"buyer_cancel_reason" json:"buyer_cancel_reason,omitempty"`
+	BuyerCPFID                 *string    `db:"buyer_cpf_id" json:"buyer_cpf_id,omitempty"`
+	BuyerUserID                *int64     `db:"buyer_user_id" json:"buyer_user_id,omitempty"`
+	BuyerUsername              *string    `db:"buyer_username" json:"buyer_username,omitempty"`
+	CancelBy                   *string    `db:"cancel_by" json:"cancel_by,omitempty"`
+	CancelReason               *string    `db:"cancel_reason" json:"cancel_reason,omitempty"`
+	COD                        *bool      `db:"cod" json:"cod,omitempty"`
+	CreateTime                 *time.Time `db:"create_time" json:"create_time,omitempty"`
+	DaysToShip                 *int       `db:"days_to_ship" json:"days_to_ship,omitempty"`
+	Dropshipper                *string    `db:"dropshipper" json:"dropshipper,omitempty"`
+	DropshipperPhone           *string    `db:"dropshipper_phone" json:"dropshipper_phone,omitempty"`
+	EstimatedShippingFee       *float64   `db:"estimated_shipping_fee" json:"estimated_shipping_fee,omitempty"`
+	FulfillmentFlag            *string    `db:"fulfillment_flag" json:"fulfillment_flag,omitempty"`
+	GoodsToDeclare             *bool      `db:"goods_to_declare" json:"goods_to_declare,omitempty"`
+	MessageToSeller            *string    `db:"message_to_seller" json:"message_to_seller,omitempty"`
+	Note                       *string    `db:"note" json:"note,omitempty"`
+	NoteUpdateTime             *time.Time `db:"note_update_time" json:"note_update_time,omitempty"`
+	PickupDoneTime             *time.Time `db:"pickup_done_time" json:"pickup_done_time,omitempty"`
+	Region                     *string    `db:"region" json:"region,omitempty"`
+	ReverseShippingFee         *float64   `db:"reverse_shipping_fee" json:"reverse_shipping_fee,omitempty"`
+	ShipByDate                 *time.Time `db:"ship_by_date" json:"ship_by_date,omitempty"`
+	ShippingCarrier            *string    `db:"shipping_carrier" json:"shipping_carrier,omitempty"`
+	SplitUp                    *bool      `db:"split_up" json:"split_up,omitempty"`
+	PaymentMethod              *string    `db:"payment_method" json:"payment_method,omitempty"`
+	RecipientName              *string    `db:"recipient_name" json:"recipient_name,omitempty"`
+	RecipientPhone             *string    `db:"recipient_phone" json:"recipient_phone,omitempty"`
+	RecipientFullAddress       *string    `db:"recipient_full_address" json:"recipient_full_address,omitempty"`
+	RecipientCity              *string    `db:"recipient_city" json:"recipient_city,omitempty"`
+	RecipientDistrict          *string    `db:"recipient_district" json:"recipient_district,omitempty"`
+	RecipientState             *string    `db:"recipient_state" json:"recipient_state,omitempty"`
+	RecipientTown              *string    `db:"recipient_town" json:"recipient_town,omitempty"`
+	RecipientZipcode           *string    `db:"recipient_zipcode" json:"recipient_zipcode,omitempty"`
+	CreatedAt                  time.Time  `db:"created_at" json:"created_at"`
 }
 
-// ShopeeOrderItemRow stores individual item JSON from an order detail.
+// ShopeeOrderItemRow stores individual item fields from an order detail.
 type ShopeeOrderItemRow struct {
-	ID      int64  `db:"id" json:"id"`
-	OrderSN string `db:"order_sn" json:"order_sn"`
-	Item    []byte `db:"item" json:"item"`
+	ID                     int64    `db:"id" json:"id"`
+	OrderSN                string   `db:"order_sn" json:"order_sn"`
+	OrderItemID            *int64   `db:"order_item_id" json:"order_item_id,omitempty"`
+	ItemName               *string  `db:"item_name" json:"item_name,omitempty"`
+	ModelOriginalPrice     *float64 `db:"model_original_price" json:"model_original_price,omitempty"`
+	ModelQuantityPurchased *int     `db:"model_quantity_purchased" json:"model_quantity_purchased,omitempty"`
+	ItemID                 *int64   `db:"item_id" json:"item_id,omitempty"`
+	ItemSKU                *string  `db:"item_sku" json:"item_sku,omitempty"`
+	ModelID                *int64   `db:"model_id" json:"model_id,omitempty"`
+	ModelName              *string  `db:"model_name" json:"model_name,omitempty"`
+	ModelSKU               *string  `db:"model_sku" json:"model_sku,omitempty"`
+	ModelDiscountedPrice   *float64 `db:"model_discounted_price" json:"model_discounted_price,omitempty"`
+	Weight                 *float64 `db:"weight" json:"weight,omitempty"`
+	PromotionID            *int64   `db:"promotion_id" json:"promotion_id,omitempty"`
+	PromotionType          *string  `db:"promotion_type" json:"promotion_type,omitempty"`
+	PromotionGroupID       *int64   `db:"promotion_group_id" json:"promotion_group_id,omitempty"`
+	AddOnDeal              *bool    `db:"add_on_deal" json:"add_on_deal,omitempty"`
+	AddOnDealID            *int64   `db:"add_on_deal_id" json:"add_on_deal_id,omitempty"`
+	MainItem               *bool    `db:"main_item" json:"main_item,omitempty"`
+	IsB2COwnedItem         *bool    `db:"is_b2c_owned_item" json:"is_b2c_owned_item,omitempty"`
+	IsPrescriptionItem     *bool    `db:"is_prescription_item" json:"is_prescription_item,omitempty"`
+	Wholesale              *bool    `db:"wholesale" json:"wholesale,omitempty"`
+	ProductLocationID      []string `db:"product_location_id" json:"product_location_id,omitempty"`
+	ImageURL               *string  `db:"image_url" json:"image_url,omitempty"`
+}
+
+// ShopeeOrderPackageRow stores shipping package details associated with an order.
+type ShopeeOrderPackageRow struct {
+	ID                         int64   `db:"id" json:"id"`
+	OrderSN                    string  `db:"order_sn" json:"order_sn"`
+	PackageNumber              *string `db:"package_number" json:"package_number,omitempty"`
+	LogisticsStatus            *string `db:"logistics_status" json:"logistics_status,omitempty"`
+	ShippingCarrier            *string `db:"shipping_carrier" json:"shipping_carrier,omitempty"`
+	LogisticsChannelID         *int64  `db:"logistics_channel_id" json:"logistics_channel_id,omitempty"`
+	ParcelChargeableWeightGram *int    `db:"parcel_chargeable_weight_gram" json:"parcel_chargeable_weight_gram,omitempty"`
+	AllowSelfDesignAWB         *bool   `db:"allow_self_design_awb" json:"allow_self_design_awb,omitempty"`
+	SortingGroup               *string `db:"sorting_group" json:"sorting_group,omitempty"`
+	GroupShipmentID            *string `db:"group_shipment_id" json:"group_shipment_id,omitempty"`
 }
