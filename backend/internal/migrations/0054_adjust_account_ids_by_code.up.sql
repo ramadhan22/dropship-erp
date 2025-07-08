@@ -1,9 +1,5 @@
 -- Temporarily disable triggers to freely update account relations
-ALTER TABLE journal_lines DISABLE TRIGGER ALL;
-ALTER TABLE expenses DISABLE TRIGGER ALL;
-ALTER TABLE expense_lines DISABLE TRIGGER ALL;
-ALTER TABLE asset_accounts DISABLE TRIGGER ALL;
-ALTER TABLE accounts DISABLE TRIGGER ALL;
+
 
 DO $$
 DECLARE
@@ -50,9 +46,3 @@ BEGIN
     PERFORM setval('accounts_account_id_seq', (SELECT MAX(account_id) FROM accounts));
 END $$;
 
--- Re-enable triggers after updates
-ALTER TABLE accounts ENABLE TRIGGER ALL;
-ALTER TABLE journal_lines ENABLE TRIGGER ALL;
-ALTER TABLE expenses ENABLE TRIGGER ALL;
-ALTER TABLE expense_lines ENABLE TRIGGER ALL;
-ALTER TABLE asset_accounts ENABLE TRIGGER ALL;
