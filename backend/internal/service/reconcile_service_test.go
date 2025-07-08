@@ -95,6 +95,15 @@ func (f *fakeRecRepoRec) InsertReconciledTransaction(ctx context.Context, r *mod
 	return nil
 }
 
+type fakeDetailRepo struct {
+	saved []*models.ShopeeOrderDetailRow
+}
+
+func (f *fakeDetailRepo) SaveOrderDetail(ctx context.Context, d *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow) error {
+	f.saved = append(f.saved, d)
+	return nil
+}
+
 func TestMatchAndJournal_Success(t *testing.T) {
 	ctx := context.Background()
 
@@ -111,8 +120,9 @@ func TestMatchAndJournal_Success(t *testing.T) {
 	}
 	fJournal := &fakeJournalRepoRec{nextID: 0}
 	fRec := &fakeRecRepoRec{}
+	fDetail := &fakeDetailRepo{}
 
-	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, nil)
+	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil)
 	err := svc.MatchAndJournal(ctx, "DP-111", "SO-222", "ShopA")
 	if err != nil {
 		t.Fatalf("MatchAndJournal error: %v", err)
