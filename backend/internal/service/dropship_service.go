@@ -25,6 +25,7 @@ type DropshipRepoInterface interface {
 	InsertDropshipPurchase(ctx context.Context, p *models.DropshipPurchase) error
 	InsertDropshipPurchaseDetail(ctx context.Context, d *models.DropshipPurchaseDetail) error
 	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
+	ListExistingPurchases(ctx context.Context, ids []string) (map[string]bool, error)
 	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
@@ -105,6 +106,7 @@ func NewDropshipService(
 func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
 	log.Printf("ImportFromCSV channel=%s", channel)
 	reader := csv.NewReader(r)
+	reader.ReuseRecord = true
 	if _, err := reader.Read(); err != nil {
 		logutil.Errorf("ImportFromCSV header error: %v", err)
 		return 0, fmt.Errorf("read header: %w", err)
@@ -128,6 +130,33 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	inserted := make(map[string]bool)
 	skipped := make(map[string]bool)
 	fetched := make(map[string]bool)
+	var allRecords [][]string
+	for {
+		rec, err := reader.Read()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			logutil.Errorf("ImportFromCSV read row error: %v", err)
+			return 0, fmt.Errorf("read row: %w", err)
+		}
+		cp := make([]string, len(rec))
+		copy(cp, rec)
+		allRecords = append(allRecords, cp)
+	}
+	unique := make(map[string]bool)
+	for _, rec := range allRecords {
+		if len(rec) > 3 {
+			unique[rec[3]] = true
+		}
+	}
+	ids := make([]string, 0, len(unique))
+	for id := range unique {
+		ids = append(ids, id)
+	}
+	existing, err := repoTx.ListExistingPurchases(ctx, ids)
+	if err != nil {
+		return 0, err
+	}
 	// track the header for each newly inserted purchase so we can
 	// create the journal entry after all rows are processed
 	headersMap := make(map[string]*models.DropshipPurchase)
@@ -140,14 +169,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	agg := make(map[string]*totals)
 	count := 0
 
-	for {
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			logutil.Errorf("ImportFromCSV read row error: %v", err)
-			return count, fmt.Errorf("read row: %w", err)
-		}
+	for _, record := range allRecords {
 
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
@@ -195,11 +217,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		}
 
 		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {
-			exists, err := repoTx.ExistsDropshipPurchase(ctx, header.KodePesanan)
-			if err != nil {
-				return count, fmt.Errorf("check exists %s: %w", header.KodePesanan, err)
-			}
-			if exists {
+			if existing[header.KodePesanan] {
 				skipped[header.KodePesanan] = true
 				continue
 			}
