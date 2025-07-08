@@ -31,8 +31,9 @@ Main features:
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Check Shopee order details from the Reconcile dashboard using the store's saved access token.
-- Order detail lookups now save key fields in `shopee_order_details` and
-  `shopee_order_items` tables rather than raw JSON for easier analysis.
+- Order detail lookups now save key fields in `shopee_order_details`,
+  `shopee_order_items` and `shopee_order_packages` tables rather than raw JSON.
+  All time values are converted to timestamps for easier analysis.
 - Dropship CSV imports fetch Shopee order detail for each invoice to record
   pending sales amounts and save the raw detail. Transactions are skipped when
   the order detail cannot be retrieved.

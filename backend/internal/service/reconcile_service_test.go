@@ -99,7 +99,7 @@ type fakeDetailRepo struct {
 	saved []*models.ShopeeOrderDetailRow
 }
 
-func (f *fakeDetailRepo) SaveOrderDetail(ctx context.Context, d *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow) error {
+func (f *fakeDetailRepo) SaveOrderDetail(ctx context.Context, d *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, pkgs []models.ShopeeOrderPackageRow) error {
 	f.saved = append(f.saved, d)
 	return nil
 }
