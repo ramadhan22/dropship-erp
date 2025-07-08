@@ -18,7 +18,7 @@ jwt:
 # Credentials for calling Shopee Partner API
 shopee_api:
   partner_id: "2011860"
-  partner_key: "shpk6e69744774664b4d6570446a79544361554950517563767146456967774e"
+  partner_key: "shpk714c6d706743744c55485053444d796555716673475a4d505a4f68756e53"
   access_token: ""
   # long-lived token used to refresh access_token
   refresh_token: ""

@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -40,6 +41,9 @@ type ReconcileServiceStoreRepo interface {
 	GetStoreByName(ctx context.Context, name string) (*models.Store, error)
 	UpdateStore(ctx context.Context, s *models.Store) error
 }
+type ReconcileServiceDetailRepo interface {
+	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow) error
+}
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
@@ -49,6 +53,7 @@ type ReconcileService struct {
 	journalRepo ReconcileServiceJournalRepo
 	recRepo     ReconcileServiceRecRepo
 	storeRepo   ReconcileServiceStoreRepo
+	detailRepo  ReconcileServiceDetailRepo
 	client      *ShopeeClient
 }
 
@@ -60,6 +65,7 @@ func NewReconcileService(
 	jr ReconcileServiceJournalRepo,
 	rr ReconcileServiceRecRepo,
 	srp ReconcileServiceStoreRepo,
+	drp ReconcileServiceDetailRepo,
 	c *ShopeeClient,
 ) *ReconcileService {
 	return &ReconcileService{
@@ -69,6 +75,7 @@ func NewReconcileService(
 		journalRepo: jr,
 		recRepo:     rr,
 		storeRepo:   srp,
+		detailRepo:  drp,
 		client:      c,
 	}
 }
@@ -376,6 +383,25 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 		}
 		detail, err = s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
 	}
+	if err == nil && s.detailRepo != nil {
+		b, _ := json.Marshal(detail)
+		row := &models.ShopeeOrderDetailRow{
+			OrderSN:   invoice,
+			NamaToko:  dp.NamaToko,
+			Detail:    b,
+			CreatedAt: time.Now(),
+		}
+		var items []models.ShopeeOrderItemRow
+		if list, ok := (*detail)["item_list"].([]interface{}); ok {
+			for _, it := range list {
+				j, _ := json.Marshal(it)
+				items = append(items, models.ShopeeOrderItemRow{OrderSN: invoice, Item: j})
+			}
+		}
+		if err := s.detailRepo.SaveOrderDetail(ctx, row, items); err != nil {
+			log.Printf("save order detail %s: %v", invoice, err)
+		}
+	}
 	return detail, err
 }
 
@@ -411,6 +437,7 @@ func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice st
 		}
 		detail, err = s.client.GetEscrowDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
 	}
+	log.Printf("GetShopeeEscrowDetail: detail: %+v, err: %v", detail, err)
 	return detail, err
 }
 

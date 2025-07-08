@@ -6,9 +6,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
@@ -113,6 +119,20 @@ func (f *fakeJournalRepoDrop) UpdateJournalLineAmount(ctx context.Context, lineI
 	return nil
 }
 
+type fakeStoreRepo struct{ store *models.Store }
+
+func (f *fakeStoreRepo) GetStoreByName(ctx context.Context, name string) (*models.Store, error) {
+	if f.store != nil && f.store.NamaToko == name {
+		return f.store, nil
+	}
+	return nil, nil
+}
+
+func (f *fakeStoreRepo) UpdateStore(ctx context.Context, s *models.Store) error {
+	f.store = s
+	return nil
+}
+
 func TestImportFromCSV_Success(t *testing.T) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
@@ -122,10 +142,31 @@ func TestImportFromCSV_Success(t *testing.T) {
 	w.Write(row)
 	w.Flush()
 
-	// Use fake repos
+	// fake Shopee detail server
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "access_token/get") {
+			fmt.Fprint(w, `{"response":{"access_token":"tok","refresh_token":"ref","expire_in":3600,"request_id":"1"}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "get_order_detail") {
+			fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"INV1","item_list":[{"model_original_price":"15.75","model_quantity_purchased":2}]}]}}`)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
+	client.httpClient = srv.Client()
+
+	now := time.Now()
+	exp := 3600
+	store := &models.Store{NamaToko: "MyShop", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+
 	fake := &fakeDropshipRepo{}
 	jfake := &fakeJournalRepoDrop{}
-	svc := NewDropshipService(nil, fake, jfake)
+	srepo := &fakeStoreRepo{store: store}
+	svc := NewDropshipService(nil, fake, jfake, srepo, nil, client)
 
 	ctx := context.Background()
 	count, err := svc.ImportFromCSV(ctx, &buf, "")
@@ -161,7 +202,7 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(nil, fake, nil)
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
@@ -185,7 +226,7 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
-	svc := NewDropshipService(nil, fake, nil)
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil)
 	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
@@ -209,9 +250,29 @@ func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
 	w.Write(row2)
 	w.Flush()
 
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "access_token/get") {
+			fmt.Fprint(w, `{"response":{"access_token":"tok","refresh_token":"ref","expire_in":3600,"request_id":"1"}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "get_order_detail") {
+			fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"INV1","item_list":[{"model_original_price":"15.75","model_quantity_purchased":2},{"model_original_price":"20","model_quantity_purchased":1}]}]}}`)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
+	client.httpClient = srv.Client()
+	now := time.Now()
+	exp := 3600
+	store := &models.Store{NamaToko: "MyShop", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+
 	fake := &fakeDropshipRepo{}
 	jfake := &fakeJournalRepoDrop{}
-	svc := NewDropshipService(nil, fake, jfake)
+	srepo := &fakeStoreRepo{store: store}
+	svc := NewDropshipService(nil, fake, jfake, srepo, nil, client)
 
 	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
 	if err != nil {
@@ -251,7 +312,7 @@ func TestImportFromCSV_ChannelFilter(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(nil, fake, nil)
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil)
 
 	count, err := svc.ImportFromCSV(context.Background(), &buf, "Tokopedia")
 	if err != nil {
@@ -262,5 +323,50 @@ func TestImportFromCSV_ChannelFilter(t *testing.T) {
 	}
 	if len(fake.insertedHeader) != 0 {
 		t.Errorf("expected no inserts, got %d", len(fake.insertedHeader))
+	}
+}
+
+func TestImportFromCSV_SkipOnDetailError(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-ERR", "TRX1", "SKU1", "ProdukA", "15", "1", "15", "0", "0", "15", "15", "15", "0", "user", "online", "MyShop", "INVERR", "Gudang", "JNE", "Ya", "RESI", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row)
+	w.Flush()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "access_token/get") {
+			fmt.Fprint(w, `{"response":{"access_token":"tok","refresh_token":"ref","expire_in":3600,"request_id":"1"}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "get_order_detail") {
+			http.Error(w, "fail", http.StatusInternalServerError)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
+	client.httpClient = srv.Client()
+
+	now := time.Now()
+	exp := 3600
+	store := &models.Store{NamaToko: "MyShop", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+
+	fakeRepo := &fakeDropshipRepo{}
+	srepo := &fakeStoreRepo{store: store}
+	svc := NewDropshipService(nil, fakeRepo, nil, srepo, nil, client)
+
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 rows, got %d", count)
+	}
+	if len(fakeRepo.insertedHeader) != 0 {
+		t.Errorf("expected no inserts, got %d", len(fakeRepo.insertedHeader))
 	}
 }

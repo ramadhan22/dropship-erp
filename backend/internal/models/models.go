@@ -301,3 +301,18 @@ type ShopeeAdjustment struct {
 	NoPesanan          string    `db:"no_pesanan" json:"no_pesanan"`
 	CreatedAt          time.Time `db:"created_at" json:"created_at"`
 }
+
+// ShopeeOrderDetailRow stores Shopee order detail as raw JSON.
+type ShopeeOrderDetailRow struct {
+	OrderSN   string    `db:"order_sn" json:"order_sn"`
+	NamaToko  string    `db:"nama_toko" json:"nama_toko"`
+	Detail    []byte    `db:"detail" json:"detail"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}
+
+// ShopeeOrderItemRow stores individual item JSON from an order detail.
+type ShopeeOrderItemRow struct {
+	ID      int64  `db:"id" json:"id"`
+	OrderSN string `db:"order_sn" json:"order_sn"`
+	Item    []byte `db:"item" json:"item"`
+}
