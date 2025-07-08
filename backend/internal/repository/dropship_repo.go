@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
@@ -74,6 +75,27 @@ func (r *DropshipRepo) ExistsDropshipPurchase(ctx context.Context, kodePesanan s
 		return false, err
 	}
 	return exists, nil
+}
+
+// ListExistingPurchases returns a map of kode_pesanan that already exist.
+func (r *DropshipRepo) ListExistingPurchases(ctx context.Context, ids []string) (map[string]bool, error) {
+	if len(ids) == 0 {
+		return map[string]bool{}, nil
+	}
+	query, args, err := sqlx.In(`SELECT kode_pesanan FROM dropship_purchases WHERE kode_pesanan IN (?)`, ids)
+	if err != nil {
+		return nil, err
+	}
+	query = r.db.Rebind(query)
+	var list []string
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+		return nil, err
+	}
+	m := make(map[string]bool, len(list))
+	for _, id := range list {
+		m[id] = true
+	}
+	return m, nil
 }
 
 // InsertDropshipPurchaseDetail inserts a record into dropship_purchase_details.
