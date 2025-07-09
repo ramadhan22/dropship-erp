@@ -2,7 +2,11 @@
 
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/lib/pq"
+)
 
 // Account represents the D6 table: accounts
 type Account struct {
@@ -351,30 +355,30 @@ type ShopeeOrderDetailRow struct {
 
 // ShopeeOrderItemRow stores individual item fields from an order detail.
 type ShopeeOrderItemRow struct {
-	ID                     int64    `db:"id" json:"id"`
-	OrderSN                string   `db:"order_sn" json:"order_sn"`
-	OrderItemID            *int64   `db:"order_item_id" json:"order_item_id,omitempty"`
-	ItemName               *string  `db:"item_name" json:"item_name,omitempty"`
-	ModelOriginalPrice     *float64 `db:"model_original_price" json:"model_original_price,omitempty"`
-	ModelQuantityPurchased *int     `db:"model_quantity_purchased" json:"model_quantity_purchased,omitempty"`
-	ItemID                 *int64   `db:"item_id" json:"item_id,omitempty"`
-	ItemSKU                *string  `db:"item_sku" json:"item_sku,omitempty"`
-	ModelID                *int64   `db:"model_id" json:"model_id,omitempty"`
-	ModelName              *string  `db:"model_name" json:"model_name,omitempty"`
-	ModelSKU               *string  `db:"model_sku" json:"model_sku,omitempty"`
-	ModelDiscountedPrice   *float64 `db:"model_discounted_price" json:"model_discounted_price,omitempty"`
-	Weight                 *float64 `db:"weight" json:"weight,omitempty"`
-	PromotionID            *int64   `db:"promotion_id" json:"promotion_id,omitempty"`
-	PromotionType          *string  `db:"promotion_type" json:"promotion_type,omitempty"`
-	PromotionGroupID       *int64   `db:"promotion_group_id" json:"promotion_group_id,omitempty"`
-	AddOnDeal              *bool    `db:"add_on_deal" json:"add_on_deal,omitempty"`
-	AddOnDealID            *int64   `db:"add_on_deal_id" json:"add_on_deal_id,omitempty"`
-	MainItem               *bool    `db:"main_item" json:"main_item,omitempty"`
-	IsB2COwnedItem         *bool    `db:"is_b2c_owned_item" json:"is_b2c_owned_item,omitempty"`
-	IsPrescriptionItem     *bool    `db:"is_prescription_item" json:"is_prescription_item,omitempty"`
-	Wholesale              *bool    `db:"wholesale" json:"wholesale,omitempty"`
-	ProductLocationID      []string `db:"product_location_id" json:"product_location_id,omitempty"`
-	ImageURL               *string  `db:"image_url" json:"image_url,omitempty"`
+	ID                     int64          `db:"id" json:"id"`
+	OrderSN                string         `db:"order_sn" json:"order_sn"`
+	OrderItemID            *int64         `db:"order_item_id" json:"order_item_id,omitempty"`
+	ItemName               *string        `db:"item_name" json:"item_name,omitempty"`
+	ModelOriginalPrice     *float64       `db:"model_original_price" json:"model_original_price,omitempty"`
+	ModelQuantityPurchased *int           `db:"model_quantity_purchased" json:"model_quantity_purchased,omitempty"`
+	ItemID                 *int64         `db:"item_id" json:"item_id,omitempty"`
+	ItemSKU                *string        `db:"item_sku" json:"item_sku,omitempty"`
+	ModelID                *int64         `db:"model_id" json:"model_id,omitempty"`
+	ModelName              *string        `db:"model_name" json:"model_name,omitempty"`
+	ModelSKU               *string        `db:"model_sku" json:"model_sku,omitempty"`
+	ModelDiscountedPrice   *float64       `db:"model_discounted_price" json:"model_discounted_price,omitempty"`
+	Weight                 *float64       `db:"weight" json:"weight,omitempty"`
+	PromotionID            *int64         `db:"promotion_id" json:"promotion_id,omitempty"`
+	PromotionType          *string        `db:"promotion_type" json:"promotion_type,omitempty"`
+	PromotionGroupID       *int64         `db:"promotion_group_id" json:"promotion_group_id,omitempty"`
+	AddOnDeal              *bool          `db:"add_on_deal" json:"add_on_deal,omitempty"`
+	AddOnDealID            *int64         `db:"add_on_deal_id" json:"add_on_deal_id,omitempty"`
+	MainItem               *bool          `db:"main_item" json:"main_item,omitempty"`
+	IsB2COwnedItem         *bool          `db:"is_b2c_owned_item" json:"is_b2c_owned_item,omitempty"`
+	IsPrescriptionItem     *bool          `db:"is_prescription_item" json:"is_prescription_item,omitempty"`
+	Wholesale              *bool          `db:"wholesale" json:"wholesale,omitempty"`
+	ProductLocationID      pq.StringArray `db:"product_location_id" json:"product_location_id,omitempty"`
+	ImageURL               *string        `db:"image_url" json:"image_url,omitempty"`
 }
 
 // ShopeeOrderPackageRow stores shipping package details associated with an order.

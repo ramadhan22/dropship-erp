@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -202,7 +203,7 @@ func normalizeOrderDetail(orderSN, namaToko string, det ShopeeOrderDetail) (*mod
 					IsB2COwnedItem:         asBool(im, "is_b2c_owned_item"),
 					IsPrescriptionItem:     asBool(im, "is_prescription_item"),
 					Wholesale:              asBool(im, "wholesale"),
-					ProductLocationID:      asStringSlice(im, "product_location_id"),
+					ProductLocationID:      pq.StringArray(asStringSlice(im, "product_location_id")),
 					ImageURL:               asString(im, "image_url"),
 				})
 			}
