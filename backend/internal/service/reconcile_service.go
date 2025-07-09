@@ -43,6 +43,7 @@ type ReconcileServiceStoreRepo interface {
 }
 type ReconcileServiceDetailRepo interface {
 	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) error
+	UpdateOrderDetailStatus(ctx context.Context, sn, status, orderStatus string, updateTime time.Time) error
 }
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
@@ -515,15 +516,6 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 	}
 	statusStr, _ := statusVal.(string)
 	status := strings.ToLower(statusStr)
-	if status == "completed" {
-		if err := s.createEscrowSettlementJournal(ctx, invoice); err != nil {
-			return err
-		}
-		return nil
-	}
-	if status != "cancelled" {
-		return nil
-	}
 	var updateTime time.Time
 	if ts, ok := (*detail)["update_time"]; ok {
 		switch v := ts.(type) {
@@ -542,6 +534,15 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 	if updateTime.IsZero() {
 		updateTime = time.Now()
 	}
+	if status == "completed" {
+		if err := s.createEscrowSettlementJournal(ctx, invoice, statusStr, updateTime); err != nil {
+			return err
+		}
+		return nil
+	}
+	if status != "cancelled" {
+		return nil
+	}
 	dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
@@ -551,7 +552,7 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 
 // createEscrowSettlementJournal posts journal entries based on escrow detail and
 // marks the purchase as complete.
-func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, invoice string) error {
+func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, invoice, status string, updateTime time.Time) error {
 	log.Printf("createEscrowSettlementJournal %s", invoice)
 
 	var tx *sqlx.Tx
@@ -633,7 +634,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	}
 
 	je := &models.JournalEntry{
-		EntryDate:    time.Now(),
+		EntryDate:    updateTime,
 		Description:  ptrString("Shopee escrow " + invoice),
 		SourceType:   "shopee_escrow",
 		SourceID:     invoice,
@@ -660,6 +661,12 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		}
 		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
 			return err
+		}
+	}
+
+	if s.detailRepo != nil {
+		if err := s.detailRepo.UpdateOrderDetailStatus(ctx, dp.KodeInvoiceChannel, status, status, updateTime); err != nil {
+			log.Printf("update order detail %s: %v", invoice, err)
 		}
 	}
 

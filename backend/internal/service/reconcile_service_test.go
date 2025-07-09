@@ -104,6 +104,10 @@ func (f *fakeDetailRepo) SaveOrderDetail(ctx context.Context, d *models.ShopeeOr
 	return nil
 }
 
+func (f *fakeDetailRepo) UpdateOrderDetailStatus(ctx context.Context, sn, status, orderStatus string, updateTime time.Time) error {
+	return nil
+}
+
 func TestMatchAndJournal_Success(t *testing.T) {
 	ctx := context.Background()
 
