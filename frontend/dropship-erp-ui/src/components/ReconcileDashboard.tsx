@@ -52,13 +52,34 @@ function formatValue(key: string, val: any): string {
       k.includes("fee") ||
       k.includes("price") ||
       k.includes("total") ||
-      k.includes("tax")
+      k.includes("tax") ||
+      k.includes("voucher") ||
+      k.includes("discount") ||
+      k.includes("cost")
     ) {
       return formatCurrency(val);
     }
   }
-  if (typeof val === "string" && /^\d+$/.test(val) && (k.includes("time") || k.includes("date"))) {
+  if (
+    typeof val === "string" &&
+    /^\d+$/.test(val) &&
+    (k.includes("time") || k.includes("date"))
+  ) {
     return formatDateTime(Number(val) * 1000);
+  }
+  if (
+    typeof val === "string" &&
+    /^\d+(\.\d+)?$/.test(val) &&
+    (k.includes("amount") ||
+      k.includes("fee") ||
+      k.includes("price") ||
+      k.includes("total") ||
+      k.includes("tax") ||
+      k.includes("voucher") ||
+      k.includes("discount") ||
+      k.includes("cost"))
+  ) {
+    return formatCurrency(Number(val));
   }
   return String(val);
 }
