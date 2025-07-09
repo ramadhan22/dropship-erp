@@ -18,6 +18,7 @@ import {
   reconcileCheck,
   cancelPurchase,
   updateShopeeStatus,
+  updateShopeeStatuses,
   fetchEscrowDetail,
   fetchShopeeDetail,
 } from "../api/reconcile";
@@ -188,10 +189,15 @@ export default function ReconcileDashboard() {
   };
 
   const handleReconcileAll = async () => {
+    const invoices = data.map((row) => row.kode_invoice_channel);
+    try {
+      await updateShopeeStatuses(invoices);
+    } catch {
+      // ignore batch errors
+    }
     await Promise.all(
       data.map(async (row) => {
         try {
-          await updateShopeeStatus(row.kode_invoice_channel);
           await reconcileCheck(row.kode_pesanan);
         } catch {
           // ignore individual errors
