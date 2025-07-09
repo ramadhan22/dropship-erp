@@ -128,3 +128,20 @@ func (r *OrderDetailRepo) GetOrderDetail(ctx context.Context, sn string) (*model
 	}
 	return &det, items, packs, nil
 }
+
+// UpdateOrderDetailStatus updates status fields and update_time for the given order_sn.
+func (r *OrderDetailRepo) UpdateOrderDetailStatus(ctx context.Context, sn, status, orderStatus string, updateTime time.Time) error {
+	var statusVal, orderStatusVal interface{}
+	if status != "" {
+		statusVal = status
+	}
+	if orderStatus != "" {
+		orderStatusVal = orderStatus
+	}
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE shopee_order_details
+                 SET status=$2, order_status=$3, update_time=$4
+                 WHERE order_sn=$1`,
+		sn, statusVal, orderStatusVal, updateTime)
+	return err
+}
