@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  LinearProgress,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -130,6 +131,9 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [detail, setDetail] = useState<
     ShopeeOrderDetail | ShopeeEscrowDetail | null
   >(null);
@@ -210,6 +214,7 @@ export default function ReconcileDashboard() {
         }
       }
 
+      setProgress({ done: 0, total: all.length });
       const concurrency =
         (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
       let idx = 0;
@@ -222,9 +227,14 @@ export default function ReconcileDashboard() {
           } catch {
             // ignore individual errors
           }
+          setProgress((p) =>
+            p ? { ...p, done: Math.min(p.done + 1, p.total) } : p,
+          );
         }
       });
       await Promise.all(workers);
+
+      setProgress(null);
 
       setMsg({ type: "success", text: "Completed" });
       reload();
@@ -339,6 +349,26 @@ export default function ReconcileDashboard() {
         <Alert severity={msg.type} sx={{ mt: 2 }}>
           {msg.text}
         </Alert>
+      )}
+      {progress && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            marginTop: "0.5rem",
+          }}
+        >
+          <LinearProgress
+            variant="determinate"
+            value={(progress.done / progress.total) * 100}
+            sx={{ flexGrow: 1 }}
+          />
+          <span>
+            Reconciling {progress.done}/{progress.total} (
+            {Math.round((progress.done / progress.total) * 100)}%)
+          </span>
+        </div>
       )}
       <SortableTable columns={columns} data={data} />
       {controls}
