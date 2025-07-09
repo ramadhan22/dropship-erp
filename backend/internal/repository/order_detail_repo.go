@@ -81,3 +81,50 @@ func (r *OrderDetailRepo) SaveOrderDetail(ctx context.Context, detail *models.Sh
 	}
 	return nil
 }
+
+// ListOrderDetails returns rows filtered by store name and partial order_sn with pagination.
+func (r *OrderDetailRepo) ListOrderDetails(ctx context.Context, store, order string, limit, offset int) ([]models.ShopeeOrderDetailRow, int, error) {
+	countQuery := `SELECT COUNT(*) FROM shopee_order_details
+                WHERE ($1 = '' OR nama_toko = $1)
+                  AND ($2 = '' OR order_sn ILIKE '%' || $2 || '%')`
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery, store, order); err != nil {
+		return nil, 0, err
+	}
+	query := `SELECT * FROM shopee_order_details
+                WHERE ($1 = '' OR nama_toko = $1)
+                  AND ($2 = '' OR order_sn ILIKE '%' || $2 || '%')
+                ORDER BY checkout_time DESC
+                LIMIT $3 OFFSET $4`
+	var list []models.ShopeeOrderDetailRow
+	if err := r.db.SelectContext(ctx, &list, query, store, order, limit, offset); err != nil {
+		return nil, 0, err
+	}
+	if list == nil {
+		list = []models.ShopeeOrderDetailRow{}
+	}
+	return list, total, nil
+}
+
+// GetOrderDetail fetches a detail row and associated items and packages by order_sn.
+func (r *OrderDetailRepo) GetOrderDetail(ctx context.Context, sn string) (*models.ShopeeOrderDetailRow, []models.ShopeeOrderItemRow, []models.ShopeeOrderPackageRow, error) {
+	var det models.ShopeeOrderDetailRow
+	if err := r.db.GetContext(ctx, &det, `SELECT * FROM shopee_order_details WHERE order_sn=$1`, sn); err != nil {
+		return nil, nil, nil, err
+	}
+	var items []models.ShopeeOrderItemRow
+	if err := r.db.SelectContext(ctx, &items, `SELECT * FROM shopee_order_items WHERE order_sn=$1 ORDER BY id`, sn); err != nil {
+		return nil, nil, nil, err
+	}
+	if items == nil {
+		items = []models.ShopeeOrderItemRow{}
+	}
+	var packs []models.ShopeeOrderPackageRow
+	if err := r.db.SelectContext(ctx, &packs, `SELECT * FROM shopee_order_packages WHERE order_sn=$1 ORDER BY id`, sn); err != nil {
+		return nil, nil, nil, err
+	}
+	if packs == nil {
+		packs = []models.ShopeeOrderPackageRow{}
+	}
+	return &det, items, packs, nil
+}

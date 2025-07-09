@@ -22,6 +22,7 @@ import StoreDetailPage from "./components/StoreDetailPage";
 import WithdrawalPage from "./components/WithdrawalPage";
 import ShopeeAdjustmentPage from "./components/ShopeeAdjustmentPage";
 import TaxPaymentPage from "./components/TaxPaymentPage";
+import ShopeeOrderDetailPage from "./components/ShopeeOrderDetailPage";
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
         <Link to="/ads">Ads Invoice</Link> | <Link to="/journal">Journal</Link>{" "}
         | <Link to="/kas">Kas</Link> |{" "}
         <Link to="/pending-balance">Pending Balance</Link> |{" "}
+        <Link to="/order-details">Order Details</Link> |{" "}
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link> |{" "}
         <Link to="/tax-payment">Tax Payment</Link> |{" "}
         <Link to="/withdrawals">Withdrawals</Link>
@@ -68,8 +70,9 @@ export default function App() {
           <Route path="/kas" element={<KasAccountPage />} />
           <Route path="/stores/:id" element={<StoreDetailPage />} />
           <Route path="/pending-balance" element={<PendingBalancePage />} />
-          <Route path="/tax-payment" element={<TaxPaymentPage />} />
-          <Route path="/withdrawals" element={<WithdrawalPage />} />
+        <Route path="/tax-payment" element={<TaxPaymentPage />} />
+        <Route path="/order-details" element={<ShopeeOrderDetailPage />} />
+        <Route path="/withdrawals" element={<WithdrawalPage />} />
         </Routes>
       </div>
     </BrowserRouter>

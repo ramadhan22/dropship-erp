@@ -16,6 +16,9 @@ import type {
   SalesProfit,
   DailyPurchaseTotal,
   MonthlyPurchaseTotal,
+  ShopeeOrderDetailRow,
+  ShopeeOrderItemRow,
+  ShopeeOrderPackageRow,
 } from "../types";
 
 export interface ImportResponse {
@@ -433,3 +436,20 @@ export const withdrawShopeeBalance = (store: string, amount: number) =>
 
 export const fetchPendingBalance = (store: string) =>
   api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
+
+export function listOrderDetails(params: { store?: string; order?: string; page?: number; page_size?: number }) {
+  const q = new URLSearchParams();
+  if (params.store) q.append("store", params.store);
+  if (params.order) q.append("order", params.order);
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  return api.get<{ data: ShopeeOrderDetailRow[]; total: number }>(
+    `/order-details?${q.toString()}`,
+  );
+}
+
+export function getOrderDetail(sn: string) {
+  return api.get<{ detail: ShopeeOrderDetailRow; items: ShopeeOrderItemRow[]; packages: ShopeeOrderPackageRow[] }>(
+    `/order-details/${sn}`,
+  );
+}

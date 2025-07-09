@@ -475,3 +475,89 @@ export interface TaxPayment {
   is_paid: boolean;
   paid_at: string;
 }
+
+export interface ShopeeOrderDetailRow {
+  order_sn: string;
+  nama_toko: string;
+  status?: string;
+  order_status?: string;
+  checkout_time?: string;
+  update_time?: string;
+  pay_time?: string;
+  total_amount?: number;
+  currency?: string;
+  actual_shipping_fee_confirmed?: boolean;
+  buyer_cancel_reason?: string;
+  buyer_cpf_id?: string;
+  buyer_user_id?: number;
+  buyer_username?: string;
+  cancel_by?: string;
+  cancel_reason?: string;
+  cod?: boolean;
+  create_time?: string;
+  days_to_ship?: number;
+  dropshipper?: string;
+  dropshipper_phone?: string;
+  estimated_shipping_fee?: number;
+  fulfillment_flag?: string;
+  goods_to_declare?: boolean;
+  message_to_seller?: string;
+  note?: string;
+  note_update_time?: string;
+  pickup_done_time?: string;
+  region?: string;
+  reverse_shipping_fee?: number;
+  ship_by_date?: string;
+  shipping_carrier?: string;
+  split_up?: boolean;
+  payment_method?: string;
+  recipient_name?: string;
+  recipient_phone?: string;
+  recipient_full_address?: string;
+  recipient_city?: string;
+  recipient_district?: string;
+  recipient_state?: string;
+  recipient_town?: string;
+  recipient_zipcode?: string;
+  created_at: string;
+}
+
+export interface ShopeeOrderItemRow {
+  id: number;
+  order_sn: string;
+  order_item_id?: number;
+  item_name?: string;
+  model_original_price?: number;
+  model_quantity_purchased?: number;
+  item_id?: number;
+  item_sku?: string;
+  model_id?: number;
+  model_name?: string;
+  model_sku?: string;
+  model_discounted_price?: number;
+  weight?: number;
+  promotion_id?: number;
+  promotion_type?: string;
+  promotion_group_id?: number;
+  add_on_deal?: boolean;
+  add_on_deal_id?: number;
+  main_item?: boolean;
+  is_b2c_owned_item?: boolean;
+  is_prescription_item?: boolean;
+  wholesale?: boolean;
+  product_location_id?: string[];
+  image_url?: string;
+}
+
+export interface ShopeeOrderPackageRow {
+  id: number;
+  order_sn: string;
+  package_number?: string;
+  logistics_status?: string;
+  shipping_carrier?: string;
+  logistics_channel_id?: number;
+  parcel_chargeable_weight_gram?: number;
+  allow_self_design_awb?: boolean;
+  sorting_group?: string;
+  group_shipment_id?: string;
+}
