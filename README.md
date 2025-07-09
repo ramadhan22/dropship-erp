@@ -180,6 +180,12 @@ Automated agents contributing to this repository should follow the
   introduced.
 - Ensure the backend CORS configuration is kept in sync whenever new pages or
   API endpoints are added.
+- When database migrations involve JSON data from an external API, parse the
+  fields and store them in regular columns instead of JSONB so the values can be
+  queried directly.
+- Whenever a new database table is introduced, add a corresponding page in the
+  React app that displays the data with filtering, pagination, sorting and a
+  detail modal so users can inspect rows easily.
 
 ## License
 

@@ -37,6 +37,12 @@ If a command cannot be executed in the environment, mention this in the pull req
   same key so repeated imports overwrite previous rows.
 - Remove any related journal entries when old data is purged to prevent
   duplicate postings.
+- When storing data that originates as JSON (e.g. API responses), avoid JSONB
+  columns.  Expand the fields into normal table columns using appropriate data
+  types during the migration so values can be queried and indexed easily.
+- When adding a new database table, also create a matching frontend page that
+  lists the records using `SortableTable` with filtering, pagination and sorting.
+  Provide a detail modal so users can inspect all fields.
 
 ## UI Patterns
 - Use the `SortableTable` component for displaying tabular data.
