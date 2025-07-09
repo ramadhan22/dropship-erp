@@ -68,11 +68,17 @@ func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, from, t
 	base := `SELECT dp.kode_pesanan, dp.kode_invoice_channel, dp.nama_toko, dp.status_pesanan_terakhir,
                ss.no_pesanan
                FROM dropship_purchases dp
+               JOIN journal_entries je ON je.source_type = 'pending_sales' AND je.source_id = dp.kode_invoice_channel
                LEFT JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
                WHERE ($1 = '' OR dp.nama_toko = $1)
                  AND ($2 = '' OR dp.kode_invoice_channel ILIKE '%' || $2 || '%')
                  AND ($3 = '' OR DATE(dp.waktu_pesanan_terbuat) >= $3::date)
                  AND ($4 = '' OR DATE(dp.waktu_pesanan_terbuat) <= $4::date)
+                 AND NOT EXISTS (
+                       SELECT 1 FROM journal_entries je2
+                       WHERE je2.source_id = dp.kode_invoice_channel
+                         AND je2.source_type IN ('shopee_escrow','reconcile_cancel')
+               )
                  AND (dp.status_pesanan_terakhir <> 'Pesanan selesai'
                       AND dp.status_pesanan_terakhir <> 'Pesanan dibatalkan'
                       AND dp.status_pesanan_terakhir <> 'Cancelled Shopee')`

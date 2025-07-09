@@ -287,6 +287,14 @@ func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = testRoundTripper(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(srv.URL, "http://")
+		return oldTransport.RoundTrip(req)
+	})
+	defer func() { http.DefaultTransport = oldTransport }()
+
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
 	client.httpClient = srv.Client()
 	now := time.Now()
@@ -371,6 +379,14 @@ func TestImportFromCSV_SkipOnDetailError(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer srv.Close()
+
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = testRoundTripper(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(srv.URL, "http://")
+		return oldTransport.RoundTrip(req)
+	})
+	defer func() { http.DefaultTransport = oldTransport }()
 
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
 	client.httpClient = srv.Client()

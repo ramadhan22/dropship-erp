@@ -44,6 +44,7 @@ type ReconcileServiceStoreRepo interface {
 type ReconcileServiceDetailRepo interface {
 	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) error
 	UpdateOrderDetailStatus(ctx context.Context, sn, status, orderStatus string, updateTime time.Time) error
+	GetOrderDetail(ctx context.Context, sn string) (*models.ShopeeOrderDetailRow, []models.ShopeeOrderItemRow, []models.ShopeeOrderPackageRow, error)
 }
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
@@ -249,21 +250,38 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from
 		}
 		for i := range list {
 			log.Printf("Fetching Shopee order detail for %s", list[i].KodeInvoiceChannel)
-			detail, err := s.GetShopeeOrderDetail(ctx, list[i].KodeInvoiceChannel)
-			if err != nil {
-				logutil.Errorf("GetShopeeOrderDetail %s: %v", list[i].KodeInvoiceChannel, err)
-				list[i].ShopeeOrderStatus = "Not Found"
-				continue
+
+			var statusStr string
+			if s.detailRepo != nil {
+				if row, _, _, err := s.detailRepo.GetOrderDetail(ctx, list[i].KodeInvoiceChannel); err == nil && row != nil {
+					if row.OrderStatus != nil {
+						statusStr = *row.OrderStatus
+					} else if row.Status != nil {
+						statusStr = *row.Status
+					}
+				}
 			}
-			status := (*detail)["order_status"]
-			if status == nil {
-				status = (*detail)["status"]
+
+			if statusStr == "" {
+				detail, err := s.GetShopeeOrderDetail(ctx, list[i].KodeInvoiceChannel)
+				if err != nil {
+					logutil.Errorf("GetShopeeOrderDetail %s: %v", list[i].KodeInvoiceChannel, err)
+					list[i].ShopeeOrderStatus = "Not Found"
+					continue
+				}
+				status := (*detail)["order_status"]
+				if status == nil {
+					status = (*detail)["status"]
+				}
+				if str, ok := status.(string); ok {
+					statusStr = str
+				}
 			}
-			if str, ok := status.(string); ok {
-				list[i].ShopeeOrderStatus = str
-			} else {
-				list[i].ShopeeOrderStatus = "Not Found"
+
+			if statusStr == "" {
+				statusStr = "Not Found"
 			}
+			list[i].ShopeeOrderStatus = statusStr
 		}
 		return list, total, nil
 	}

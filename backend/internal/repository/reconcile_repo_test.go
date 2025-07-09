@@ -65,26 +65,56 @@ func TestListCandidates(t *testing.T) {
 	recRepo := NewReconcileRepo(testDB)
 	dropRepo := NewDropshipRepo(testDB)
 	shopRepo := NewShopeeRepo(testDB)
+	jrepo := NewJournalRepo(testDB)
 
 	kode1 := "CAND-" + time.Now().Format("150405")
 	dp1 := &models.DropshipPurchase{KodePesanan: kode1, KodeInvoiceChannel: kode1, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp1)
 	ss1 := &models.ShopeeSettled{NamaToko: "ShopA", NoPesanan: kode1, WaktuPesananDibuat: time.Now(), TanggalDanaDilepaskan: time.Now()}
 	_ = shopRepo.InsertShopeeSettled(ctx, ss1)
+	je := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("pending"),
+		SourceType:   "pending_sales",
+		SourceID:     kode1,
+		ShopUsername: "ShopA",
+		Store:        "ShopA",
+		CreatedAt:    time.Now(),
+	}
+	_, _ = jrepo.CreateJournalEntry(ctx, je)
 
 	kode2 := "CAND-" + time.Now().Format("150405") + "b"
-	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
+	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
+
+	je2 := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("pending"),
+		SourceType:   "pending_sales",
+		SourceID:     kode2,
+		ShopUsername: "ShopA",
+		Store:        "ShopA",
+		CreatedAt:    time.Now(),
+	}
+	_, _ = jrepo.CreateJournalEntry(ctx, je2)
+
+	escrow := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("escrow"),
+		SourceType:   "shopee_escrow",
+		SourceID:     kode2,
+		ShopUsername: "ShopA",
+		Store:        "ShopA",
+		CreatedAt:    time.Now(),
+	}
+	_, _ = jrepo.CreateJournalEntry(ctx, escrow)
 
 	list, total, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "", 10, 0)
 	if err != nil {
 		t.Fatalf("ListCandidates error: %v", err)
 	}
-	if total < 2 {
-		t.Errorf("expected total >= 2, got %d", total)
-	}
-	if len(list) == 0 {
-		t.Errorf("expected some candidates")
+	if total != 1 || len(list) != 1 {
+		t.Errorf("expected 1 candidate, got %d total %d", len(list), total)
 	}
 
 	list2, total2, err := recRepo.ListCandidates(ctx, "", kode1, "", "", 10, 0)
@@ -98,4 +128,5 @@ func TestListCandidates(t *testing.T) {
 	// cleanup
 	testDB.ExecContext(ctx, "DELETE FROM shopee_settled WHERE no_pesanan=$1", kode1)
 	testDB.ExecContext(ctx, "DELETE FROM dropship_purchases WHERE kode_pesanan IN ($1,$2)", kode1, kode2)
+	testDB.ExecContext(ctx, "DELETE FROM journal_entries WHERE source_id IN ($1,$2)", kode1, kode2)
 }
