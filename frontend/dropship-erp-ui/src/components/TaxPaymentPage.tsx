@@ -2,6 +2,7 @@ import { Alert, Button, CircularProgress, MenuItem, Select } from "@mui/material
 import { useState } from "react";
 import { fetchTaxPayment, payTax } from "../api/tax";
 import { listAllStores } from "../api";
+import { formatCurrency } from "../utils/format";
 import type { Store, TaxPayment } from "../types";
 
 export default function TaxPaymentPage() {
@@ -44,10 +45,6 @@ export default function TaxPaymentPage() {
     }
   };
 
-  const format = (n: number) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(
-      n,
-    );
 
   return (
     <div>
@@ -83,8 +80,8 @@ export default function TaxPaymentPage() {
       {error && <Alert severity="error">{error}</Alert>}
       {data && (
         <div style={{ marginTop: "1rem" }}>
-          <p>Revenue: {format(data.revenue)}</p>
-          <p>Tax Amount: {format(data.tax_amount)}</p>
+          <p>Revenue: {formatCurrency(data.revenue)}</p>
+          <p>Tax Amount: {formatCurrency(data.tax_amount)}</p>
           {data.is_paid ? (
             <Alert severity="success">Paid on {data.paid_at}</Alert>
           ) : (

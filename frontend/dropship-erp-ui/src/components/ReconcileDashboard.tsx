@@ -31,6 +31,7 @@ import type {
 import { getCurrentMonthRange } from "../utils/date";
 import useServerPagination from "../useServerPagination";
 import JsonTabs from "./JsonTabs";
+import { formatDateTime } from "../utils/format";
 
 function formatLabel(label: string): string {
   return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -38,7 +39,7 @@ function formatLabel(label: string): string {
 
 function formatValue(val: any): string {
   if (typeof val === "number" && val > 1e10) {
-    return new Date(val * 1000).toLocaleString();
+    return formatDateTime(val * 1000);
   }
   return String(val);
 }
