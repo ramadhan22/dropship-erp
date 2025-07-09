@@ -23,6 +23,7 @@ import WithdrawalPage from "./components/WithdrawalPage";
 import ShopeeAdjustmentPage from "./components/ShopeeAdjustmentPage";
 import TaxPaymentPage from "./components/TaxPaymentPage";
 import ShopeeOrderDetailPage from "./components/ShopeeOrderDetailPage";
+import WalletTransactionPage from "./components/WalletTransactionPage";
 
 export default function App() {
   return (
@@ -45,7 +46,8 @@ export default function App() {
         <Link to="/order-details">Order Details</Link> |{" "}
         <Link to="/reconcile/dashboard">Reconcile Dashboard</Link> |{" "}
         <Link to="/tax-payment">Tax Payment</Link> |{" "}
-        <Link to="/withdrawals">Withdrawals</Link>
+        <Link to="/withdrawals">Withdrawals</Link> |{" "}
+        <Link to="/wallet-transactions">Wallet Txn</Link>
       </nav>
       <div style={{ padding: "1rem" }}>
         <BreadcrumbsNav />
@@ -54,7 +56,10 @@ export default function App() {
           <Route path="/dropship" element={<DropshipImport />} />
           <Route path="/shopee" element={<ShopeeSalesPage />} />
           <Route path="/sales-profit" element={<SalesProfitPage />} />
-          <Route path="/shopee/adjustments" element={<ShopeeAdjustmentPage />} />
+          <Route
+            path="/shopee/adjustments"
+            element={<ShopeeAdjustmentPage />}
+          />
           <Route path="/shopee/affiliate" element={<ShopeeAffiliatePage />} />
           <Route path="/reconcile" element={<ReconcileForm />} />
           <Route path="/reconcile/dashboard" element={<ReconcileDashboard />} />
@@ -70,9 +75,13 @@ export default function App() {
           <Route path="/kas" element={<KasAccountPage />} />
           <Route path="/stores/:id" element={<StoreDetailPage />} />
           <Route path="/pending-balance" element={<PendingBalancePage />} />
-        <Route path="/tax-payment" element={<TaxPaymentPage />} />
-        <Route path="/order-details" element={<ShopeeOrderDetailPage />} />
-        <Route path="/withdrawals" element={<WithdrawalPage />} />
+          <Route path="/tax-payment" element={<TaxPaymentPage />} />
+          <Route path="/order-details" element={<ShopeeOrderDetailPage />} />
+          <Route path="/withdrawals" element={<WithdrawalPage />} />
+          <Route
+            path="/wallet-transactions"
+            element={<WalletTransactionPage />}
+          />
         </Routes>
       </div>
     </BrowserRouter>
