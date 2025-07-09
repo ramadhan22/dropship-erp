@@ -123,6 +123,18 @@ export default function ShopeeOrderDetailPage() {
     },
   ];
 
+  const itemColumns: Column<ShopeeOrderItemRow>[] = [
+    { label: "Item Name", key: "item_name" },
+    { label: "Model SKU", key: "model_sku" },
+    { label: "Qty", key: "model_quantity_purchased", align: "right" },
+  ];
+
+  const packageColumns: Column<ShopeeOrderPackageRow>[] = [
+    { label: "Package #", key: "package_number" },
+    { label: "Status", key: "logistics_status" },
+    { label: "Carrier", key: "shipping_carrier" },
+  ];
+
   return (
     <div>
       <h2>Shopee Order Details</h2>
@@ -174,20 +186,32 @@ export default function ShopeeOrderDetailPage() {
                   </tr>
                 ))}
                 {detail.items.length > 0 && (
-                  <tr>
-                    <td style={{ fontWeight: "bold" }}>Items</td>
-                    <td>
-                      <JsonTabs items={detail.items} />
-                    </td>
-                  </tr>
+                  <>
+                    <tr>
+                      <td colSpan={2} style={{ fontWeight: "bold", paddingTop: "1rem" }}>
+                        Items
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2}>
+                        <SortableTable columns={itemColumns} data={detail.items} />
+                      </td>
+                    </tr>
+                  </>
                 )}
                 {detail.packages.length > 0 && (
-                  <tr>
-                    <td style={{ fontWeight: "bold" }}>Packages</td>
-                    <td>
-                      <JsonTabs items={detail.packages} />
-                    </td>
-                  </tr>
+                  <>
+                    <tr>
+                      <td colSpan={2} style={{ fontWeight: "bold", paddingTop: "1rem" }}>
+                        Packages
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2}>
+                        <SortableTable columns={packageColumns} data={detail.packages} />
+                      </td>
+                    </tr>
+                  </>
                 )}
               </tbody>
             </table>
