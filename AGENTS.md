@@ -67,6 +67,7 @@ models or introducing a new page, keep this mapping in sync.
 - `asset_accounts` – listed and adjusted on **KasAccountPage**.
 - `jenis_channels` & `stores` – maintained on **ChannelPage** and used across
   filters.
+
   - `shopee_order_details`, `shopee_order_items` & `shopee_order_packages` – store
     Shopee order information for reconciliation and analysis. Displayed on
     **ShopeeOrderDetailPage**.
