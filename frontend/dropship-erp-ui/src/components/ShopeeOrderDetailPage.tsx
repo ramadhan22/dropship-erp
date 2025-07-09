@@ -10,6 +10,7 @@ import {
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import JsonTabs from "./JsonTabs";
+import { formatCurrency, formatDateTime } from "../utils/format";
 import {
   listOrderDetails,
   getOrderDetail,
@@ -29,7 +30,7 @@ function formatLabel(label: string): string {
 
 function formatValue(val: any): string {
   if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-    return new Date(val).toLocaleString();
+    return formatDateTime(val);
   }
   return String(val);
 }
@@ -63,13 +64,6 @@ function renderValue(value: any): JSX.Element {
   return <>{formatValue(value)}</>;
 }
 
-function money(v: number | undefined | null) {
-  if (v == null) return "";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-  }).format(v);
-}
 
 export default function ShopeeOrderDetailPage() {
   const [store, setStore] = useState("");
@@ -144,19 +138,19 @@ export default function ShopeeOrderDetailPage() {
       label: "Orig Price",
       key: "model_original_price",
       align: "right",
-      render: (v) => money(v as number),
+      render: (v) => formatCurrency(v as number),
     },
     {
       label: "Disc Price",
       key: "model_discounted_price",
       align: "right",
-      render: (v) => money(v as number),
+      render: (v) => formatCurrency(v as number),
     },
     {
       label: "Total Orig",
       align: "right",
       render: (_, row) =>
-        money(
+        formatCurrency(
           (row.model_original_price ?? 0) *
             (row.model_quantity_purchased ?? 0),
         ),
@@ -165,7 +159,7 @@ export default function ShopeeOrderDetailPage() {
       label: "Total Disc",
       align: "right",
       render: (_, row) =>
-        money(
+        formatCurrency(
           (row.model_discounted_price ?? 0) *
             (row.model_quantity_purchased ?? 0),
         ),
@@ -264,8 +258,8 @@ export default function ShopeeOrderDetailPage() {
                     </tr>
                     <tr>
                       <td colSpan={2} style={{ textAlign: "right", paddingTop: "0.5rem" }}>
-                        <div>Total Original Price: {money(totalOrig)}</div>
-                        <div>Total Discounted Price: {money(totalDisc)}</div>
+                        <div>Total Original Price: {formatCurrency(totalOrig)}</div>
+                        <div>Total Discounted Price: {formatCurrency(totalDisc)}</div>
                       </td>
                     </tr>
                   </>

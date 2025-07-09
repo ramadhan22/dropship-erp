@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { fetchBalanceSheet, listAllStores } from "../api";
 import { fetchProfitLoss } from "../api/pl";
+import { formatCurrency } from "../utils/format";
 import type { BalanceCategory, Store, Account } from "../types";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
@@ -25,11 +26,7 @@ function AccountTable({ accounts }: { accounts: Account[] }) {
       label: "Balance",
       key: "balance",
       align: "right",
-      render: (v) =>
-        Number(v).toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        }),
+      render: (v) => formatCurrency(Number(v)),
     },
   ];
   return <SortableTable columns={columns} data={accounts} />;
@@ -165,8 +162,6 @@ export default function BalanceSheetPage() {
     return list;
   })();
   const equityTotal = equityAccounts.reduce((sum, a) => sum + a.balance, 0);
-  const format = (n: number) =>
-    n.toLocaleString("id-ID", { style: "currency", currency: "IDR" });
 
   return (
     <div>
@@ -262,14 +257,14 @@ export default function BalanceSheetPage() {
           variant="subtitle1"
           sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}
         >
-          Total Assets: {format(assetCat?.total ?? 0)}
+          Total Assets: {formatCurrency(assetCat?.total ?? 0)}
         </Typography>
         <Typography
           variant="subtitle1"
           sx={{ flex: 1, fontWeight: "bold", textAlign: "right" }}
         >
           Total Liabilities + Equity:{" "}
-          {format((liabilityCat?.total ?? 0) + equityTotal)}
+          {formatCurrency((liabilityCat?.total ?? 0) + equityTotal)}
         </Typography>
       </div>
     </div>

@@ -22,6 +22,7 @@ import {
 } from "../api";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
+import { formatCurrency, formatDateTime } from "../utils/format";
 import type { ShopeeAffiliateSale } from "../types";
 
 export default function ShopeeAffiliatePage() {
@@ -52,17 +53,17 @@ export default function ShopeeAffiliatePage() {
     {
       label: "Waktu Pesanan",
       key: "waktu_pesanan",
-      render: (v) => new Date(v).toLocaleString(),
+      render: (v) => formatDateTime(v),
     },
     {
       label: "Waktu Pesanan Selesai",
       key: "waktu_pesanan_selesai",
-      render: (v) => new Date(v).toLocaleString(),
+      render: (v) => formatDateTime(v),
     },
     {
       label: "Waktu Terverifikasi",
       key: "waktu_pesanan_terverifikasi",
-      render: (v) => new Date(v).toLocaleString(),
+      render: (v) => formatDateTime(v),
     },
     { label: "Kode Produk", key: "kode_produk" },
     { label: "Nama Produk", key: "nama_produk" },
@@ -79,27 +80,19 @@ export default function ShopeeAffiliatePage() {
     {
       label: "Waktu Pesanan",
       key: "waktu_pesanan",
-      render: (v) => new Date(v).toLocaleDateString("id-ID"),
+      render: (v) => formatDateTime(v),
     },
     {
       label: "Nilai Pembelian",
       key: "nilai_pembelian",
       align: "right",
-      render: (v) =>
-        Number(v).toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        }),
+      render: (v) => formatCurrency(Number(v)),
     },
     {
       label: "Komisi Affiliate",
       key: "estimasi_komisi_affiliate_per_pesanan",
       align: "right",
-      render: (v) =>
-        Number(v).toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        }),
+      render: (v) => formatCurrency(Number(v)),
     },
     { label: "MCN", key: "mcn_terhubung" },
     { label: "ID Komisi Pesanan", key: "id_komisi_pesanan" },
@@ -134,7 +127,7 @@ export default function ShopeeAffiliatePage() {
     {
       label: "Waktu Pemotongan",
       key: "waktu_pemotongan",
-      render: (v) => new Date(v).toLocaleString(),
+      render: (v) => formatDateTime(v),
     },
     {
       label: "Dropship",
@@ -251,19 +244,11 @@ export default function ShopeeAffiliatePage() {
         </LocalizationProvider>
       </div>
       <div style={{ marginBottom: "0.5rem" }}>
-        <strong>Page Total:</strong>{" "}
-        {pageTotal.toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        })}
+        <strong>Page Total:</strong> {formatCurrency(pageTotal)}
         {" | "}
         <strong>Total Rows:</strong> {total}
         {" | "}
-        <strong>All Total:</strong>{" "}
-        {allTotal.toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        })}
+        <strong>All Total:</strong> {formatCurrency(allTotal)}
       </div>
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>

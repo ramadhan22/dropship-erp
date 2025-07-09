@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -63,7 +62,7 @@ func (h *ShopeeAdjustmentHandler) list(c *gin.Context) {
 }
 
 func (h *ShopeeAdjustmentHandler) update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, _ := getIDParam(c)
 	var a models.ShopeeAdjustment
 	if err := c.ShouldBindJSON(&a); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -78,7 +77,7 @@ func (h *ShopeeAdjustmentHandler) update(c *gin.Context) {
 }
 
 func (h *ShopeeAdjustmentHandler) delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, _ := getIDParam(c)
 	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

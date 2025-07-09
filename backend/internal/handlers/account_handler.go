@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -51,7 +50,7 @@ func (h *AccountHandler) HandleListAccounts(c *gin.Context) {
 }
 
 func (h *AccountHandler) HandleGetAccount(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, err := getIDParam(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account id"})
 		return
@@ -69,7 +68,7 @@ func (h *AccountHandler) HandleGetAccount(c *gin.Context) {
 }
 
 func (h *AccountHandler) HandleUpdateAccount(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, err := getIDParam(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account id"})
 		return
@@ -88,7 +87,7 @@ func (h *AccountHandler) HandleUpdateAccount(c *gin.Context) {
 }
 
 func (h *AccountHandler) HandleDeleteAccount(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, err := getIDParam(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid account id"})
 		return

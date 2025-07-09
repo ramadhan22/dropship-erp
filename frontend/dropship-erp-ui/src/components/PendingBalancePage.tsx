@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, CircularProgress, Alert, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import { listAllStores, fetchPendingBalance } from "../api";
 import type { Store } from "../types";
+import { formatCurrency } from "../utils/format";
 
 export default function PendingBalancePage() {
   const [store, setStore] = useState("");
@@ -33,8 +34,6 @@ export default function PendingBalancePage() {
     }
   }
 
-  const money = (v: number) =>
-    new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(v);
 
   return (
     <div>
@@ -67,7 +66,7 @@ export default function PendingBalancePage() {
         </Alert>
       )}
       {balance !== null && !loading && (
-        <div style={{ marginTop: "1rem", fontSize: "1.2rem" }}>{money(balance)}</div>
+        <div style={{ marginTop: "1rem", fontSize: "1.2rem" }}>{formatCurrency(balance)}</div>
       )}
     </div>
   );
