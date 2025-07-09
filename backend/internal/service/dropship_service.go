@@ -156,6 +156,45 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	if err != nil {
 		return 0, err
 	}
+
+	batches := make(map[string][]*models.DropshipPurchase)
+	for _, record := range allRecords {
+		h := &models.DropshipPurchase{
+			KodePesanan:        record[3],
+			NamaToko:           record[18],
+			KodeInvoiceChannel: record[19],
+			JenisChannel:       record[17],
+		}
+		if channel != "" && h.JenisChannel != channel {
+			continue
+		}
+		if existing[h.KodePesanan] || fetched[h.KodePesanan] {
+			continue
+		}
+		fetched[h.KodePesanan] = true
+		batches[h.NamaToko] = append(batches[h.NamaToko], h)
+	}
+
+	apiTotals := make(map[string]float64)
+	for store, list := range batches {
+		for i := 0; i < len(list); i += 50 {
+			end := i + 50
+			if end > len(list) {
+				end = len(list)
+			}
+			amtMap, err := s.fetchAndStoreDetailBatch(ctx, list[i:end])
+			if err != nil {
+				log.Printf("fetch batch detail store %s: %v", store, err)
+				for _, h := range list[i:end] {
+					skipped[h.KodePesanan] = true
+				}
+				continue
+			}
+			for k, v := range amtMap {
+				apiTotals[k] = v
+			}
+		}
+	}
 	// track the header for each newly inserted purchase so we can
 	// create the journal entry after all rows are processed
 	headersMap := make(map[string]*models.DropshipPurchase)
@@ -221,17 +260,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 				continue
 			}
 
-			var apiAmt float64
-			if !fetched[header.KodePesanan] {
-				amt, err := s.fetchAndStoreDetail(ctx, header)
-				fetched[header.KodePesanan] = true
-				if err != nil {
-					log.Printf("fetch order detail %s: %v", header.KodeInvoiceChannel, err)
-					skipped[header.KodePesanan] = true
-					continue
-				}
-				apiAmt = amt
-			}
+			apiAmt := apiTotals[header.KodePesanan]
 
 			if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
 				return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
@@ -379,6 +408,64 @@ func (s *DropshipService) fetchAndStoreDetail(ctx context.Context, header *model
 		}
 	}
 	return total, nil
+}
+
+// fetchAndStoreDetailBatch retrieves Shopee order details for multiple orders in a single API call.
+// It returns a map keyed by order_sn with summed original item prices for journal posting.
+func (s *DropshipService) fetchAndStoreDetailBatch(ctx context.Context, headers []*models.DropshipPurchase) (map[string]float64, error) {
+	res := make(map[string]float64)
+	if len(headers) == 0 {
+		return res, nil
+	}
+	if s.storeRepo == nil || s.client == nil {
+		return nil, fmt.Errorf("shopee client not configured")
+	}
+	storeName := headers[0].NamaToko
+	st, err := s.storeRepo.GetStoreByName(ctx, storeName)
+	if err != nil || st == nil || st.AccessToken == nil || st.ShopID == nil {
+		return nil, fmt.Errorf("fetch store %s: %w", storeName, err)
+	}
+	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+		return nil, err
+	}
+
+	sns := make([]string, len(headers))
+	hdrMap := make(map[string]*models.DropshipPurchase, len(headers))
+	for i, h := range headers {
+		sns[i] = h.KodeInvoiceChannel
+		hdrMap[h.KodeInvoiceChannel] = h
+	}
+
+	details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
+			details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	for _, det := range details {
+		snVal, _ := det["order_sn"].(string)
+		h := hdrMap[snVal]
+		row, items, packages := normalizeOrderDetail(snVal, storeName, det)
+		var total float64
+		for _, it := range items {
+			if it.ModelOriginalPrice != nil && it.ModelQuantityPurchased != nil {
+				total += *it.ModelOriginalPrice * float64(*it.ModelQuantityPurchased)
+			}
+		}
+		if s.detailRepo != nil {
+			if err := s.detailRepo.SaveOrderDetail(ctx, row, items, packages); err != nil {
+				log.Printf("save order detail %s: %v", h.KodeInvoiceChannel, err)
+			}
+		}
+		if h != nil {
+			res[h.KodePesanan] = total
+		}
+	}
+	return res, nil
 }
 
 // ensureStoreTokenValid refreshes the access token for the given store if it has
