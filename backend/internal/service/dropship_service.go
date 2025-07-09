@@ -367,35 +367,13 @@ func (s *DropshipService) fetchAndStoreDetail(ctx context.Context, header *model
 		return 0, err
 	}
 	var total float64
-	if list, ok := (*det)["item_list"].([]interface{}); ok {
-		for _, it := range list {
-			if m, ok := it.(map[string]interface{}); ok {
-				var price float64
-				switch v := m["model_original_price"].(type) {
-				case float64:
-					price = v
-				case string:
-					price, _ = strconv.ParseFloat(v, 64)
-				}
-				var qty int
-				switch q := m["model_quantity_purchased"].(type) {
-				case float64:
-					qty = int(q)
-				case string:
-					qi, _ := strconv.Atoi(q)
-					qty = qi
-				}
-				total += price * float64(qty)
-			}
+	row, items, packages := normalizeOrderDetail(header.KodeInvoiceChannel, header.NamaToko, *det)
+	for _, it := range items {
+		if it.ModelOriginalPrice != nil && it.ModelQuantityPurchased != nil {
+			total += *it.ModelOriginalPrice * float64(*it.ModelQuantityPurchased)
 		}
 	}
 	if s.detailRepo != nil {
-		row, items, packages := normalizeOrderDetail(header.KodeInvoiceChannel, header.NamaToko, *det)
-		for _, it := range items {
-			if it.ModelOriginalPrice != nil && it.ModelQuantityPurchased != nil {
-				total += *it.ModelOriginalPrice * float64(*it.ModelQuantityPurchased)
-			}
-		}
 		if err := s.detailRepo.SaveOrderDetail(ctx, row, items, packages); err != nil {
 			log.Printf("save order detail %s: %v", header.KodeInvoiceChannel, err)
 		}
