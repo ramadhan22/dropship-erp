@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -47,7 +48,8 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 	ctx := c.Request.Context()
 	total := 0
 	mismatches := []string{}
-	for _, fh := range files {
+	for i, fh := range files {
+		log.Printf("HandleImport processing file %d of %d: %s", i+1, len(files), fh.Filename)
 		f, err := fh.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -59,6 +61,7 @@ func (h *ShopeeHandler) HandleImport(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		log.Printf("HandleImport finished file %d of %d: %s inserted=%d", i+1, len(files), fh.Filename, count)
 		total += count
 		mismatches = append(mismatches, mis...)
 	}
@@ -98,7 +101,8 @@ func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	total := 0
-	for _, fh := range files {
+	for i, fh := range files {
+		log.Printf("HandleImportAffiliate processing file %d of %d: %s", i+1, len(files), fh.Filename)
 		f, err := fh.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -110,6 +114,7 @@ func (h *ShopeeHandler) HandleImportAffiliate(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		log.Printf("HandleImportAffiliate finished file %d of %d: %s inserted=%d", i+1, len(files), fh.Filename, count)
 		total += count
 	}
 	c.JSON(http.StatusOK, gin.H{"inserted": total})
