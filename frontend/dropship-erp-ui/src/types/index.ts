@@ -561,3 +561,23 @@ export interface ShopeeOrderPackageRow {
   sorting_group?: string;
   group_shipment_id?: string;
 }
+
+export interface WalletTransaction {
+  status: string;
+  transaction_type: string;
+  amount: number;
+  current_balance: number;
+  create_time: number;
+  order_sn?: string;
+  refund_sn?: string;
+  withdrawal_type?: string;
+  transaction_fee?: number;
+  description?: string;
+  buyer_name?: string;
+  pay_order_list?: { order_sn: string; shop_name: string }[];
+  withdrawal_id?: number;
+  reason?: string;
+  root_withdrawal_id?: number;
+  transaction_tab_type?: string;
+  money_flow?: string;
+}

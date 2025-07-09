@@ -576,3 +576,71 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 	}
 	return total, nil
 }
+
+// GetWalletTransactionList calls Shopee get_wallet_transaction_list API.
+func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken, shopID string, p WalletTransactionParams) (*WalletTransactionList, error) {
+	path := "/api/v2/payment/get_wallet_transaction_list"
+	ts := time.Now().Unix()
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", shopID)
+	q.Set("access_token", accessToken)
+	q.Set("page_no", strconv.Itoa(p.PageNo))
+	q.Set("page_size", strconv.Itoa(p.PageSize))
+	if p.CreateTimeFrom != nil {
+		q.Set("create_time_from", strconv.FormatInt(*p.CreateTimeFrom, 10))
+	}
+	if p.CreateTimeTo != nil {
+		q.Set("create_time_to", strconv.FormatInt(*p.CreateTimeTo, 10))
+	}
+	if p.WalletType != "" {
+		q.Set("wallet_type", p.WalletType)
+	}
+	if p.TransactionType != "" {
+		q.Set("transaction_type", p.TransactionType)
+	}
+	if p.MoneyFlow != "" {
+		q.Set("money_flow", p.MoneyFlow)
+	}
+	if p.TransactionTabType != "" {
+		q.Set("transaction_tab_type", p.TransactionTabType)
+	}
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logutil.Errorf("GetWalletTransactionList request error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("GetWalletTransactionList unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+	var out struct {
+		Response struct {
+			TransactionList []WalletTransaction `json:"transaction_list"`
+			HasNextPage     bool                `json:"has_next_page"`
+		} `json:"response"`
+		Error   string `json:"error"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		logutil.Errorf("GetWalletTransactionList API error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+	return &WalletTransactionList{Transactions: out.Response.TransactionList, HasNextPage: out.Response.HasNextPage}, nil
+}
