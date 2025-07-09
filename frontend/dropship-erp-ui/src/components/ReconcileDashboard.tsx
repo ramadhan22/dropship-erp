@@ -31,20 +31,39 @@ import type {
 import { getCurrentMonthRange } from "../utils/date";
 import useServerPagination from "../useServerPagination";
 import JsonTabs from "./JsonTabs";
-import { formatDateTime } from "../utils/format";
+import { formatCurrency, formatDateTime } from "../utils/format";
 
 function formatLabel(label: string): string {
   return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatValue(val: any): string {
-  if (typeof val === "number" && val > 1e10) {
-    return formatDateTime(val * 1000);
+function formatValue(key: string, val: any): string {
+  if (val == null) return "";
+  const k = key.toLowerCase();
+  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+    return formatDateTime(val);
+  }
+  if (typeof val === "number") {
+    if (k.includes("time") || k.includes("date")) {
+      return formatDateTime(val * 1000);
+    }
+    if (
+      k.includes("amount") ||
+      k.includes("fee") ||
+      k.includes("price") ||
+      k.includes("total") ||
+      k.includes("tax")
+    ) {
+      return formatCurrency(val);
+    }
+  }
+  if (typeof val === "string" && /^\d+$/.test(val) && (k.includes("time") || k.includes("date"))) {
+    return formatDateTime(Number(val) * 1000);
   }
   return String(val);
 }
 
-function renderValue(value: any): JSX.Element {
+function renderValue(key: string, value: any): JSX.Element {
   if (Array.isArray(value)) {
     return <JsonTabs items={value} />;
   }
@@ -63,14 +82,14 @@ function renderValue(value: any): JSX.Element {
               >
                 {formatLabel(k)}
               </td>
-              <td>{renderValue(v)}</td>
+              <td>{renderValue(k, v)}</td>
             </tr>
           ))}
         </tbody>
       </table>
     );
   }
-  return <>{formatValue(value)}</>;
+  return <>{formatValue(key, value)}</>;
 }
 
 export default function ReconcileDashboard() {
@@ -293,7 +312,7 @@ export default function ReconcileDashboard() {
                     >
                       {formatLabel(key)}
                     </td>
-                    <td>{renderValue(value)}</td>
+                    <td>{renderValue(key, value)}</td>
                   </tr>
                 ))}
               </tbody>
