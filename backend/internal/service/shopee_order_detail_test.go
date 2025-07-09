@@ -60,3 +60,38 @@ func TestFetchShopeeOrderDetail(t *testing.T) {
 		t.Errorf("unexpected detail %+v", detail)
 	}
 }
+
+func TestFetchShopeeOrderDetails(t *testing.T) {
+	partnerID := "1"
+	partnerKey := "secret"
+	shopID := "2"
+	token := "token"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/order/get_order_detail" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.URL.Query().Get("order_sn_list") != "123,456" {
+			t.Errorf("expected order_sn_list=123,456, got %s", r.URL.Query().Get("order_sn_list"))
+		}
+		fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"123"},{"order_sn":"456"}]}}`)
+	}))
+	defer srv.Close()
+
+	cfg := config.ShopeeAPIConfig{
+		BaseURLShopee: srv.URL,
+		PartnerID:     partnerID,
+		PartnerKey:    partnerKey,
+		ShopID:        shopID,
+	}
+	client := NewShopeeClient(cfg)
+
+	list, err := client.FetchShopeeOrderDetails(context.Background(), token, shopID, []string{"123", "456"})
+	if err != nil {
+		t.Fatalf("FetchShopeeOrderDetails error: %v", err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(list))
+	}
+}

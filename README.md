@@ -38,7 +38,8 @@ Discrepancy* adjustment when they differ.
   `shopee_order_items` and `shopee_order_packages` tables rather than raw JSON.
   All time values are converted to timestamps for easier analysis.
 - Dropship CSV imports fetch Shopee order detail for each invoice to record
-  pending sales amounts and save the raw detail. Transactions are skipped when
+  pending sales amounts and save the raw detail. Order lookups are batched up
+  to 50 invoices per request to reduce API calls. Transactions are skipped when
   the order detail cannot be retrieved.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.

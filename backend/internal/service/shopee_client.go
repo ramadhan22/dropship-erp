@@ -288,6 +288,59 @@ func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, 
 	return &out.Response.OrderList[0], nil
 }
 
+// FetchShopeeOrderDetails fetches details for multiple order_sn values in a single request.
+// The API accepts up to 50 comma separated order numbers.
+func (c *ShopeeClient) FetchShopeeOrderDetails(ctx context.Context, accessToken, shopID string, orderSNs []string) ([]ShopeeOrderDetail, error) {
+	if len(orderSNs) == 0 {
+		return nil, nil
+	}
+	path := "/api/v2/order/get_order_detail"
+	ts := time.Now().Unix()
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", shopID)
+	q.Set("access_token", accessToken)
+	q.Set("order_sn_list", strings.Join(orderSNs, ","))
+	q.Set("response_optional_fields", "buyer_user_id,buyer_username,estimated_shipping_fee,recipient_address,actual_shipping_fee ,goods_to_declare,note,note_update_time,item_list,pay_time,dropshipper, dropshipper_phone,split_up,buyer_cancel_reason,cancel_by,cancel_reason,actual_shipping_fee_confirmed,buyer_cpf_id,fulfillment_flag,pickup_done_time,package_list,shipping_carrier,payment_method,total_amount,buyer_username,invoice_data,order_chargeable_weight_gram,return_request_due_date,edt")
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logutil.Errorf("FetchShopeeOrderDetails request error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("FetchShopeeOrderDetails unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var out orderDetailAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		logutil.Errorf("FetchShopeeOrderDetails API error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+	if len(out.Response.OrderList) == 0 {
+		return nil, fmt.Errorf("empty response")
+	}
+	return out.Response.OrderList, nil
+}
+
 // GetEscrowDetail retrieves escrow information for an order using a direct HTTP
 // call. The accessToken and shopID parameters should belong to the store that
 // owns the order.
