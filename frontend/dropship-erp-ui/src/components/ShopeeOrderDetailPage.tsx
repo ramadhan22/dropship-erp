@@ -63,6 +63,14 @@ function renderValue(value: any): JSX.Element {
   return <>{formatValue(value)}</>;
 }
 
+function money(v: number | undefined | null) {
+  if (v == null) return "";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+  }).format(v);
+}
+
 export default function ShopeeOrderDetailPage() {
   const [store, setStore] = useState("");
   const [order, setOrder] = useState("");
@@ -132,6 +140,36 @@ export default function ShopeeOrderDetailPage() {
     { label: "Item Name", key: "item_name" },
     { label: "Model SKU", key: "model_sku" },
     { label: "Qty", key: "model_quantity_purchased", align: "right" },
+    {
+      label: "Orig Price",
+      key: "model_original_price",
+      align: "right",
+      render: (v) => money(v as number),
+    },
+    {
+      label: "Disc Price",
+      key: "model_discounted_price",
+      align: "right",
+      render: (v) => money(v as number),
+    },
+    {
+      label: "Total Orig",
+      align: "right",
+      render: (_, row) =>
+        money(
+          (row.model_original_price ?? 0) *
+            (row.model_quantity_purchased ?? 0),
+        ),
+    },
+    {
+      label: "Total Disc",
+      align: "right",
+      render: (_, row) =>
+        money(
+          (row.model_discounted_price ?? 0) *
+            (row.model_quantity_purchased ?? 0),
+        ),
+    },
   ];
 
   const packageColumns: Column<ShopeeOrderPackageRow>[] = [
@@ -139,6 +177,20 @@ export default function ShopeeOrderDetailPage() {
     { label: "Status", key: "logistics_status" },
     { label: "Carrier", key: "shipping_carrier" },
   ];
+
+  const totalOrig =
+    detail?.items.reduce(
+      (sum, it) =>
+        sum + (it.model_original_price ?? 0) * (it.model_quantity_purchased ?? 0),
+      0,
+    ) ?? 0;
+  const totalDisc =
+    detail?.items.reduce(
+      (sum, it) =>
+        sum +
+        (it.model_discounted_price ?? 0) * (it.model_quantity_purchased ?? 0),
+      0,
+    ) ?? 0;
 
   return (
     <div>
@@ -208,6 +260,12 @@ export default function ShopeeOrderDetailPage() {
                     <tr>
                       <td colSpan={2}>
                         <SortableTable columns={itemColumns} data={detail.items} />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2} style={{ textAlign: "right", paddingTop: "0.5rem" }}>
+                        <div>Total Original Price: {money(totalOrig)}</div>
+                        <div>Total Discounted Price: {money(totalDisc)}</div>
                       </td>
                     </tr>
                   </>
