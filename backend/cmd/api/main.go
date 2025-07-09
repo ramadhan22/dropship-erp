@@ -61,6 +61,7 @@ func main() {
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
 		repo.ChannelRepo,
 		repo.OrderDetailRepo,
+		repo.ShopeeAdjustmentRepo,
 		shClient,
 	)
 	metricSvc := service.NewMetricService(

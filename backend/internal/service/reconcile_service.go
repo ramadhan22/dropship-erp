@@ -52,6 +52,7 @@ type ReconcileService struct {
 	dropRepo    ReconcileServiceDropshipRepo
 	shopeeRepo  ReconcileServiceShopeeRepo
 	journalRepo ReconcileServiceJournalRepo
+	adjRepo     *repository.ShopeeAdjustmentRepo
 	recRepo     ReconcileServiceRecRepo
 	storeRepo   ReconcileServiceStoreRepo
 	detailRepo  ReconcileServiceDetailRepo
@@ -67,6 +68,7 @@ func NewReconcileService(
 	rr ReconcileServiceRecRepo,
 	srp ReconcileServiceStoreRepo,
 	drp ReconcileServiceDetailRepo,
+	ar *repository.ShopeeAdjustmentRepo,
 	c *ShopeeClient,
 ) *ReconcileService {
 	return &ReconcileService{
@@ -74,6 +76,7 @@ func NewReconcileService(
 		dropRepo:    dr,
 		shopeeRepo:  sr,
 		journalRepo: jr,
+		adjRepo:     ar,
 		recRepo:     rr,
 		storeRepo:   srp,
 		detailRepo:  drp,
@@ -179,6 +182,51 @@ func (s *ReconcileService) MatchAndJournal(
 
 // ptrString helper
 func ptrString(s string) *string { return &s }
+
+func (s *ReconcileService) createAdjustmentJournal(ctx context.Context, jr ReconcileServiceJournalRepo, a *models.ShopeeAdjustment) error {
+	je := &models.JournalEntry{
+		EntryDate:    a.TanggalPenyesuaian,
+		Description:  ptrString("Shopee adjustment " + a.NoPesanan),
+		SourceType:   "shopee_adjustment",
+		SourceID:     fmt.Sprintf("%s-%s-%s", a.NoPesanan, a.TanggalPenyesuaian.Format("20060102"), sanitizeID(a.TipePenyesuaian)),
+		ShopUsername: a.NamaToko,
+		Store:        a.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	amt := a.BiayaPenyesuaian
+	saldoAcc := saldoShopeeAccountID(a.NamaToko)
+	if amt >= 0 {
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: true, Amount: amt},
+			{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: amt},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	} else {
+		aamt := -amt
+		acc := int64(55005)
+		if strings.EqualFold(a.TipePenyesuaian, "Shipping Fee Discrepancy") {
+			acc = 52010
+		}
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: acc, IsDebit: true, Amount: aamt},
+			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: aamt},
+		}
+		for i := range lines {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 // ListUnmatched delegates to repo to list unmatched rows.
 func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error) {
@@ -627,6 +675,14 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
 		escrowAmt = *v
 	}
+	estShip := 0.0
+	if v := asFloat64(income, "estimated_shipping_fee"); v != nil {
+		estShip = *v
+	}
+	actShip := 0.0
+	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
+		actShip = *v
+	}
 
 	debitTotal := commission + service + voucher + discount + affiliate + escrowAmt
 	if math.Abs(debitTotal-orderPrice) > 0.01 {
@@ -660,6 +716,27 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			continue
 		}
 		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	diff := estShip - actShip
+	if math.Abs(diff) > 0.01 && s.adjRepo != nil {
+		adj := &models.ShopeeAdjustment{
+			NamaToko:           dp.NamaToko,
+			TanggalPenyesuaian: updateTime,
+			TipePenyesuaian:    "Shipping Fee Discrepancy",
+			AlasanPenyesuaian:  "Auto from escrow",
+			BiayaPenyesuaian:   diff,
+			NoPesanan:          invoice,
+			CreatedAt:          time.Now(),
+		}
+		if err := s.adjRepo.Delete(ctx, adj.NoPesanan, adj.TanggalPenyesuaian, adj.TipePenyesuaian); err != nil {
+			return err
+		}
+		if err := s.adjRepo.Insert(ctx, adj); err != nil {
+			return err
+		}
+		if err := s.createAdjustmentJournal(ctx, jrRepo, adj); err != nil {
 			return err
 		}
 	}
