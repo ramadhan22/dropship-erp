@@ -92,29 +92,27 @@ test("click reconcile button", async () => {
 });
 
 test("reconcile all button", async () => {
-  (api.listCandidates as jest.Mock).mockResolvedValueOnce({
-    data: {
-      data: [
-        {
-          kode_pesanan: "A",
-          kode_invoice_channel: "INV",
-          nama_toko: "X",
-          status_pesanan_terakhir: "diproses",
-          no_pesanan: "INV",
-          shopee_order_status: "PROCESSED",
-        },
-        {
-          kode_pesanan: "B",
-          kode_invoice_channel: "INV2",
-          nama_toko: "X",
-          status_pesanan_terakhir: "diproses",
-          no_pesanan: "INV2",
-          shopee_order_status: "PROCESSED",
-        },
-      ],
-      total: 2,
+  const rows = [
+    {
+      kode_pesanan: "A",
+      kode_invoice_channel: "INV",
+      nama_toko: "X",
+      status_pesanan_terakhir: "diproses",
+      no_pesanan: "INV",
+      shopee_order_status: "PROCESSED",
     },
-  });
+    {
+      kode_pesanan: "B",
+      kode_invoice_channel: "INV2",
+      nama_toko: "X",
+      status_pesanan_terakhir: "diproses",
+      no_pesanan: "INV2",
+      shopee_order_status: "PROCESSED",
+    },
+  ];
+  (api.listCandidates as jest.Mock)
+    .mockResolvedValueOnce({ data: { data: rows, total: 2 } })
+    .mockResolvedValueOnce({ data: { data: rows, total: 2 } });
   render(
     <MemoryRouter>
       <ReconcileDashboard />
