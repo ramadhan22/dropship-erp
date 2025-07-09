@@ -100,10 +100,15 @@ export default function ShopeeOrderDetailPage() {
   }, [store, order]);
 
   const openDetail = async (sn: string) => {
+    setDetail(null);
+    setOpen(true);
     try {
       const res = await getOrderDetail(sn);
-      setDetail(res.data);
-      setOpen(true);
+      setDetail({
+        detail: res.data.detail,
+        items: res.data.items ?? [],
+        packages: res.data.packages ?? [],
+      });
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
@@ -165,10 +170,18 @@ export default function ShopeeOrderDetailPage() {
       )}
       <SortableTable columns={columns} data={data} />
       {controls}
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false);
+          setDetail(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Order Detail</DialogTitle>
         <DialogContent>
-          {detail && (
+          {detail ? (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <tbody>
                 {Object.entries(detail.detail).map(([k, v]) => (
@@ -215,10 +228,19 @@ export default function ShopeeOrderDetailPage() {
                 )}
               </tbody>
             </table>
+          ) : (
+            <>Loading...</>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Close</Button>
+          <Button
+            onClick={() => {
+              setOpen(false);
+              setDetail(null);
+            }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </div>
