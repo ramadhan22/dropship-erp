@@ -84,7 +84,7 @@ func TestListCandidates(t *testing.T) {
 	_, _ = jrepo.CreateJournalEntry(ctx, je)
 
 	kode2 := "CAND-" + time.Now().Format("150405") + "b"
-	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "pesanan selesai", WaktuPesananTerbuat: time.Now()}
+	dp2 := &models.DropshipPurchase{KodePesanan: kode2, KodeInvoiceChannel: kode2, NamaToko: "ShopA", StatusPesananTerakhir: "diproses", WaktuPesananTerbuat: time.Now()}
 	_ = dropRepo.InsertDropshipPurchase(ctx, dp2)
 
 	je2 := &models.JournalEntry{
@@ -97,6 +97,17 @@ func TestListCandidates(t *testing.T) {
 		CreatedAt:    time.Now(),
 	}
 	_, _ = jrepo.CreateJournalEntry(ctx, je2)
+
+	escrow := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("escrow"),
+		SourceType:   "shopee_escrow",
+		SourceID:     kode2,
+		ShopUsername: "ShopA",
+		Store:        "ShopA",
+		CreatedAt:    time.Now(),
+	}
+	_, _ = jrepo.CreateJournalEntry(ctx, escrow)
 
 	list, total, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "", 10, 0)
 	if err != nil {
