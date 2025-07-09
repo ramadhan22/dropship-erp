@@ -55,7 +55,11 @@ func TestGetEscrowDetail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetEscrowDetail error: %v", err)
 	}
-	if (*detail)["escrow_amount"] != float64(100) {
+	orderMap, ok := (*detail)["order"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected detail %+v", detail)
+	}
+	if orderMap["escrow_amount"] != float64(100) {
 		t.Errorf("unexpected detail %+v", detail)
 	}
 }

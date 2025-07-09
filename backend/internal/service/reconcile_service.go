@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -513,7 +514,14 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 		statusVal = (*detail)["status"]
 	}
 	statusStr, _ := statusVal.(string)
-	if strings.ToLower(statusStr) != "cancelled" {
+	status := strings.ToLower(statusStr)
+	if status == "completed" {
+		if err := s.createEscrowSettlementJournal(ctx, invoice); err != nil {
+			return err
+		}
+		return nil
+	}
+	if status != "cancelled" {
 		return nil
 	}
 	var updateTime time.Time
@@ -539,4 +547,124 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
 	}
 	return s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee")
+}
+
+// createEscrowSettlementJournal posts journal entries based on escrow detail and
+// marks the purchase as complete.
+func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, invoice string) error {
+	log.Printf("createEscrowSettlementJournal %s", invoice)
+
+	var tx *sqlx.Tx
+	dropRepo := s.dropRepo
+	jrRepo := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		dropRepo = repository.NewDropshipRepo(tx)
+		jrRepo = repository.NewJournalRepo(tx)
+	}
+
+	dp, err := dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+
+	esc, err := s.GetShopeeEscrowDetail(ctx, invoice)
+	if err != nil {
+		return err
+	}
+	m := map[string]any(*esc)
+	income, _ := m["order_income"].(map[string]any)
+	orderPrice := 0.0
+	if items, ok := income["items"].([]any); ok {
+		for _, it := range items {
+			im, ok := it.(map[string]any)
+			if !ok {
+				continue
+			}
+			price := 0.0
+			if v := asFloat64(im, "original_price"); v != nil {
+				price = *v
+			}
+			qty := 1
+			if q := asInt(im, "quantity_purchased"); q != nil {
+				qty = *q
+			}
+			orderPrice += price * float64(qty)
+		}
+	}
+	if orderPrice == 0 {
+		if v := asFloat64(income, "order_original_price"); v != nil {
+			orderPrice = *v
+		}
+	}
+	commission := 0.0
+	if v := asFloat64(income, "commission_fee"); v != nil {
+		commission = *v
+	}
+	service := 0.0
+	if v := asFloat64(income, "service_fee"); v != nil {
+		service = *v
+	}
+	voucher := 0.0
+	if v := asFloat64(income, "voucher_from_seller"); v != nil {
+		voucher = *v
+	}
+	affiliate := 0.0
+	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
+		affiliate = *v
+	}
+	escrowAmt := 0.0
+	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
+		escrowAmt = *v
+	}
+
+	debitTotal := commission + service + voucher + affiliate + escrowAmt
+	if math.Abs(debitTotal-orderPrice) > 0.01 {
+		escrowAmt += orderPrice - debitTotal
+	}
+
+	je := &models.JournalEntry{
+		EntryDate:    time.Now(),
+		Description:  ptrString("Shopee escrow " + invoice),
+		SourceType:   "shopee_escrow",
+		SourceID:     invoice,
+		ShopUsername: dp.NamaToko,
+		Store:        dp.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jrRepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	lines := []models.JournalLine{
+		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: orderPrice, Memo: ptrString("Pending " + invoice)},
+		{JournalID: jid, AccountID: 52006, IsDebit: true, Amount: commission, Memo: ptrString("Biaya Administrasi " + invoice)},
+		{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
+		{JournalID: jid, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
+		{JournalID: jid, AccountID: 52005, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
+		{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
+	}
+	for i := range lines {
+		if lines[i].Amount == 0 {
+			continue
+		}
+		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+
+	if err := dropRepo.UpdatePurchaseStatus(ctx, dp.KodePesanan, "Pesanan selesai"); err != nil {
+		return fmt.Errorf("update status: %w", err)
+	}
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
