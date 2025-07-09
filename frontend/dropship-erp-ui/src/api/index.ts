@@ -51,17 +51,25 @@ export const api = axios.create({
 
 // Global loading indicator hooks into axios requests
 api.interceptors.request.use((config) => {
-  loadingEmitter.start();
+  if (!config.headers?.["X-Skip-Loading"]) {
+    loadingEmitter.start();
+    // mark so we know to end later
+    (config as any)._withLoading = true;
+  }
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-    loadingEmitter.end();
+    if ((res.config as any)._withLoading) {
+      loadingEmitter.end();
+    }
     return res;
   },
   (err) => {
-    loadingEmitter.end();
+    if ((err.config as any)._withLoading) {
+      loadingEmitter.end();
+    }
     return Promise.reject(err);
   },
 );

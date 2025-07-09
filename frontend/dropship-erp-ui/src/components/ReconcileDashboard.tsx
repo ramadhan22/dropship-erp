@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  LinearProgress,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -130,6 +131,9 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [detail, setDetail] = useState<
     ShopeeOrderDetail | ShopeeEscrowDetail | null
   >(null);
@@ -193,8 +197,17 @@ export default function ReconcileDashboard() {
       const all: ReconcileCandidate[] = [];
       const pageSize = 1000;
       let page = 1;
+      const skipLoading = { headers: { "X-Skip-Loading": "1" } };
       while (true) {
-        const res = await listCandidates(shop, order, from, to, page, pageSize);
+        const res = await listCandidates(
+          shop,
+          order,
+          from,
+          to,
+          page,
+          pageSize,
+          skipLoading,
+        );
         all.push(...res.data.data);
         if (all.length >= res.data.total) break;
         page += 1;
@@ -204,12 +217,14 @@ export default function ReconcileDashboard() {
         try {
           await updateShopeeStatuses(
             all.slice(i, i + 50).map((r) => r.kode_invoice_channel),
+            skipLoading,
           );
         } catch {
           // ignore batch errors
         }
       }
 
+      setProgress({ done: 0, total: all.length });
       const concurrency =
         (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
       let idx = 0;
@@ -218,13 +233,18 @@ export default function ReconcileDashboard() {
           const cur = idx++;
           if (cur >= all.length) break;
           try {
-            await reconcileCheck(all[cur].kode_pesanan);
+            await reconcileCheck(all[cur].kode_pesanan, skipLoading);
           } catch {
             // ignore individual errors
           }
+          setProgress((p) =>
+            p ? { ...p, done: Math.min(p.done + 1, p.total) } : p,
+          );
         }
       });
       await Promise.all(workers);
+
+      setProgress(null);
 
       setMsg({ type: "success", text: "Completed" });
       reload();
@@ -339,6 +359,26 @@ export default function ReconcileDashboard() {
         <Alert severity={msg.type} sx={{ mt: 2 }}>
           {msg.text}
         </Alert>
+      )}
+      {progress && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            marginTop: "0.5rem",
+          }}
+        >
+          <LinearProgress
+            variant="determinate"
+            value={(progress.done / progress.total) * 100}
+            sx={{ flexGrow: 1 }}
+          />
+          <span>
+            Reconciling {progress.done}/{progress.total} (
+            {Math.round((progress.done / progress.total) * 100)}%)
+          </span>
+        </div>
       )}
       <SortableTable columns={columns} data={data} />
       {controls}
