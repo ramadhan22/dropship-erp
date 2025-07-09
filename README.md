@@ -23,11 +23,13 @@ Main features:
   Existing entries for the same order/date/type are replaced and they are also
   captured when importing settled orders.
   Adjustments can be browsed on the **Shopee Adjustments** page.
-  Adjustments may be edited or deleted; updating replaces the original
-  journal entry. Negative values are posted to a dedicated **Refund** account
-  instead of the Discount account. The **Shipping Fee Discrepancy** sheet of the
-  income report is also parsed so extra courier charges are imported as
-  adjustments.
+Adjustments may be edited or deleted; updating replaces the original
+journal entry. Negative values are posted to a dedicated **Refund** account
+instead of the Discount account. The **Shipping Fee Discrepancy** sheet of the
+income report is also parsed so extra courier charges are imported as
+adjustments. When posting Shopee escrow settlements the application now compares
+the actual and estimated shipping fee and automatically records a *Shipping Fee
+Discrepancy* adjustment when they differ.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
 - Check Shopee order details from the Reconcile dashboard using the store's saved access token.
