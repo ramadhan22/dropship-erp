@@ -108,6 +108,10 @@ func (f *fakeDetailRepo) UpdateOrderDetailStatus(ctx context.Context, sn, status
 	return nil
 }
 
+func (f *fakeDetailRepo) GetOrderDetail(ctx context.Context, sn string) (*models.ShopeeOrderDetailRow, []models.ShopeeOrderItemRow, []models.ShopeeOrderPackageRow, error) {
+	return nil, nil, nil, errors.New("not found")
+}
+
 func TestMatchAndJournal_Success(t *testing.T) {
 	ctx := context.Background()
 

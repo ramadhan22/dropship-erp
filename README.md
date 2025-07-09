@@ -98,6 +98,8 @@ Run tests with:
 ```bash
 go test ./...
 ```
+Use mocks for Shopee API calls during unit tests to avoid network access.
+
 
 ## Frontend
 

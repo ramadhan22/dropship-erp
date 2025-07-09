@@ -3,6 +3,7 @@
 These guidelines apply to all directories in this repository. They are intended to help future code generation tools work with a consistent workflow.
 
 ## Testing
+- Use mock servers for Shopee API interactions in unit tests.
 - Run `go test ./...` from `backend` when Go code or migrations are modified.
 - Run `npm test` in `frontend/dropship-erp-ui` for changes to the React app.
 
