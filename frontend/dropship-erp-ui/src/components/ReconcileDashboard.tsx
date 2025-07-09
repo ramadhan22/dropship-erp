@@ -189,23 +189,48 @@ export default function ReconcileDashboard() {
   };
 
   const handleReconcileAll = async () => {
-    const invoices = data.map((row) => row.kode_invoice_channel);
     try {
-      await updateShopeeStatuses(invoices);
-    } catch {
-      // ignore batch errors
-    }
-    await Promise.all(
-      data.map(async (row) => {
+      const all: ReconcileCandidate[] = [];
+      const pageSize = 1000;
+      let page = 1;
+      while (true) {
+        const res = await listCandidates(shop, order, from, to, page, pageSize);
+        all.push(...res.data.data);
+        if (all.length >= res.data.total) break;
+        page += 1;
+      }
+
+      for (let i = 0; i < all.length; i += 50) {
         try {
-          await reconcileCheck(row.kode_pesanan);
+          await updateShopeeStatuses(
+            all.slice(i, i + 50).map((r) => r.kode_invoice_channel),
+          );
         } catch {
-          // ignore individual errors
+          // ignore batch errors
         }
-      }),
-    );
-    setMsg({ type: "success", text: "Completed" });
-    reload();
+      }
+
+      const concurrency =
+        (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
+      let idx = 0;
+      const workers = Array.from({ length: concurrency }, async () => {
+        for (;;) {
+          const cur = idx++;
+          if (cur >= all.length) break;
+          try {
+            await reconcileCheck(all[cur].kode_pesanan);
+          } catch {
+            // ignore individual errors
+          }
+        }
+      });
+      await Promise.all(workers);
+
+      setMsg({ type: "success", text: "Completed" });
+      reload();
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.message });
+    }
   };
 
   const columns: Column<ReconcileCandidate>[] = [
