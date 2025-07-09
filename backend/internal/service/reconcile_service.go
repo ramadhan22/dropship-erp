@@ -649,9 +649,9 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: orderPrice, Memo: ptrString("Pending " + invoice)},
 		{JournalID: jid, AccountID: 52006, IsDebit: true, Amount: commission, Memo: ptrString("Biaya Administrasi " + invoice)},
 		{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
-		{JournalID: jid, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
-		{JournalID: jid, AccountID: 52002, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
-		{JournalID: jid, AccountID: 52005, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
+		{JournalID: jid, AccountID: 55001, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
+		{JournalID: jid, AccountID: 55004, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
+		{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 	}
 	for i := range lines {

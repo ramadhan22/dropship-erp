@@ -727,11 +727,11 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 	}
 	lines := []models.JournalLine{
 		{JournalID: id, AccountID: pendingAccountID(entry.NamaToko), IsDebit: false, Amount: netSale, Memo: ptrString("Pending " + entry.NoPesanan)},
-		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc, Memo: ptrString("Discount " + entry.NoPesanan)},
-		{JournalID: id, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 55004, IsDebit: true, Amount: disc, Memo: ptrString("Discount " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 55001, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52006, IsDebit: true, Amount: admin, Memo: ptrString("Biaya Administrasi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52004, IsDebit: true, Amount: layanan, Memo: ptrString("Biaya Layanan " + entry.NoPesanan)},
-		{JournalID: id, AccountID: 52005, IsDebit: true, Amount: affiliateAmt, Memo: ptrString("Biaya Affiliate " + entry.NoPesanan)},
+		{JournalID: id, AccountID: 55002, IsDebit: true, Amount: affiliateAmt, Memo: ptrString("Biaya Affiliate " + entry.NoPesanan)},
 		{JournalID: id, AccountID: 52011, IsDebit: true, Amount: transFee, Memo: ptrString("Biaya Transaksi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: saldoShopeeAccountID(entry.NamaToko), IsDebit: true, Amount: saldo, Memo: ptrString("Saldo Shopee " + entry.NoPesanan)},
 	}
@@ -779,7 +779,7 @@ func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.
 		return err
 	}
 	lines := []models.JournalLine{
-		{JournalID: jid, AccountID: 52005, IsDebit: true, Amount: sale.Pengeluaran, Memo: ptrString("Biaya Affiliate " + sale.KodePesanan)},
+		{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: sale.Pengeluaran, Memo: ptrString("Biaya Affiliate " + sale.KodePesanan)},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(sale.NamaToko), IsDebit: false, Amount: sale.Pengeluaran, Memo: ptrString("Saldo Shopee " + sale.KodePesanan)},
 	}
 	for i := range lines {
@@ -864,7 +864,7 @@ func (s *ShopeeService) createDiscountJournal(ctx context.Context, jr ShopeeJour
 	}
 	lines := []models.JournalLine{
 		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: disc},
-		{JournalID: id, AccountID: 52002, IsDebit: true, Amount: disc},
+		{JournalID: id, AccountID: 55004, IsDebit: true, Amount: disc},
 	}
 	for i := range lines {
 		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
@@ -1012,7 +1012,7 @@ func createWithdrawJournal(ctx context.Context, jr ShopeeJournalRepo, store stri
 		net := amount - fee
 		lines := []models.JournalLine{
 			{JournalID: jid, AccountID: bankAcc, IsDebit: true, Amount: net},
-			{JournalID: jid, AccountID: 52008, IsDebit: true, Amount: fee},
+			{JournalID: jid, AccountID: 55003, IsDebit: true, Amount: fee},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
 		}
 		for i := range lines {
@@ -1245,7 +1245,7 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 		}
 	} else {
 		aamt := -amt
-		acc := int64(52009)
+		acc := int64(55005)
 		if strings.EqualFold(a.TipePenyesuaian, "Shipping Fee Discrepancy") {
 			acc = 52010
 		}

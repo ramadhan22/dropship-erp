@@ -431,8 +431,8 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END) AS biaya_administrasi,
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
                SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END) AS biaya_transaksi,
-               SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END) AS biaya_voucher,
-               SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
+               SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END) AS biaya_voucher,
+               SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
                COALESCE(adj.refund,0) AS biaya_refund,
                COALESCE(adj.selisih,0) AS selisih_ongkir,
                COALESCE(adj.income,0) AS adjustment_income,
@@ -443,8 +443,8 @@ func (r *ShopeeRepo) ListSalesProfit(
                    + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
-                   + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                   + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END)
                    + COALESCE(adj.refund,0)
                    + COALESCE(adj.selisih,0)
                    + COALESCE(aff.aff,0)
@@ -456,8 +456,8 @@ func (r *ShopeeRepo) ListSalesProfit(
                            + SUM(CASE WHEN jl.account_id = 52006 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
-                           + SUM(CASE WHEN jl.account_id = 52003 THEN jl.amount ELSE 0 END)
-                           + SUM(CASE WHEN jl.account_id = 52005 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END)
                            + COALESCE(adj.refund,0)
                            + COALESCE(adj.selisih,0)
                            + COALESCE(aff.aff,0)
@@ -470,19 +470,19 @@ func (r *ShopeeRepo) ListSalesProfit(
                       SELECT REPLACE(jes.source_id,'-discount','') AS kode_pesanan, SUM(jls.amount) AS discount
                       FROM journal_entries jes
                       JOIN journal_lines jls ON jls.journal_id = jes.journal_id
-                      WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 52002
+                      WHERE jes.source_type = 'shopee_discount' AND jls.account_id = 55004
                       GROUP BY kode_pesanan
               ) disc ON disc.kode_pesanan = je.source_id
               LEFT JOIN (
                       SELECT split_part(jes.source_id, '-', 1) AS kode_pesanan, SUM(jls.amount) AS aff
                       FROM journal_entries jes
                       JOIN journal_lines jls ON jls.journal_id = jes.journal_id
-                      WHERE jes.source_type = 'shopee_affiliate' AND jls.account_id = 52005
+                      WHERE jes.source_type = 'shopee_affiliate' AND jls.account_id = 55002
                       GROUP BY split_part(jes.source_id, '-', 1)
               ) aff ON aff.kode_pesanan = je.source_id
               LEFT JOIN (
                       SELECT split_part(jes.source_id, '-', 1) AS kode_pesanan,
-                             SUM(CASE WHEN jls.account_id = 52009 THEN jls.amount ELSE 0 END) AS refund,
+                             SUM(CASE WHEN jls.account_id = 55005 THEN jls.amount ELSE 0 END) AS refund,
                              SUM(CASE WHEN jls.account_id = 52010 THEN jls.amount ELSE 0 END) AS selisih,
                              SUM(CASE WHEN jls.account_id = 4001 AND jls.is_debit = false THEN jls.amount ELSE 0 END) AS income
                       FROM journal_entries jes

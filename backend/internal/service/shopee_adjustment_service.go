@@ -251,7 +251,7 @@ func (s *ShopeeAdjustmentService) createJournal(ctx context.Context, jr ShopeeJo
 		}
 	} else {
 		aamt := -amt
-		acc := int64(52009)
+		acc := int64(55005)
 		if strings.EqualFold(a.TipePenyesuaian, "Shipping Fee Discrepancy") {
 			acc = 52010
 		}
