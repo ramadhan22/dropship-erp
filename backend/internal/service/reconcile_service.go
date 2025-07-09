@@ -614,6 +614,10 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "voucher_from_seller"); v != nil {
 		voucher = *v
 	}
+	discount := 0.0
+	if v := asFloat64(income, "order_seller_discount"); v != nil {
+		discount = *v
+	}
 	affiliate := 0.0
 	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
 		affiliate = *v
@@ -623,9 +627,9 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		escrowAmt = *v
 	}
 
-	debitTotal := commission + service + voucher + affiliate + escrowAmt
+	debitTotal := commission + service + voucher + discount + affiliate + escrowAmt
 	if math.Abs(debitTotal-orderPrice) > 0.01 {
-		escrowAmt += orderPrice - debitTotal
+		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
 	}
 
 	je := &models.JournalEntry{
@@ -646,6 +650,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		{JournalID: jid, AccountID: 52006, IsDebit: true, Amount: commission, Memo: ptrString("Biaya Administrasi " + invoice)},
 		{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
 		{JournalID: jid, AccountID: 52003, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
+		{JournalID: jid, AccountID: 52002, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
 		{JournalID: jid, AccountID: 52005, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 	}
