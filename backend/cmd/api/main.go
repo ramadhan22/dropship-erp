@@ -80,6 +80,7 @@ func main() {
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
+	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -153,6 +154,7 @@ func main() {
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
+		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 	}
 

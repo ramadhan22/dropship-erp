@@ -4,7 +4,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -42,7 +41,7 @@ type ReconcileServiceStoreRepo interface {
 	UpdateStore(ctx context.Context, s *models.Store) error
 }
 type ReconcileServiceDetailRepo interface {
-	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow) error
+	SaveOrderDetail(ctx context.Context, detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) error
 }
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
@@ -384,21 +383,8 @@ func (s *ReconcileService) GetShopeeOrderDetail(ctx context.Context, invoice str
 		detail, err = s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, dp.KodeInvoiceChannel)
 	}
 	if err == nil && s.detailRepo != nil {
-		b, _ := json.Marshal(detail)
-		row := &models.ShopeeOrderDetailRow{
-			OrderSN:   invoice,
-			NamaToko:  dp.NamaToko,
-			Detail:    b,
-			CreatedAt: time.Now(),
-		}
-		var items []models.ShopeeOrderItemRow
-		if list, ok := (*detail)["item_list"].([]interface{}); ok {
-			for _, it := range list {
-				j, _ := json.Marshal(it)
-				items = append(items, models.ShopeeOrderItemRow{OrderSN: invoice, Item: j})
-			}
-		}
-		if err := s.detailRepo.SaveOrderDetail(ctx, row, items); err != nil {
+		row, items, packages := normalizeOrderDetail(invoice, dp.NamaToko, *detail)
+		if err := s.detailRepo.SaveOrderDetail(ctx, row, items, packages); err != nil {
 			log.Printf("save order detail %s: %v", invoice, err)
 		}
 	}

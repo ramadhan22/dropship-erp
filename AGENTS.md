@@ -67,6 +67,9 @@ models or introducing a new page, keep this mapping in sync.
 - `asset_accounts` – listed and adjusted on **KasAccountPage**.
 - `jenis_channels` & `stores` – maintained on **ChannelPage** and used across
   filters.
+  - `shopee_order_details`, `shopee_order_items` & `shopee_order_packages` – store
+    Shopee order information for reconciliation and analysis. Displayed on
+    **ShopeeOrderDetailPage**.
 
 ## Service ↔ Table Mapping
 Understanding which backend service manipulates which tables helps when adding
@@ -85,6 +88,8 @@ features or debugging issues.
   invoice.
 - **ReconcileService** – records `reconciled_transactions` and creates matching
   journal entries and lines.
+- DropshipService and ReconcileService – save Shopee order details in
+  `shopee_order_details`, `shopee_order_items` and `shopee_order_packages`.
 - **ExpenseService** – stores `expenses` and `expense_lines` while journaling the
   totals.
 - **AdInvoiceService** – parses invoices into `ad_invoices` and adds journal
