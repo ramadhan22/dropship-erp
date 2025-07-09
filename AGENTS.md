@@ -37,6 +37,10 @@ If a command cannot be executed in the environment, mention this in the pull req
   same key so repeated imports overwrite previous rows.
 - Remove any related journal entries when old data is purged to prevent
   duplicate postings.
+- When generating journal entries (for example during dropship purchase
+  imports), ensure the total debit amount equals the total credit amount so
+  accounts like *Pendapatan Operasional* and pending receivables are not
+  doubled.
 - When storing data that originates as JSON (e.g. API responses), avoid JSONB
   columns.  Expand the fields into normal table columns using appropriate data
   types during the migration so values can be queried and indexed easily.

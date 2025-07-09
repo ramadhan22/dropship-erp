@@ -19,6 +19,12 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
+type testRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f testRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
 // fakeDropshipRepo captures calls to InsertDropshipPurchase.
 type fakeDropshipRepo struct {
 	insertedHeader []*models.DropshipPurchase
@@ -165,6 +171,14 @@ func TestImportFromCSV_Success(t *testing.T) {
 		http.NotFound(w, r)
 	}))
 	defer srv.Close()
+
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = testRoundTripper(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(srv.URL, "http://")
+		return oldTransport.RoundTrip(req)
+	})
+	defer func() { http.DefaultTransport = oldTransport }()
 
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
 	client.httpClient = srv.Client()
