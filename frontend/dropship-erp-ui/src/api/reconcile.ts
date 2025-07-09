@@ -61,3 +61,7 @@ export function cancelPurchase(kodePesanan: string) {
 export function updateShopeeStatus(invoice: string) {
   return api.post("/reconcile/update_status", { invoice });
 }
+
+export function updateShopeeStatuses(invoices: string[]) {
+  return api.post("/reconcile/update_statuses", { invoices });
+}

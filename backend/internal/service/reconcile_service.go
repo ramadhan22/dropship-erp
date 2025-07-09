@@ -757,3 +757,87 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	}
 	return nil
 }
+func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []string) error {
+	if len(invoices) == 0 {
+		return nil
+	}
+	batches := make(map[string][]*models.DropshipPurchase)
+	for _, inv := range invoices {
+		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, inv)
+		if err != nil || dp == nil {
+			log.Printf("fetch purchase %s: %v", inv, err)
+			continue
+		}
+		batches[dp.NamaToko] = append(batches[dp.NamaToko], dp)
+	}
+	for store, list := range batches {
+		st, err := s.storeRepo.GetStoreByName(ctx, store)
+		if err != nil || st == nil || st.AccessToken == nil || st.ShopID == nil {
+			log.Printf("fetch store %s: %v", store, err)
+			continue
+		}
+		if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+			log.Printf("ensure token %s: %v", store, err)
+			continue
+		}
+		sns := make([]string, len(list))
+		dpMap := make(map[string]*models.DropshipPurchase, len(list))
+		for i, dp := range list {
+			sns[i] = dp.KodeInvoiceChannel
+			dpMap[dp.KodeInvoiceChannel] = dp
+		}
+		details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+		if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+			if e := s.ensureStoreTokenValid(ctx, st); e == nil {
+				details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+			}
+		}
+		if err != nil {
+			log.Printf("batch fetch detail %s: %v", store, err)
+			continue
+		}
+		for _, det := range details {
+			sn, _ := det["order_sn"].(string)
+			statusVal, ok := det["order_status"]
+			if !ok {
+				statusVal = det["status"]
+			}
+			statusStr, _ := statusVal.(string)
+			var updateTime time.Time
+			if ts, ok := det["update_time"]; ok {
+				switch v := ts.(type) {
+				case float64:
+					updateTime = time.Unix(int64(v), 0)
+				case int64:
+					updateTime = time.Unix(v, 0)
+				case int:
+					updateTime = time.Unix(int64(v), 0)
+				case string:
+					if t, err := strconv.ParseInt(v, 10, 64); err == nil {
+						updateTime = time.Unix(t, 0)
+					}
+				}
+			}
+			if updateTime.IsZero() {
+				updateTime = time.Now()
+			}
+			dp := dpMap[sn]
+			if dp == nil {
+				continue
+			}
+			status := strings.ToLower(statusStr)
+			if status == "completed" {
+				if err := s.createEscrowSettlementJournal(ctx, sn, statusStr, updateTime); err != nil {
+					log.Printf("escrow settlement %s: %v", sn, err)
+				}
+				continue
+			}
+			if status == "cancelled" {
+				if err := s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee"); err != nil {
+					log.Printf("cancel purchase %s: %v", dp.KodePesanan, err)
+				}
+			}
+		}
+	}
+	return nil
+}

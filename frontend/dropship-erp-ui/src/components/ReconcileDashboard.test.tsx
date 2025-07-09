@@ -14,6 +14,7 @@ jest.mock("../api", () => ({
 jest.mock("../api/reconcile", () => ({
   listCandidates: jest.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
+  updateShopeeStatuses: jest.fn().mockResolvedValue({}),
   fetchShopeeDetail: jest.fn().mockResolvedValue({
     data: { order_sn: "INV", order_status: "PROCESSED" },
   }),
@@ -121,6 +122,9 @@ test("reconcile all button", async () => {
   );
   await screen.findByRole("button", { name: /Reconcile All/i });
   fireEvent.click(screen.getByRole("button", { name: /Reconcile All/i }));
+  await waitFor(() =>
+    expect(api.updateShopeeStatuses).toHaveBeenCalledWith(["INV", "INV2"]),
+  );
   await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledTimes(2));
 });
 

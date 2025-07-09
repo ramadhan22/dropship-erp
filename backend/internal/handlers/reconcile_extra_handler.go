@@ -21,6 +21,7 @@ type ReconcileExtraService interface {
 	GetShopeeAccessToken(ctx context.Context, invoice string) (string, error)
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
+	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -37,6 +38,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.POST("/check", h.check)
 	grp.POST("/cancel", h.cancel)
 	grp.POST("/update_status", h.updateStatus)
+	grp.POST("/update_statuses", h.updateStatuses)
 	grp.GET("/status", h.status)
 	grp.GET("/escrow", h.escrow)
 	grp.GET("/token", h.token)
@@ -172,6 +174,21 @@ func (h *ReconcileExtraHandler) updateStatus(c *gin.Context) {
 		return
 	}
 	if err := h.svc.UpdateShopeeStatus(context.Background(), req.Invoice); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *ReconcileExtraHandler) updateStatuses(c *gin.Context) {
+	var req struct {
+		Invoices []string `json:"invoices"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.UpdateShopeeStatuses(context.Background(), req.Invoices); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
