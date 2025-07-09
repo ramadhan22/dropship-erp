@@ -197,8 +197,17 @@ export default function ReconcileDashboard() {
       const all: ReconcileCandidate[] = [];
       const pageSize = 1000;
       let page = 1;
+      const skipLoading = { headers: { "X-Skip-Loading": "1" } };
       while (true) {
-        const res = await listCandidates(shop, order, from, to, page, pageSize);
+        const res = await listCandidates(
+          shop,
+          order,
+          from,
+          to,
+          page,
+          pageSize,
+          skipLoading,
+        );
         all.push(...res.data.data);
         if (all.length >= res.data.total) break;
         page += 1;
@@ -208,6 +217,7 @@ export default function ReconcileDashboard() {
         try {
           await updateShopeeStatuses(
             all.slice(i, i + 50).map((r) => r.kode_invoice_channel),
+            skipLoading,
           );
         } catch {
           // ignore batch errors
@@ -223,7 +233,7 @@ export default function ReconcileDashboard() {
           const cur = idx++;
           if (cur >= all.length) break;
           try {
-            await reconcileCheck(all[cur].kode_pesanan);
+            await reconcileCheck(all[cur].kode_pesanan, skipLoading);
           } catch {
             // ignore individual errors
           }

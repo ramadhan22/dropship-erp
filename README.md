@@ -112,6 +112,8 @@ reconciliation and data imports.
 Common UI elements include sortable tables with built-in pagination and filter
 controls. The `SortableTable` component and `usePagination` hook are reused
 across pages to keep behavior consistent.
+API requests trigger a global loading spinner by default; add an `X-Skip-Loading`
+header to disable the overlay when a custom progress bar is shown.
 
 To develop the frontend:
 
