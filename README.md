@@ -23,6 +23,7 @@ Main features:
   Existing entries for the same order/date/type are replaced and they are also
   captured when importing settled orders.
   Adjustments can be browsed on the **Shopee Adjustments** page.
+- Multi-file imports now log progress so long uploads can be monitored.
 Adjustments may be edited or deleted; updating replaces the original
 journal entry. Negative values are posted to a dedicated **Refund** account
 instead of the Discount account. The **Shipping Fee Discrepancy** sheet of the
