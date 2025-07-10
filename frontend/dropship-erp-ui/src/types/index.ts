@@ -563,6 +563,7 @@ export interface ShopeeOrderPackageRow {
 }
 
 export interface WalletTransaction {
+  transaction_id: number;
   status: string;
   transaction_type: string;
   amount: number;

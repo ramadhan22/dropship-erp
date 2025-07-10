@@ -24,6 +24,7 @@ type WalletTransactionParams struct {
 
 // WalletTransaction represents a single wallet transaction row.
 type WalletTransaction struct {
+	TransactionID      int64   `json:"transaction_id"`
 	Status             string  `json:"status"`
 	TransactionType    string  `json:"transaction_type"`
 	Amount             float64 `json:"amount"`
