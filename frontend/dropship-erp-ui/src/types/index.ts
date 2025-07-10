@@ -581,4 +581,5 @@ export interface WalletTransaction {
   root_withdrawal_id?: number;
   transaction_tab_type?: string;
   money_flow?: string;
+  journaled?: boolean;
 }

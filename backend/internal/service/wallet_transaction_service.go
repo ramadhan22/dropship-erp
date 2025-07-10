@@ -42,6 +42,7 @@ type WalletTransaction struct {
 	RootWithdrawalID   int64   `json:"root_withdrawal_id,omitempty"`
 	TransactionTabType string  `json:"transaction_tab_type,omitempty"`
 	MoneyFlow          string  `json:"money_flow,omitempty"`
+	Journaled          bool    `json:"journaled,omitempty"`
 }
 
 // WalletTransactionList contains transaction rows and pagination info.

@@ -21,11 +21,15 @@ export function listAdsTopups(params: {
   );
 }
 
-export function createAdsTopupJournal(payload: { s
+export function createAdsTopupJournal(payload: {
   store: string;
   transaction_id: number;
   create_time: number;
   amount: number;
 }) {
   return api.post(`/ads-topups/journal`, payload);
+}
+
+export function createAllAdsTopupJournal(payload: { store: string }) {
+  return api.post(`/ads-topups/journal-all`, payload);
 }

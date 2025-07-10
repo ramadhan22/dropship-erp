@@ -13,6 +13,7 @@ import (
 type AdsTopupService interface {
 	List(ctx context.Context, store string, p service.WalletTransactionParams) ([]service.WalletTransaction, bool, error)
 	CreateJournal(ctx context.Context, store string, t service.WalletTransaction) error
+	CreateAllJournal(ctx context.Context, store string) error
 }
 
 type AdsTopupHandler struct{ svc AdsTopupService }
@@ -23,6 +24,7 @@ func (h *AdsTopupHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/ads-topups")
 	grp.GET("", h.list)
 	grp.POST("/journal", h.journal)
+	grp.POST("/journal-all", h.journalAll)
 }
 
 func (h *AdsTopupHandler) list(c *gin.Context) {
@@ -82,4 +84,19 @@ func (h *AdsTopupHandler) journal(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "journaled"})
+}
+
+func (h *AdsTopupHandler) journalAll(c *gin.Context) {
+	var req struct {
+		Store string `json:"store"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Store == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "store required"})
+		return
+	}
+	if err := h.svc.CreateAllJournal(c.Request.Context(), req.Store); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
