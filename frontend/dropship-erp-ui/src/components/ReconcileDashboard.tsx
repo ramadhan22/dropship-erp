@@ -197,8 +197,17 @@ export default function ReconcileDashboard() {
       const all: ReconcileCandidate[] = [];
       const pageSize = 1000;
       let page = 1;
+      const skipLoading = { headers: { "X-Skip-Loading": "1" } };
       while (true) {
-        const res = await listCandidates(shop, order, from, to, page, pageSize);
+        const res = await listCandidates(
+          shop,
+          order,
+          from,
+          to,
+          page,
+          pageSize,
+          skipLoading,
+        );
         all.push(...res.data.data);
         if (all.length >= res.data.total) break;
         page += 1;
@@ -208,6 +217,7 @@ export default function ReconcileDashboard() {
         try {
           await updateShopeeStatuses(
             all.slice(i, i + 50).map((r) => r.kode_invoice_channel),
+            skipLoading,
           );
         } catch {
           // ignore batch errors
@@ -223,7 +233,7 @@ export default function ReconcileDashboard() {
           const cur = idx++;
           if (cur >= all.length) break;
           try {
-            await reconcileCheck(all[cur].kode_pesanan);
+            await reconcileCheck(all[cur].kode_pesanan, skipLoading);
           } catch {
             // ignore individual errors
           }
@@ -350,26 +360,24 @@ export default function ReconcileDashboard() {
           {msg.text}
         </Alert>
       )}
-      {progress && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            marginTop: "0.5rem",
-          }}
+      <Dialog open={progress !== null} fullWidth maxWidth="sm">
+        <DialogTitle>Reconciling</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
         >
           <LinearProgress
             variant="determinate"
-            value={(progress.done / progress.total) * 100}
+            value={progress ? (progress.done / progress.total) * 100 : 0}
             sx={{ flexGrow: 1 }}
           />
-          <span>
-            Reconciling {progress.done}/{progress.total} (
-            {Math.round((progress.done / progress.total) * 100)}%)
-          </span>
-        </div>
-      )}
+          {progress && (
+            <span>
+              {progress.done}/{progress.total} (
+              {Math.round((progress.done / progress.total) * 100)}%)
+            </span>
+          )}
+        </DialogContent>
+      </Dialog>
       <SortableTable columns={columns} data={data} />
       {controls}
       <Dialog

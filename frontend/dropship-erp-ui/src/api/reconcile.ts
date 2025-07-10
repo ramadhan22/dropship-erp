@@ -1,4 +1,5 @@
 import { api } from "./index";
+import type { AxiosRequestConfig } from "axios";
 import type {
   ReconciledTransaction,
   ReconcileCandidate,
@@ -17,6 +18,7 @@ export function listCandidates(
   to: string,
   page: number,
   pageSize: number,
+  config?: AxiosRequestConfig,
 ) {
   const q = new URLSearchParams();
   if (shop) q.append("shop", shop);
@@ -27,17 +29,20 @@ export function listCandidates(
   q.append("page_size", String(pageSize));
   const qs = q.toString();
   const url = qs ? `/reconcile/candidates?${qs}` : "/reconcile/candidates";
-  return api.get<{ data: ReconcileCandidate[]; total: number }>(url);
+  return api.get<{ data: ReconcileCandidate[]; total: number }>(url, config);
 }
 
 export function bulkReconcile(pairs: [string, string][], shop: string) {
   return api.post("/reconcile/bulk", { pairs, shop });
 }
 
-export function reconcileCheck(kodePesanan: string) {
+export function reconcileCheck(
+  kodePesanan: string,
+  config?: AxiosRequestConfig,
+) {
   return api.post<{ message: string }>("/reconcile/check", {
     kode_pesanan: kodePesanan,
-  });
+  }, config);
 }
 
 export function fetchShopeeDetail(invoice: string) {
@@ -62,6 +67,9 @@ export function updateShopeeStatus(invoice: string) {
   return api.post("/reconcile/update_status", { invoice });
 }
 
-export function updateShopeeStatuses(invoices: string[]) {
-  return api.post("/reconcile/update_statuses", { invoices });
+export function updateShopeeStatuses(
+  invoices: string[],
+  config?: AxiosRequestConfig,
+) {
+  return api.post("/reconcile/update_statuses", { invoices }, config);
 }

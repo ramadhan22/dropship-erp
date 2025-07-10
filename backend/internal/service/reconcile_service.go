@@ -689,6 +689,24 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
 		affiliate = *v
 	}
+	if adjList, ok := m["order_adjustment"].([]any); ok {
+		for _, a := range adjList {
+			am, ok := a.(map[string]any)
+			if !ok {
+				continue
+			}
+			reason, _ := am["adjustment_reason"].(string)
+			if strings.EqualFold(reason, "BD Marketing") {
+				if v := asFloat64(am, "amount"); v != nil {
+					affiliate += math.Abs(*v)
+				}
+			}
+		}
+	}
+	shipDisc := 0.0
+	if v := asFloat64(income, "seller_shipping_discount"); v != nil {
+		shipDisc = *v
+	}
 	escrowAmt := 0.0
 	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
 		escrowAmt = *v
@@ -702,7 +720,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		actShip = *v
 	}
 
-	debitTotal := commission + service + voucher + discount + affiliate + escrowAmt
+	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + escrowAmt
 	if math.Abs(debitTotal-orderPrice) > 0.01 {
 		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
 	}
@@ -726,6 +744,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
 		{JournalID: jid, AccountID: 55001, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
 		{JournalID: jid, AccountID: 55004, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
+		{JournalID: jid, AccountID: 55006, IsDebit: true, Amount: shipDisc, Memo: ptrString("Diskon Ongkir " + invoice)},
 		{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 	}

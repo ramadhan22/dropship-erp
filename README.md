@@ -44,6 +44,7 @@ Discrepancy* adjustment when they differ.
   the order detail cannot be retrieved.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
+- Reconcile All now displays a progress dialog showing processed totals.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.
    Adjustments including shipping fee discrepancies are now factored into profit
@@ -112,6 +113,8 @@ reconciliation and data imports.
 Common UI elements include sortable tables with built-in pagination and filter
 controls. The `SortableTable` component and `usePagination` hook are reused
 across pages to keep behavior consistent.
+API requests trigger a global loading spinner by default; add an `X-Skip-Loading`
+header to disable the overlay when a custom progress bar is shown.
 
 To develop the frontend:
 
