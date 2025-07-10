@@ -674,7 +674,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	}
 
 	logistikAmt := 0.0
-	if adjList, ok := m["order_adjustment"].([]any); ok {
+	if adjList, ok := income["order_adjustment"].([]any); ok {
 		for _, a := range adjList {
 			am, ok := a.(map[string]any)
 			if !ok {
