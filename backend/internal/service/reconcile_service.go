@@ -673,6 +673,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		affiliate = *v
 	}
 
+	logistikAmt := 0.0
 	if adjList, ok := m["order_adjustment"].([]any); ok {
 		for _, a := range adjList {
 			am, ok := a.(map[string]any)
@@ -683,6 +684,11 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			if strings.EqualFold(reason, "BD Marketing") {
 				if v := asFloat64(am, "amount"); v != nil {
 					affiliate += math.Abs(*v)
+				}
+			}
+			if strings.Contains(strings.ToLower(reason), "logistik") {
+				if v := asFloat64(am, "amount"); v != nil {
+					logistikAmt += math.Abs(*v)
 				}
 			}
 		}
@@ -704,8 +710,16 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		actShip = *v
 	}
 
+	// Logistic compensation occurs when the item is lost in transit and the
+	// logistic provider reimburses the seller.  Shopee records this as an
+	// order adjustment with reason "Logistik".  In this scenario Shopee does
+	// not charge any fees and the seller receives the reimbursed amount
+	// directly in escrow.  When such an adjustment exists we simply transfer
+	// the escrow amount from the pending account to the Shopee balance.
+	logistikCase := logistikAmt > 0
+
 	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + escrowAmt
-	if math.Abs(debitTotal-orderPrice) > 0.01 {
+	if !logistikCase && math.Abs(debitTotal-orderPrice) > 0.01 {
 		log.Printf("unbalanced journal for %s: debit %.2f credit %.2f", invoice, debitTotal, orderPrice)
 		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f",
 			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt)
@@ -727,15 +741,23 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if err != nil {
 		return err
 	}
-	lines := []models.JournalLine{
-		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: orderPrice, Memo: ptrString("Pending " + invoice)},
-		{JournalID: jid, AccountID: 52006, IsDebit: true, Amount: commission, Memo: ptrString("Biaya Administrasi " + invoice)},
-		{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
-		{JournalID: jid, AccountID: 55001, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
-		{JournalID: jid, AccountID: 55004, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
-		{JournalID: jid, AccountID: 55006, IsDebit: true, Amount: shipDisc, Memo: ptrString("Diskon Ongkir " + invoice)},
-		{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
-		{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
+	var lines []models.JournalLine
+	if logistikCase {
+		lines = []models.JournalLine{
+			{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: escrowAmt, Memo: ptrString("Pending " + invoice)},
+			{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
+		}
+	} else {
+		lines = []models.JournalLine{
+			{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: orderPrice, Memo: ptrString("Pending " + invoice)},
+			{JournalID: jid, AccountID: 52006, IsDebit: true, Amount: commission, Memo: ptrString("Biaya Administrasi " + invoice)},
+			{JournalID: jid, AccountID: 52004, IsDebit: true, Amount: service, Memo: ptrString("Biaya Layanan " + invoice)},
+			{JournalID: jid, AccountID: 55001, IsDebit: true, Amount: voucher, Memo: ptrString("Voucher " + invoice)},
+			{JournalID: jid, AccountID: 55004, IsDebit: true, Amount: discount, Memo: ptrString("Discount " + invoice)},
+			{JournalID: jid, AccountID: 55006, IsDebit: true, Amount: shipDisc, Memo: ptrString("Diskon Ongkir " + invoice)},
+			{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
+			{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
+		}
 	}
 	for i := range lines {
 		if lines[i].Amount == 0 {
@@ -746,7 +768,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		}
 	}
 	diff := estShip - actShip
-	if math.Abs(diff) > 0.01 && s.adjRepo != nil {
+	if !logistikCase && math.Abs(diff) > 0.01 && s.adjRepo != nil {
 		adj := &models.ShopeeAdjustment{
 			NamaToko:           dp.NamaToko,
 			TanggalPenyesuaian: updateTime,
