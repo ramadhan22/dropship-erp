@@ -56,7 +56,8 @@ Discrepancy* adjustment when they differ.
   The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 - Pay UMKM final tax (0.5% of revenue) per store and period on the **Tax Payment** page. Journal entries are created automatically when paying.
 - A dedicated `PPh Final UMKM` account (`5.4.1`) tracks these tax expenses.
-- View Shopee wallet transactions by store on the **Wallet Transactions** page.
+- View Shopee wallet transactions by store on the **Wallet Transactions** page;
+  pagination now uses a **More** button with filter dropdowns.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations

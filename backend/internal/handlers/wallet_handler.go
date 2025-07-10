@@ -29,7 +29,10 @@ func (h *WalletHandler) list(c *gin.Context) {
 		return
 	}
 	pageNo, _ := strconv.Atoi(c.DefaultQuery("page_no", "0"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "40"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "25"))
+	if pageSize > 100 {
+		pageSize = 100
+	}
 	var createFromPtr, createToPtr *int64
 	if v := c.Query("create_time_from"); v != "" {
 		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
