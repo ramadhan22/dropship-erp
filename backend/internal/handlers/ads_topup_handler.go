@@ -21,7 +21,7 @@ func NewAdsTopupHandler(s AdsTopupService) *AdsTopupHandler { return &AdsTopupHa
 
 func (h *AdsTopupHandler) RegisterRoutes(r gin.IRouter) {
 	grp := r.Group("/ads-topups")
-	grp.GET("/", h.list)
+	grp.GET("", h.list)
 	grp.POST("/journal", h.journal)
 }
 

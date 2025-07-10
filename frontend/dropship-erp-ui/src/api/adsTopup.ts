@@ -17,11 +17,11 @@ export function listAdsTopups(params: {
   if (params.create_time_to != null)
     q.append("create_time_to", String(params.create_time_to));
   return api.get<{ data: WalletTransaction[]; has_next_page: boolean }>(
-    `/ads-topups?${q.toString()}`,
+    `ads-topups?${q.toString()}`,
   );
 }
 
-export function createAdsTopupJournal(payload: {
+export function createAdsTopupJournal(payload: { s
   store: string;
   transaction_id: number;
   create_time: number;
