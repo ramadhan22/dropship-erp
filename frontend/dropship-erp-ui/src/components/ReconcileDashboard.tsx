@@ -360,26 +360,24 @@ export default function ReconcileDashboard() {
           {msg.text}
         </Alert>
       )}
-      {progress && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            marginTop: "0.5rem",
-          }}
+      <Dialog open={progress !== null} fullWidth maxWidth="sm">
+        <DialogTitle>Reconciling</DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
         >
           <LinearProgress
             variant="determinate"
-            value={(progress.done / progress.total) * 100}
+            value={progress ? (progress.done / progress.total) * 100 : 0}
             sx={{ flexGrow: 1 }}
           />
-          <span>
-            Reconciling {progress.done}/{progress.total} (
-            {Math.round((progress.done / progress.total) * 100)}%)
-          </span>
-        </div>
-      )}
+          {progress && (
+            <span>
+              {progress.done}/{progress.total} (
+              {Math.round((progress.done / progress.total) * 100)}%)
+            </span>
+          )}
+        </DialogContent>
+      </Dialog>
       <SortableTable columns={columns} data={data} />
       {controls}
       <Dialog

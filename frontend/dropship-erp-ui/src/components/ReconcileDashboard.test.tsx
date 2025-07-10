@@ -120,6 +120,7 @@ test("reconcile all button", async () => {
   );
   await screen.findByRole("button", { name: /Reconcile All/i });
   fireEvent.click(screen.getByRole("button", { name: /Reconcile All/i }));
+  await screen.findByRole("dialog");
   await waitFor(() =>
     expect(api.updateShopeeStatuses).toHaveBeenCalledWith(["INV", "INV2"]),
   );
