@@ -647,23 +647,6 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	m := map[string]any(*esc)
 	income, _ := m["order_income"].(map[string]any)
 	orderPrice := 0.0
-	if items, ok := income["items"].([]any); ok {
-		for _, it := range items {
-			im, ok := it.(map[string]any)
-			if !ok {
-				continue
-			}
-			price := 0.0
-			if v := asFloat64(im, "original_price"); v != nil {
-				price = *v
-			}
-			qty := 1
-			if q := asInt(im, "quantity_purchased"); q != nil {
-				qty = *q
-			}
-			orderPrice += price * float64(qty)
-		}
-	}
 	if orderPrice == 0 {
 		if v := asFloat64(income, "order_original_price"); v != nil {
 			orderPrice = *v
@@ -717,6 +700,11 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 
 	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + escrowAmt
 	if math.Abs(debitTotal-orderPrice) > 0.01 {
+		log.Printf("unbalanced journal for %s: debit %.2f credit %.2f", invoice, debitTotal, orderPrice)
+		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f",
+			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt)
+		log.Printf("  estShip: %.2f, actShip: %.2f", estShip, actShip)
+		log.Printf("  orderPrice: %.2f", orderPrice)
 		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
 	}
 

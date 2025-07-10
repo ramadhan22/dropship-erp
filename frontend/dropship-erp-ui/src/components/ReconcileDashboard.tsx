@@ -197,7 +197,7 @@ export default function ReconcileDashboard() {
       const all: ReconcileCandidate[] = [];
       const pageSize = 1000;
       let page = 1;
-      const skipLoading = { headers: { "X-Skip-Loading": "1" } };
+      const skipLoading = {  };
       while (true) {
         const res = await listCandidates(
           shop,
