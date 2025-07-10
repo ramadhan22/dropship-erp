@@ -6,7 +6,12 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { listAllStores } from "../api";
-import { listAdsTopups, createAdsTopupJournal } from "../api/adsTopup";
+import {
+  listAdsTopups,
+  createAdsTopupJournal,
+  createAllAdsTopupJournal,
+} from "../api/adsTopup";
+import { formatCurrency } from "../utils/format";
 import type { Store, WalletTransaction } from "../types";
 
 export default function AdsTopupPage() {
@@ -19,6 +24,7 @@ export default function AdsTopupPage() {
   const [createFrom, setCreateFrom] = useState<Date | null>(null);
   const [createTo, setCreateTo] = useState<Date | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [loadingAll, setLoadingAll] = useState(false);
 
   useEffect(() => {
     listAllStores().then((r) => setStores(r));
@@ -30,15 +36,28 @@ export default function AdsTopupPage() {
       key: "create_time",
       render: (v) => new Date(v * 1000).toLocaleString(),
     },
-    { label: "Amount", key: "amount", align: "right" },
-    { label: "Current Balance", key: "current_balance", align: "right" },
+    {
+      label: "Amount",
+      key: "amount",
+      align: "right",
+      render: (v) => formatCurrency(Number(v)),
+    },
+    {
+      label: "Current Balance",
+      key: "current_balance",
+      align: "right",
+      render: (v) => formatCurrency(Number(v)),
+    },
     {
       label: "Journal",
-      render: (_, row) => (
-        <Button size="small" onClick={() => handleJournal(row)}>
-          Insert
-        </Button>
-      ),
+      render: (_, row) =>
+        row.journaled ? (
+          <span>Posted</span>
+        ) : (
+          <Button size="small" onClick={() => handleJournal(row)}>
+            Insert
+          </Button>
+        ),
     },
   ];
 
@@ -77,6 +96,18 @@ export default function AdsTopupPage() {
       setMsg("journaled");
     } catch (e: any) {
       setMsg(e.response?.data?.error || e.message);
+    }
+  };
+
+  const handleJournalAll = async () => {
+    try {
+      setLoadingAll(true);
+      await createAllAdsTopupJournal({ store });
+      setMsg("inserted all");
+    } catch (e: any) {
+      setMsg(e.response?.data?.error || e.message);
+    } finally {
+      setLoadingAll(false);
     }
   };
 
@@ -132,6 +163,9 @@ export default function AdsTopupPage() {
         </LocalizationProvider>
         <Button disabled={!store} onClick={() => fetchData(0)}>
           Fetch
+        </Button>
+        <Button disabled={!store || loadingAll} onClick={handleJournalAll}>
+          Insert All
         </Button>
       </div>
       {msg && <Alert severity="info">{msg}</Alert>}
