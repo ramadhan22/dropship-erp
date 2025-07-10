@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -45,7 +46,7 @@ type WalletTransaction struct {
 // WalletTransactionList contains transaction rows and pagination info.
 type WalletTransactionList struct {
 	Transactions []WalletTransaction
-	HasNextPage  bool
+	more         bool
 }
 
 // WalletTransactionService fetches wallet transactions from Shopee API.
@@ -82,7 +83,9 @@ func (s *WalletTransactionService) ListWalletTransactions(ctx context.Context, s
 	if err != nil {
 		return nil, false, err
 	}
-	return resp.Transactions, resp.HasNextPage, nil
+	log.Printf("Fetched %d wallet transactions for store %s", len(resp.Transactions), store)
+	log.Printf("More transactions available: %t", resp.more)
+	return resp.Transactions, resp.more, nil
 }
 
 // ensureTokenValid refreshes the store token if needed.

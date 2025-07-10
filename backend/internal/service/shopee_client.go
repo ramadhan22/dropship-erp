@@ -630,7 +630,7 @@ func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken
 	var out struct {
 		Response struct {
 			TransactionList []WalletTransaction `json:"transaction_list"`
-			HasNextPage     bool                `json:"has_next_page"`
+			More            bool                `json:"more"`
 		} `json:"response"`
 		Error   string `json:"error"`
 		Message string `json:"message"`
@@ -642,5 +642,5 @@ func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken
 		logutil.Errorf("GetWalletTransactionList API error: %s", out.Error)
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
-	return &WalletTransactionList{Transactions: out.Response.TransactionList, HasNextPage: out.Response.HasNextPage}, nil
+	return &WalletTransactionList{Transactions: out.Response.TransactionList, more: out.Response.More}, nil
 }
