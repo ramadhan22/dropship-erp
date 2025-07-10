@@ -689,6 +689,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
 		affiliate = *v
 	}
+
 	if adjList, ok := m["order_adjustment"].([]any); ok {
 		for _, a := range adjList {
 			am, ok := a.(map[string]any)
