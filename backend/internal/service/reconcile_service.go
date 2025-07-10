@@ -672,11 +672,17 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
 		affiliate = *v
 	}
-	if s.adjRepo != nil {
-		if list, err := s.adjRepo.ListByOrder(ctx, invoice); err == nil {
-			for _, adj := range list {
-				if strings.EqualFold(adj.AlasanPenyesuaian, "BD Marketing") {
-					affiliate += math.Abs(adj.BiayaPenyesuaian)
+
+	if adjList, ok := m["order_adjustment"].([]any); ok {
+		for _, a := range adjList {
+			am, ok := a.(map[string]any)
+			if !ok {
+				continue
+			}
+			reason, _ := am["adjustment_reason"].(string)
+			if strings.EqualFold(reason, "BD Marketing") {
+				if v := asFloat64(am, "amount"); v != nil {
+					affiliate += math.Abs(*v)
 				}
 			}
 		}
