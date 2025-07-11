@@ -9,6 +9,7 @@ import (
 // It holds the shared *sqlx.DB connection and each repo instance.
 type Repository struct {
 	DB                   *sqlx.DB
+	BatchRepo            *BatchRepo
 	DropshipRepo         *DropshipRepo
 	ShopeeRepo           *ShopeeRepo
 	ReconcileRepo        *ReconcileRepo
@@ -34,6 +35,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	}
 
 	// Instantiate sub-repositories
+	batchRepo := NewBatchRepo(db)
 	dropshipRepo := NewDropshipRepo(db)
 	shopeeRepo := NewShopeeRepo(db)
 	reconcileRepo := NewReconcileRepo(db)
@@ -50,6 +52,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 
 	return &Repository{
 		DB:                   db,
+		BatchRepo:            batchRepo,
 		DropshipRepo:         dropshipRepo,
 		ShopeeRepo:           shopeeRepo,
 		ReconcileRepo:        reconcileRepo,

@@ -3,12 +3,14 @@ package handlers
 import (
 	"context"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
+	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
 // DropshipServiceInterface defines only the method the handler needs.
@@ -25,12 +27,13 @@ type DropshipServiceInterface interface {
 }
 
 type DropshipHandler struct {
-	svc DropshipServiceInterface
+	svc   DropshipServiceInterface
+	batch *service.BatchService
 }
 
 // Now accepts any DropshipServiceInterface
-func NewDropshipHandler(svc DropshipServiceInterface) *DropshipHandler {
-	return &DropshipHandler{svc: svc}
+func NewDropshipHandler(svc DropshipServiceInterface, batch *service.BatchService) *DropshipHandler {
+	return &DropshipHandler{svc: svc, batch: batch}
 }
 
 func (h *DropshipHandler) HandleImport(c *gin.Context) {
@@ -40,19 +43,31 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 		return
 	}
 	channel := c.PostForm("channel")
-	f, err := fileHeader.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer f.Close()
 
-	count, err := h.svc.ImportFromCSV(context.Background(), f, channel)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	var id int64
+	if h.batch != nil {
+		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: 1, DoneData: 0}
+		var err error
+		id, err = h.batch.Create(context.Background(), batch)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
-	c.JSON(http.StatusOK, gin.H{"inserted": count})
+
+	go func(fh *multipart.FileHeader, ch string, batchID int64) {
+		f, err := fh.Open()
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		h.svc.ImportFromCSV(context.Background(), f, ch)
+		if h.batch != nil {
+			h.batch.UpdateDone(context.Background(), batchID, 1)
+		}
+	}(fileHeader, channel, id)
+
+	c.JSON(http.StatusOK, gin.H{"message": "processing in background", "batch_id": id})
 }
 
 // HandleList returns dropship purchases with optional filters and pagination.

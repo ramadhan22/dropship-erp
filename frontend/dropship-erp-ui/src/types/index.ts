@@ -583,3 +583,11 @@ export interface WalletTransaction {
   money_flow?: string;
   journaled?: boolean;
 }
+
+export interface BatchHistory {
+  id: number;
+  process_type: string;
+  started_at: string;
+  total_data: number;
+  done_data: number;
+}
