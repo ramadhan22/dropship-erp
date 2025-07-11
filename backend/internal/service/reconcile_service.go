@@ -759,18 +759,18 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
 			{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 		}
-		if diff > 0 {
-			lines = append(lines,
-				models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
-				models.JournalLine{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
-			)
-		} else if diff < 0 {
-			aamt := -diff
-			lines = append(lines,
-				models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
-				models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: false, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
-			)
-		}
+	}
+	if diff > 0 {
+		lines = append(lines,
+			models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
+			models.JournalLine{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
+		)
+	} else if diff < 0 {
+		aamt := -diff
+		lines = append(lines,
+			models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
+			models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: false, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
+		)
 	}
 	for i := range lines {
 		if lines[i].Amount == 0 {
@@ -780,7 +780,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			return err
 		}
 	}
-	if !logistikCase && math.Abs(diff) > 0.01 && s.adjRepo != nil {
+	if math.Abs(diff) > 0.01 && s.adjRepo != nil {
 		adj := &models.ShopeeAdjustment{
 			NamaToko:           dp.NamaToko,
 			TanggalPenyesuaian: updateTime,
