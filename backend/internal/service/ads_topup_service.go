@@ -86,7 +86,7 @@ func (s *AdsTopupService) CreateAllJournal(ctx context.Context, store string) er
 	var emptyRanges int
 	to := time.Now()
 	for emptyRanges < 2 {
-		from := to.AddDate(0, 0, -15)
+		from := to.AddDate(0, 0, -14)
 		fromUnix := from.Unix()
 		toUnix := to.Unix()
 		page := 0

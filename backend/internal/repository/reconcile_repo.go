@@ -78,10 +78,7 @@ func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, from, t
                        SELECT 1 FROM journal_entries je2
                        WHERE je2.source_id = dp.kode_invoice_channel
                          AND je2.source_type IN ('shopee_escrow','reconcile_cancel')
-               )
-                 AND (dp.status_pesanan_terakhir <> 'Pesanan selesai'
-                      AND dp.status_pesanan_terakhir <> 'Pesanan dibatalkan'
-                      AND dp.status_pesanan_terakhir <> 'Cancelled Shopee')`
+               )`
 
 	countQuery := "SELECT COUNT(*) FROM (" + base + ") AS sub"
 	var total int
