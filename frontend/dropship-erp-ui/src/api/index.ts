@@ -19,6 +19,7 @@ import type {
   ShopeeOrderDetailRow,
   ShopeeOrderItemRow,
   ShopeeOrderPackageRow,
+  BatchHistory,
 } from "../types";
 
 export interface ImportResponse {
@@ -460,4 +461,8 @@ export function getOrderDetail(sn: string) {
   return api.get<{ detail: ShopeeOrderDetailRow; items: ShopeeOrderItemRow[]; packages: ShopeeOrderPackageRow[] }>(
     `/order-details/${sn}`,
   );
+}
+
+export function listBatchHistory() {
+  return api.get<BatchHistory[]>("/batches/");
 }
