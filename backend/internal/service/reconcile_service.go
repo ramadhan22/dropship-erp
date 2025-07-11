@@ -796,9 +796,10 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		if err := s.adjRepo.Insert(ctx, adj); err != nil {
 			return err
 		}
-		if err := s.createAdjustmentJournal(ctx, jrRepo, adj); err != nil {
-			return err
-		}
+		// Journal lines for the shipping fee discrepancy have already
+		// been created above as part of the escrow settlement journal,
+		// so we only persist the adjustment record here to avoid
+		// double posting.
 	}
 
 	if s.detailRepo != nil {
