@@ -701,15 +701,19 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
 		escrowAmt = *v
 	}
-	estShip := 0.0
-	if v := asFloat64(income, "estimated_shipping_fee"); v != nil {
-		estShip = *v
-	}
 	actShip := 0.0
 	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
 		actShip = *v
 	}
-	diff := estShip - actShip
+	buyerShip := 0.0
+	if v := asFloat64(income, "buyer_paid_shipping_fee"); v != nil {
+		buyerShip = *v
+	}
+	shopeeRebate := 0.0
+	if v := asFloat64(income, "shopee_shipping_rebate"); v != nil {
+		shopeeRebate = *v
+	}
+	diff := actShip - buyerShip - shopeeRebate - shipDisc
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
@@ -724,7 +728,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		log.Printf("unbalanced journal for %s: debit %.2f credit %.2f", invoice, debitTotal, orderPrice)
 		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f, diff: %.2f",
 			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt, diff)
-		log.Printf("  estShip: %.2f, actShip: %.2f", estShip, actShip)
+		log.Printf("  actShip: %.2f, buyerShip: %.2f, rebate: %.2f", actShip, buyerShip, shopeeRebate)
 		log.Printf("  orderPrice: %.2f", orderPrice)
 		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
 	}
