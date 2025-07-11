@@ -709,6 +709,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
 		actShip = *v
 	}
+	diff := estShip - actShip
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
@@ -718,11 +719,11 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	// the escrow amount from the pending account to the Shopee balance.
 	logistikCase := logistikAmt > 0
 
-	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + escrowAmt
+	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + diff + escrowAmt
 	if !logistikCase && math.Abs(debitTotal-orderPrice) > 0.01 {
 		log.Printf("unbalanced journal for %s: debit %.2f credit %.2f", invoice, debitTotal, orderPrice)
-		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f",
-			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt)
+		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f, diff: %.2f",
+			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt, diff)
 		log.Printf("  estShip: %.2f, actShip: %.2f", estShip, actShip)
 		log.Printf("  orderPrice: %.2f", orderPrice)
 		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
@@ -758,6 +759,18 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: affiliate, Memo: ptrString("Biaya Affiliate " + invoice)},
 			{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 		}
+		if diff > 0 {
+			lines = append(lines,
+				models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
+				models.JournalLine{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
+			)
+		} else if diff < 0 {
+			aamt := -diff
+			lines = append(lines,
+				models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
+				models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: false, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
+			)
+		}
 	}
 	for i := range lines {
 		if lines[i].Amount == 0 {
@@ -767,7 +780,6 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			return err
 		}
 	}
-	diff := estShip - actShip
 	if !logistikCase && math.Abs(diff) > 0.01 && s.adjRepo != nil {
 		adj := &models.ShopeeAdjustment{
 			NamaToko:           dp.NamaToko,
