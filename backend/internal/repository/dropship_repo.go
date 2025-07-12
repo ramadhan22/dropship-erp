@@ -402,3 +402,45 @@ func (r *DropshipRepo) CancelledSummary(
 	}
 	return res, nil
 }
+
+// CountOrders returns the number of purchases matching the filters.
+func (r *DropshipRepo) CountOrders(ctx context.Context, channel, store, from, to string) (int, error) {
+	query := `SELECT COUNT(*) FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)`
+	var n int
+	if err := r.db.GetContext(ctx, &n, query, channel, store, from, to); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+// AvgOrderValue returns the average total_transaksi for purchases matching the filters.
+func (r *DropshipRepo) AvgOrderValue(ctx context.Context, channel, store, from, to string) (float64, error) {
+	query := `SELECT COALESCE(AVG(total_transaksi),0) FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)`
+	var v float64
+	if err := r.db.GetContext(ctx, &v, query, channel, store, from, to); err != nil {
+		return 0, err
+	}
+	return v, nil
+}
+
+// DistinctCustomers counts unique dibuat_oleh values matching the filters.
+func (r *DropshipRepo) DistinctCustomers(ctx context.Context, channel, store, from, to string) (int, error) {
+	query := `SELECT COUNT(DISTINCT dibuat_oleh) FROM dropship_purchases
+                WHERE ($1 = '' OR jenis_channel = $1)
+                  AND ($2 = '' OR nama_toko = $2)
+                  AND ($3 = '' OR DATE(waktu_pesanan_terbuat) >= $3::date)
+                  AND ($4 = '' OR DATE(waktu_pesanan_terbuat) <= $4::date)`
+	var n int
+	if err := r.db.GetContext(ctx, &n, query, channel, store, from, to); err != nil {
+		return 0, err
+	}
+	return n, nil
+}

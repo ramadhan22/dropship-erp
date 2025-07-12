@@ -166,7 +166,8 @@ func main() {
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
-		handlers.NewDashboardHandler().RegisterRoutes(apiGroup)
+		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
+		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
