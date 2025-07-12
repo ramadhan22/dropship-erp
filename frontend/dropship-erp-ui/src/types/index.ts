@@ -590,6 +590,8 @@ export interface BatchHistory {
   started_at: string;
   total_data: number;
   done_data: number;
+  status: string;
+  error_message: string;
 }
 
 export interface DashboardData {

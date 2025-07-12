@@ -20,6 +20,10 @@ func (s *BatchService) UpdateDone(ctx context.Context, id int64, done int) error
 	return s.repo.UpdateDone(ctx, id, done)
 }
 
+func (s *BatchService) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
+	return s.repo.UpdateStatus(ctx, id, status, msg)
+}
+
 func (s *BatchService) List(ctx context.Context) ([]models.BatchHistory, error) {
 	return s.repo.List(ctx)
 }
