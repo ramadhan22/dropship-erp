@@ -400,6 +400,74 @@ func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID,
 	return &out.Response, nil
 }
 
+// FetchShopeeEscrowDetails retrieves escrow information for multiple orders in a single request.
+// The API accepts up to 50 order numbers in the request body.
+func (c *ShopeeClient) FetchShopeeEscrowDetails(ctx context.Context, accessToken, shopID string, orderSNs []string) (map[string]ShopeeEscrowDetail, error) {
+	if len(orderSNs) == 0 {
+		return map[string]ShopeeEscrowDetail{}, nil
+	}
+
+	path := "/api/v2/payment/get_escrow_detail_batch"
+	ts := time.Now().Unix()
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", fmt.Sprintf("%d", ts))
+	q.Set("sign", sign)
+	q.Set("shop_id", shopID)
+	q.Set("access_token", accessToken)
+
+	body := map[string]any{"order_sn_list": orderSNs}
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(body); err != nil {
+		return nil, err
+	}
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: POST %s", urlStr)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlStr, &buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logutil.Errorf("FetchShopeeEscrowDetails request error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("FetchShopeeEscrowDetails unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var out struct {
+		Response []struct {
+			EscrowDetail ShopeeEscrowDetail `json:"escrow_detail"`
+			OrderSN      string             `json:"order_sn"`
+		} `json:"response"`
+		Error   string `json:"error"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		logutil.Errorf("FetchShopeeEscrowDetails API error: %s", out.Error)
+		return nil, fmt.Errorf("shopee error: %s", out.Error)
+	}
+
+	res := make(map[string]ShopeeEscrowDetail, len(out.Response))
+	for _, item := range out.Response {
+		res[item.OrderSN] = item.EscrowDetail
+	}
+	return res, nil
+}
+
 // GetOrderDetail fetches order detail for a given order_sn and returns the status.
 func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (string, error) {
 	if _, err := c.RefreshAccessToken(ctx); err != nil {

@@ -45,6 +45,8 @@ Discrepancy* adjustment when they differ.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
 - Reconcile All now displays a progress dialog showing processed totals.
+- Escrow details are fetched in batches of up to 50 orders when reconciling all, reducing API requests.
+- Shopee reconciliation batches run in parallel for faster processing.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.
    Adjustments including shipping fee discrepancies are now factored into profit
