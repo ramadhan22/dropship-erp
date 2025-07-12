@@ -18,7 +18,6 @@ import {
   createExpense,
   listExpenses,
   deleteExpense,
-  getExpense,
   updateExpense,
 } from "../api/expenses";
 import { getJournalLinesBySource } from "../api/journal";
@@ -30,9 +29,6 @@ export default function ExpensePage() {
   const {
     data: list,
     controls,
-    page,
-    setPage,
-    pageSize,
     reload,
   } = useServerPagination((params) =>
     listExpenses({ page: params.page, page_size: params.pageSize }).then((r) => r.data),
@@ -72,7 +68,7 @@ export default function ExpensePage() {
           lines: lines.map((l) => ({
             account_id: Number(l.account),
             amount: Number(l.amount),
-          })),
+          })) as any,
           date: new Date(date).toISOString(),
         });
       } else {
@@ -82,7 +78,7 @@ export default function ExpensePage() {
           lines: lines.map((l) => ({
             account_id: Number(l.account),
             amount: Number(l.amount),
-          })),
+          })) as any,
           date: new Date(date).toISOString(),
         });
       }
