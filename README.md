@@ -106,10 +106,11 @@ Use mocks for Shopee API calls during unit tests to avoid network access.
 ## Frontend
 
 The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is
-a Vite powered React + TypeScript project using Material UI, React Query and
-Recharts for graphing. The application provides dashboards for sales summaries,
-profit & loss, balance sheet and general ledger as well as pages for
-reconciliation and data imports.
+a Vite powered React + TypeScript project using Material UI, Tailwind CSS,
+React Query and Recharts for graphing. The application provides dashboards for
+sales summaries, profit & loss, balance sheet and general ledger as well as
+pages for reconciliation and data imports. A Tailwind based analytics dashboard
+is available at `/dashboard`.
 
 Common UI elements include sortable tables with built-in pagination and filter
 controls. The `SortableTable` component and `usePagination` hook are reused

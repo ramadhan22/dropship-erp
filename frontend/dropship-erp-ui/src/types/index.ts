@@ -591,3 +591,8 @@ export interface BatchHistory {
   total_data: number;
   done_data: number;
 }
+
+export interface DashboardData {
+  summary: Record<string, { value: number; change: number }>;
+  charts: Record<string, { date: string; value: number }[]>;
+}
