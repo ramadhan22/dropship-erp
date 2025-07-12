@@ -111,9 +111,7 @@ export default function Dashboard() {
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       {/* Filter Controls */}
-      <div
-        style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}
-      >
+      <div className="mb-4 flex flex-wrap gap-2">
         <select
           className="border p-1 text-sm"
           value={orderType}
@@ -175,7 +173,7 @@ export default function Dashboard() {
         the Balance Sheet page.
       */}
       {metrics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-4 gap-4 mt-4">
           <SummaryCard
             label="TOTAL ORDERS"
             value={metrics.total_orders?.value}
@@ -203,7 +201,7 @@ export default function Dashboard() {
         </div>
       )}
       {/* Charts */}
-      <div className="grid md:grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-2 gap-4 mt-4">
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Total Sales</h3>
           <ResponsiveContainer width="100%" height={200}>
@@ -231,7 +229,7 @@ export default function Dashboard() {
       </div>
 
       {/* Additional Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+      <div className="grid grid-cols-4 gap-4 mt-4">
         <SummaryCard
           label="Total Price"
           value={metrics.total_price?.value}
@@ -257,7 +255,7 @@ export default function Dashboard() {
           loading={metricsLoading}
         />
       </div>
-      <div className="grid md:grid-cols-2 gap-4 mt-8">
+      <div className="grid grid-cols-2 gap-4 mt-8">
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Number of Orders</h3>
           <ResponsiveContainer width="100%" height={200}>
