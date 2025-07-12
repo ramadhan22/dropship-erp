@@ -10,6 +10,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -176,25 +177,42 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	}
 
 	apiTotals := make(map[string]float64)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 5)
+
 	for store, list := range batches {
 		for i := 0; i < len(list); i += 50 {
 			end := i + 50
 			if end > len(list) {
 				end = len(list)
 			}
-			amtMap, err := s.fetchAndStoreDetailBatch(ctx, list[i:end])
-			if err != nil {
-				log.Printf("fetch batch detail store %s: %v", store, err)
-				for _, h := range list[i:end] {
-					skipped[h.KodePesanan] = true
+			subset := list[i:end]
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(st string, batch []*models.DropshipPurchase) {
+				defer func() {
+					<-sem
+					wg.Done()
+				}()
+				amtMap, err := s.fetchAndStoreDetailBatch(ctx, batch)
+				mu.Lock()
+				if err != nil {
+					log.Printf("fetch batch detail store %s: %v", st, err)
+					for _, h := range batch {
+						skipped[h.KodePesanan] = true
+					}
+					mu.Unlock()
+					return
 				}
-				continue
-			}
-			for k, v := range amtMap {
-				apiTotals[k] = v
-			}
+				for k, v := range amtMap {
+					apiTotals[k] = v
+				}
+				mu.Unlock()
+			}(store, subset)
 		}
 	}
+	wg.Wait()
 	// track the header for each newly inserted purchase so we can
 	// create the journal entry after all rows are processed
 	headersMap := make(map[string]*models.DropshipPurchase)
