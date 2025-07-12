@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 import { fetchDashboard } from "../api";
 import type { DashboardData } from "../types";
 
@@ -103,31 +111,55 @@ export default function Dashboard() {
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       {/* Filter Controls */}
-      <div className="flex gap-2">
-        <select className="border p-1" value={orderType} onChange={(e) => setOrderType(e.target.value)}>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <select
+          className="border p-1 text-sm"
+          value={orderType}
+          onChange={(e) => setOrderType(e.target.value)}
+        >
           <option value="">All Orders</option>
           <option value="COD">COD</option>
         </select>
-        <select className="border p-1" value={channel} onChange={(e) => setChannel(e.target.value)}>
+        <select
+          className="border p-1 text-sm"
+          value={channel}
+          onChange={(e) => setChannel(e.target.value)}
+        >
           <option value="">All Channels</option>
           <option value="Shopee">Shopee</option>
         </select>
-        <select className="border p-1" value={store} onChange={(e) => setStore(e.target.value)}>
+        <select
+          className="border p-1 text-sm"
+          value={store}
+          onChange={(e) => setStore(e.target.value)}
+        >
           <option value="">All Stores</option>
           <option value="StoreA">StoreA</option>
         </select>
-        <select className="border p-1" value={period} onChange={(e) => setPeriod(e.target.value as any)}>
+        <select
+          className="border p-1 text-sm"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as any)}
+        >
           <option value="Monthly">Monthly</option>
           <option value="Yearly">Yearly</option>
         </select>
         {period === "Monthly" && (
-          <select className="border p-1" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+          <select
+            className="border p-1 text-sm"
+            value={month}
+            onChange={(e) => setMonth(Number(e.target.value))}
+          >
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
         )}
-        <select className="border p-1" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+        <select
+          className="border p-1 text-sm"
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+        >
           {Array.from({ length: 3 }, (_, i) => now.getFullYear() - i).map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
@@ -141,8 +173,8 @@ export default function Dashboard() {
         the Balance Sheet page.
       */}
       {metrics && (
-        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
-          <SummaryCard 
+        <div className="grid grid-cols-4 gap-4 mt-4">
+          <SummaryCard
             label="TOTAL ORDERS"
             value={metrics.total_orders?.value}
             change={metrics.total_orders?.change}
@@ -169,31 +201,35 @@ export default function Dashboard() {
         </div>
       )}
       {/* Charts */}
-      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+      <div className="grid grid-cols-2 gap-4 mt-4">
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Total Sales</h3>
-          <LineChart width={300} height={200} data={charts.total_sales}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#8884d8" />
-          </LineChart>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={charts.total_sales}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#8884d8" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Average Order Value</h3>
-          <LineChart width={300} height={200} data={charts.avg_order_value}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#82ca9d" />
-          </LineChart>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={charts.avg_order_value}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#82ca9d" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
       {/* Additional Summary Cards */}
-      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+      <div className="grid grid-cols-4 gap-4 mt-4">
         <SummaryCard
           label="Total Price"
           value={metrics.total_price?.value}
@@ -219,17 +255,18 @@ export default function Dashboard() {
           loading={metricsLoading}
         />
       </div>
-
-      <div className="grid grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-2 gap-4 mt-8">
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Number of Orders</h3>
-          <LineChart width={300} height={200} data={charts.number_of_orders}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#8884d8" />
-          </LineChart>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={charts.number_of_orders}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#8884d8" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
