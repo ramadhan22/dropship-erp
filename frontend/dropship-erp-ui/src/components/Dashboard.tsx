@@ -136,40 +136,38 @@ export default function Dashboard() {
 
 
       {/*
-        Parent container for the four summary cards. The flex row keeps cards
-        horizontally aligned with gaps, max width centers the row and
-        overflow-x-auto allows scrolling on small screens.
+        Parent container for the summary cards. Using a responsive grid keeps
+        the metrics aligned consistently across pages and matches the layout on
+        the Balance Sheet page.
       */}
-      <>
-        {metrics && (
-          <div className="inline-flex gap-x-4 max-w-screen-lg mx-auto w-full overflow-x-auto px-4 scrollbar-thin shrink-0">
-            <SummaryCard
-              label="TOTAL ORDERS"
-              value={metrics.total_orders?.value}
-              change={metrics.total_orders?.change}
-              loading={metricsLoading}
-            />
-            <SummaryCard
-              label="AVERAGE ORDER VALUE"
-              value={metrics.avg_order_value?.value}
-              change={metrics.avg_order_value?.change}
-              loading={metricsLoading}
-            />
-            <SummaryCard
-              label="TOTAL CANCELLED ORDERS"
-              value={metrics.total_cancelled?.value}
-              change={metrics.total_cancelled?.change}
-              loading={metricsLoading}
-            />
-            <SummaryCard
-              label="TOTAL CUSTOMERS"
-              value={metrics.total_customers?.value}
-              change={metrics.total_customers?.change}
-              loading={metricsLoading}
-            />
-          </div>
-        )}
-      </>
+      {metrics && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-screen-lg mx-auto w-full px-4">
+          <SummaryCard
+            label="TOTAL ORDERS"
+            value={metrics.total_orders?.value}
+            change={metrics.total_orders?.change}
+            loading={metricsLoading}
+          />
+          <SummaryCard
+            label="AVERAGE ORDER VALUE"
+            value={metrics.avg_order_value?.value}
+            change={metrics.avg_order_value?.change}
+            loading={metricsLoading}
+          />
+          <SummaryCard
+            label="TOTAL CANCELLED ORDERS"
+            value={metrics.total_cancelled?.value}
+            change={metrics.total_cancelled?.change}
+            loading={metricsLoading}
+          />
+          <SummaryCard
+            label="TOTAL CUSTOMERS"
+            value={metrics.total_customers?.value}
+            change={metrics.total_customers?.change}
+            loading={metricsLoading}
+          />
+        </div>
+      )}
       {/* Charts */}
       <div className="grid grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-xl shadow p-4 h-64">
