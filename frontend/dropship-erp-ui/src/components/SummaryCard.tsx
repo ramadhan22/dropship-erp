@@ -22,7 +22,7 @@ export default function SummaryCard({
         padding: "1.5rem",
         display: "flex",
         flexDirection: "column",
-        minWidth: "180px",
+        minWidth: "335px",
       }}
       aria-label={`${label} card`}
     >

@@ -117,7 +117,7 @@ export default function Dashboard() {
         the Balance Sheet page.
       */}
       {metrics && (
-        <div style={{ marginTop: "1rem", display: "flex", gap: "12rem" }}>
+        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
           <SummaryCard 
             label="TOTAL ORDERS"
             value={metrics.total_orders?.value}
@@ -166,7 +166,7 @@ export default function Dashboard() {
           >
             Total Sales
           </h3>
-          <LineChart width={700} height={200} data={charts.total_sales}>
+          <LineChart width={650} height={200} data={charts.total_sales}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
@@ -194,7 +194,7 @@ export default function Dashboard() {
           >
             Average Order Value
           </h3>
-          <LineChart width={700} height={200} data={charts.avg_order_value}>
+          <LineChart width={650} height={200} data={charts.avg_order_value}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
@@ -205,7 +205,7 @@ export default function Dashboard() {
       </div>
 
       {/* Additional Summary Cards */}
-      <div style={{ marginTop: "1rem", display: "flex", gap: "12rem" }}>
+      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
         <SummaryCard
           label="Total Price"
           value={metrics.total_price?.value}
@@ -260,7 +260,7 @@ export default function Dashboard() {
           >
             Number of Orders
           </h3>
-          <LineChart width={1400} height={200} data={charts.number_of_orders}>
+          <LineChart width={650} height={200} data={charts.number_of_orders}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
