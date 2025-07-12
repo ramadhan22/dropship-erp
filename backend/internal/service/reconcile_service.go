@@ -664,6 +664,9 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "voucher_from_seller"); v != nil {
 		voucher = *v
 	}
+	if v := asFloat64(income, "seller_coin_cash_back"); v != nil {
+		voucher += *v
+	}
 	discount := 0.0
 	if v := asFloat64(income, "order_seller_discount"); v != nil {
 		discount = *v
@@ -698,7 +701,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		shipDisc = *v
 	}
 	escrowAmt := 0.0
-	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
+	if v := asFloat64(income, "escrow_amount"); v != nil {
 		escrowAmt = *v
 	}
 	actShip := 0.0
