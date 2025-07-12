@@ -41,7 +41,8 @@ Discrepancy* adjustment when they differ.
 - Dropship CSV imports fetch Shopee order detail for each invoice to record
   pending sales amounts and save the raw detail. Order lookups are batched up
   to 50 invoices per request to reduce API calls. Transactions are skipped when
-  the order detail cannot be retrieved.
+  the order detail cannot be retrieved. Order detail batches are now fetched
+  concurrently for faster imports.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
 - Reconcile All now displays a progress dialog showing processed totals.
