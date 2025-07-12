@@ -87,13 +87,13 @@ export default function JournalPage() {
         <>
           <Button
             size="small"
-            onClick={() => {
-              setDetailEntry(j);
-              getJournalLines(j.journal_id).then((r) => {
-                setDetailLines(r.data);
-                setDetailOpen(true);
-              });
-            }}
+              onClick={() => {
+                setDetailEntry(j);
+                getJournalLines(j.journal_id).then((r) => {
+                  setDetailLines(r.data as any);
+                  setDetailOpen(true);
+                });
+              }}
           >
             Detail
           </Button>

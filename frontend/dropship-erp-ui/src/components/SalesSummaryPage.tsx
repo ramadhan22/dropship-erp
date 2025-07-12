@@ -99,7 +99,7 @@ export default function SalesSummaryPage() {
               from,
               to,
             });
-      const arr = res.data.sort((a, b) => {
+      const arr = (res.data as any[]).sort((a, b) => {
         const da = period === "Daily" ? a.date : a.month;
         const db = period === "Daily" ? b.date : b.month;
         return da < db ? -1 : 1;
@@ -147,7 +147,7 @@ export default function SalesSummaryPage() {
   }, [channel, store, from, to, period]);
 
   const openDetail = async (a: ShopeeAdjustment) => {
-    const id = `${a.no_pesanan}-${a.tanggal_penyesuaian.replaceAll("-", "")}`;
+    const id = `${a.no_pesanan}-${a.tanggal_penyesuaian.replace(/-/g, "")}`;
     try {
       const [linesRes, detailRes] = await Promise.all([
         getJournalLinesBySource(id),

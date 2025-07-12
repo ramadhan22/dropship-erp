@@ -20,7 +20,7 @@ export function getJournal(id: number) {
 }
 
 export function getJournalLines(id: number) {
-  return api.get<JournalLine & { account_name: string }[]>(
+  return api.get<(JournalLine & { account_name: string })[]>(
     `/journal/${id}/lines`,
   );
 }

@@ -385,7 +385,6 @@ export default function ShopeeSalesPage() {
     },
     {
       label: "Actions",
-      key: "actions",
       render: (_, row) => {
         if (row.is_settled_confirmed) return "✔️";
         if (row.is_data_mismatch)

@@ -183,10 +183,30 @@ export default function Dashboard() {
 
       {/* Additional Summary Cards */}
       <div className="grid grid-cols-4 gap-4 mt-8">
-        <SummaryCard label="Total Price" value={s.total_price.value} change={s.total_price.change} />
-        <SummaryCard label="Total Discounts" value={s.total_discounts.value} change={s.total_discounts.change} />
-        <SummaryCard label="Total Net Profit" value={s.total_net_profit.value} change={s.total_net_profit.change} />
-        <SummaryCard label="Outstanding Amount" value={s.outstanding_amount.value} change={s.outstanding_amount.change} />
+        <SummaryCard
+          label="Total Price"
+          value={s.total_price.value}
+          change={s.total_price.change}
+          loading={metricsLoading}
+        />
+        <SummaryCard
+          label="Total Discounts"
+          value={s.total_discounts.value}
+          change={s.total_discounts.change}
+          loading={metricsLoading}
+        />
+        <SummaryCard
+          label="Total Net Profit"
+          value={s.total_net_profit.value}
+          change={s.total_net_profit.change}
+          loading={metricsLoading}
+        />
+        <SummaryCard
+          label="Outstanding Amount"
+          value={s.outstanding_amount.value}
+          change={s.outstanding_amount.change}
+          loading={metricsLoading}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-6 mt-8">

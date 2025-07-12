@@ -16,6 +16,7 @@ import type {
   SalesProfit,
   DailyPurchaseTotal,
   MonthlyPurchaseTotal,
+  DashboardData,
   ShopeeOrderDetailRow,
   ShopeeOrderItemRow,
   ShopeeOrderPackageRow,

@@ -2,7 +2,6 @@ import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
 import { fireEvent, screen, waitFor } from "@testing-library/dom";
 import * as api from "../api/journal";
-import * as baseApi from "../api";
 import JournalPage from "./JournalPage";
 
 jest.mock("../api/journal", () => ({
