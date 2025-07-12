@@ -1,150 +1,176 @@
 import { useEffect, useState } from "react";
-import {
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-} from "@mui/material";
+import { Alert, Button } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
 import { listAllStores } from "../api";
 import {
-  createWithdrawal,
-  listWithdrawals,
-  importWithdrawals,
+  listWalletWithdrawals,
+  createWalletWithdrawalJournal,
+  createAllWalletWithdrawalJournal,
 } from "../api/withdrawals";
-import type { Store, Withdrawal } from "../types";
-import usePagination from "../usePagination";
+import { formatCurrency } from "../utils/format";
+import type { Store, WalletTransaction } from "../types";
 
 export default function WithdrawalPage() {
-  const [list, setList] = useState<Withdrawal[]>([]);
-  const { paginated, controls } = usePagination(list);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [open, setOpen] = useState(false);
   const [store, setStore] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [amount, setAmount] = useState("0");
-  const [file, setFile] = useState<File | null>(null);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(
-    null,
-  );
-
-  const fetchData = () => listWithdrawals().then((r) => setList(r.data));
+  const [stores, setStores] = useState<Store[]>([]);
+  const [list, setList] = useState<WalletTransaction[]>([]);
+  const [hasNext, setHasNext] = useState(false);
+  const [pageNo, setPageNo] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
+  const [createFrom, setCreateFrom] = useState<Date | null>(null);
+  const [createTo, setCreateTo] = useState<Date | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [loadingAll, setLoadingAll] = useState(false);
 
   useEffect(() => {
-    fetchData();
     listAllStores().then((r) => setStores(r));
   }, []);
 
-  const columns: Column<Withdrawal>[] = [
+  const columns: Column<WalletTransaction>[] = [
     {
-      label: "Date",
-      key: "date",
-      render: (v) => new Date(v).toLocaleDateString(),
+      label: "Create Time",
+      key: "create_time",
+      render: (v) => new Date(v * 1000).toLocaleString(),
     },
-    { label: "Store", key: "store" },
     {
       label: "Amount",
       key: "amount",
       align: "right",
-      render: (v) =>
-        Number(v).toLocaleString("id-ID", { style: "currency", currency: "IDR" }),
+      render: (v) => formatCurrency(Number(v)),
+    },
+    {
+      label: "Current Balance",
+      key: "current_balance",
+      align: "right",
+      render: (v) => formatCurrency(Number(v)),
+    },
+    {
+      label: "Journal",
+      render: (_, row) =>
+        row.journaled ? (
+          <span>Posted</span>
+        ) : (
+          <Button size="small" onClick={() => handleJournal(row)}>
+            Insert
+          </Button>
+        ),
     },
   ];
 
-  const handleSave = async () => {
+  const fetchData = async (page: number, replace = true) => {
     try {
-      await createWithdrawal({
+      const res = await listWalletWithdrawals({
         store,
-        date: new Date(date).toISOString().split("T")[0],
-        amount: Number(amount),
+        page_no: page,
+        page_size: pageSize,
+        create_time_from: createFrom
+          ? Math.floor(createFrom.getTime() / 1000)
+          : undefined,
+        create_time_to: createTo ? Math.floor(createTo.getTime() / 1000) : undefined,
       });
-      setOpen(false);
-      setStore("");
-      setAmount("0");
-      fetchData();
-      setMsg({ type: "success", text: "saved" });
+      setList((prev) => (replace ? res.data.data : [...prev, ...res.data.data]));
+      setHasNext(res.data.has_next_page);
+      setPageNo(page);
+      setMsg(null);
     } catch (e: any) {
-      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+      setMsg(e.response?.data?.error || e.message);
     }
   };
 
-  const handleImport = async () => {
-    if (!file) return;
+  const handleJournal = async (tx: WalletTransaction) => {
     try {
-      await importWithdrawals(file);
-      setFile(null);
-      fetchData();
-      setMsg({ type: "success", text: "imported" });
+      await createWalletWithdrawalJournal({
+        store,
+        transaction_id: tx.transaction_id,
+        create_time: tx.create_time,
+        amount: tx.amount,
+      });
+      setMsg("journaled");
     } catch (e: any) {
-      setMsg({ type: "error", text: e.message });
+      setMsg(e.response?.data?.error || e.message);
+    }
+  };
+
+  const handleJournalAll = async () => {
+    try {
+      setLoadingAll(true);
+      await createAllWalletWithdrawalJournal({ store });
+      setMsg("inserted all");
+    } catch (e: any) {
+      setMsg(e.response?.data?.error || e.message);
+    } finally {
+      setLoadingAll(false);
     }
   };
 
   return (
     <div>
       <h2>Withdrawals</h2>
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        <input
-          type="file"
-          accept=".xlsx"
-          onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-        />
-        <Button variant="contained" onClick={handleImport} disabled={!file}>
-          Import
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => setOpen(true)}
-          sx={{ ml: "auto" }}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <select aria-label="Store" value={store} onChange={(e) => setStore(e.target.value)}>
+          <option value="">Select Store</option>
+          {stores.map((s) => (
+            <option key={s.store_id} value={s.nama_toko}>
+              {s.nama_toko}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Page Size"
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
         >
-          Add Withdrawal
+          {[25, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DateTimePicker
+            label="Create From"
+            value={createFrom}
+            onChange={(d) => setCreateFrom(d)}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DateTimePicker
+            label="Create To"
+            value={createTo}
+            onChange={(d) => setCreateTo(d)}
+            slotProps={{ textField: { size: "small" } }}
+          />
+        </LocalizationProvider>
+        <Button disabled={!store} onClick={() => fetchData(0)}>
+          Fetch
+        </Button>
+        <Button disabled={!store || loadingAll} onClick={handleJournalAll}>
+          Insert All
         </Button>
       </div>
-      {msg && <Alert severity={msg.type}>{msg.text}</Alert>}
-      <SortableTable columns={columns} data={paginated} />
-      {controls}
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Add Withdrawal</DialogTitle>
-        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <TextField
-            label="Store"
-            value={store}
-            onChange={(e) => setStore(e.target.value)}
-            select
-            SelectProps={{ native: true }}
-          >
-            <option value=""></option>
-            {stores.map((s) => (
-              <option key={s.store_id} value={s.nama_toko}>
-                {s.nama_toko}
-              </option>
-            ))}
-          </TextField>
-          <TextField
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            label="Amount"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!store || !amount}>
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {msg && <Alert severity="info">{msg}</Alert>}
+      {list.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <SortableTable columns={columns} data={list} />
+          <div style={{ marginTop: "1rem" }}>
+            <Button disabled={!hasNext} onClick={() => fetchData(pageNo + 1, false)}>
+              More
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,10 +41,13 @@ Discrepancy* adjustment when they differ.
 - Dropship CSV imports fetch Shopee order detail for each invoice to record
   pending sales amounts and save the raw detail. Order lookups are batched up
   to 50 invoices per request to reduce API calls. Transactions are skipped when
-  the order detail cannot be retrieved.
+  the order detail cannot be retrieved. Order detail batches are now fetched
+  concurrently for faster imports.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
 - Reconcile All now displays a progress dialog showing processed totals.
+- Escrow details are fetched in batches of up to 50 orders when reconciling all, reducing API requests.
+- Shopee reconciliation batches run in parallel for faster processing.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.
    Adjustments including shipping fee discrepancies are now factored into profit
@@ -106,10 +109,10 @@ Use mocks for Shopee API calls during unit tests to avoid network access.
 ## Frontend
 
 The UI resides in [`frontend/dropship-erp-ui`](frontend/dropship-erp-ui). It is
-a Vite powered React + TypeScript project using Material UI, React Query and
-Recharts for graphing. The application provides dashboards for sales summaries,
-profit & loss, balance sheet and general ledger as well as pages for
-reconciliation and data imports.
+a Vite powered React + TypeScript project using Material UI, Tailwind CSS,
+React Query and Recharts for graphing. The application provides dashboards for
+sales summaries, profit & loss, balance sheet and general ledger as well as
+pages for reconciliation and data imports.
 
 Common UI elements include sortable tables with built-in pagination and filter
 controls. The `SortableTable` component and `usePagination` hook are reused

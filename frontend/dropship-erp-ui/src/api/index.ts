@@ -19,6 +19,7 @@ import type {
   ShopeeOrderDetailRow,
   ShopeeOrderItemRow,
   ShopeeOrderPackageRow,
+  BatchHistory,
 } from "../types";
 
 export interface ImportResponse {
@@ -460,4 +461,26 @@ export function getOrderDetail(sn: string) {
   return api.get<{ detail: ShopeeOrderDetailRow; items: ShopeeOrderItemRow[]; packages: ShopeeOrderPackageRow[] }>(
     `/order-details/${sn}`,
   );
+}
+
+export function listBatchHistory() {
+  return api.get<BatchHistory[]>("/batches/");
+}
+
+export function fetchDashboard(params: {
+  order?: string;
+  channel?: string;
+  store?: string;
+  period?: string;
+  month?: number;
+  year?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params.order) q.append("order", params.order);
+  if (params.channel) q.append("channel", params.channel);
+  if (params.store) q.append("store", params.store);
+  if (params.period) q.append("period", params.period);
+  if (params.month) q.append("month", String(params.month));
+  if (params.year) q.append("year", String(params.year));
+  return api.get<DashboardData>(`/dashboard?${q.toString()}`);
 }

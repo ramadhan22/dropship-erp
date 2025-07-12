@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -601,7 +603,7 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 		updateTime = time.Now()
 	}
 	if status == "completed" {
-		if err := s.createEscrowSettlementJournal(ctx, invoice, statusStr, updateTime); err != nil {
+		if err := s.createEscrowSettlementJournal(ctx, invoice, statusStr, updateTime, nil); err != nil {
 			return err
 		}
 		return nil
@@ -618,7 +620,7 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 
 // createEscrowSettlementJournal posts journal entries based on escrow detail and
 // marks the purchase as complete.
-func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, invoice, status string, updateTime time.Time) error {
+func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, invoice, status string, updateTime time.Time, escDetail *ShopeeEscrowDetail) error {
 	log.Printf("createEscrowSettlementJournal %s", invoice)
 
 	var tx *sqlx.Tx
@@ -640,11 +642,13 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
 	}
 
-	esc, err := s.GetShopeeEscrowDetail(ctx, invoice)
-	if err != nil {
-		return err
+	if escDetail == nil {
+		escDetail, err = s.GetShopeeEscrowDetail(ctx, invoice)
+		if err != nil {
+			return err
+		}
 	}
-	m := map[string]any(*esc)
+	m := map[string]any(*escDetail)
 	income, _ := m["order_income"].(map[string]any)
 	orderPrice := 0.0
 	if orderPrice == 0 {
@@ -663,6 +667,9 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	voucher := 0.0
 	if v := asFloat64(income, "voucher_from_seller"); v != nil {
 		voucher = *v
+	}
+	if v := asFloat64(income, "seller_coin_cash_back"); v != nil {
+		voucher += *v
 	}
 	discount := 0.0
 	if v := asFloat64(income, "order_seller_discount"); v != nil {
@@ -698,18 +705,26 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		shipDisc = *v
 	}
 	escrowAmt := 0.0
-	if v := asFloat64(income, "escrow_amount_after_adjustment"); v != nil {
+	if v := asFloat64(income, "escrow_amount"); v != nil {
 		escrowAmt = *v
-	}
-	estShip := 0.0
-	if v := asFloat64(income, "estimated_shipping_fee"); v != nil {
-		estShip = *v
 	}
 	actShip := 0.0
 	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
 		actShip = *v
 	}
+<<<<<<< HEAD
 	diff := actShip - estShip
+=======
+	buyerShip := 0.0
+	if v := asFloat64(income, "buyer_paid_shipping_fee"); v != nil {
+		buyerShip = *v
+	}
+	shopeeRebate := 0.0
+	if v := asFloat64(income, "shopee_shipping_rebate"); v != nil {
+		shopeeRebate = *v
+	}
+	diff := actShip - buyerShip - shopeeRebate - shipDisc
+>>>>>>> c7dc23c5ecf4c19c0e0e0808256c988182366383
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
@@ -726,7 +741,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		log.Printf("unbalanced journal for %s: debit %.2f credit %.2f", invoice, debitTotal, orderPrice)
 		log.Printf("  commission: %.2f, service: %.2f, voucher: %.2f, discount: %.2f, shipDisc: %.2f, affiliate: %.2f, escrowAmt: %.2f, diff: %.2f",
 			commission, service, voucher, discount, shipDisc, affiliate, escrowAmt, diff)
-		log.Printf("  estShip: %.2f, actShip: %.2f", estShip, actShip)
+		log.Printf("  actShip: %.2f, buyerShip: %.2f, rebate: %.2f", actShip, buyerShip, shopeeRebate)
 		log.Printf("  orderPrice: %.2f", orderPrice)
 		return fmt.Errorf("unbalanced journal: debit %.2f credit %.2f", debitTotal, orderPrice)
 	}
@@ -833,74 +848,103 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 		}
 		batches[dp.NamaToko] = append(batches[dp.NamaToko], dp)
 	}
+
+	g, ctx := errgroup.WithContext(ctx)
 	for store, list := range batches {
-		st, err := s.storeRepo.GetStoreByName(ctx, store)
-		if err != nil || st == nil || st.AccessToken == nil || st.ShopID == nil {
-			log.Printf("fetch store %s: %v", store, err)
+		store := store
+		list := list
+		g.Go(func() error {
+			s.processShopeeStatusBatch(ctx, store, list)
+			return nil
+		})
+	}
+	return g.Wait()
+}
+
+func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store string, list []*models.DropshipPurchase) {
+	st, err := s.storeRepo.GetStoreByName(ctx, store)
+	if err != nil || st == nil || st.AccessToken == nil || st.ShopID == nil {
+		log.Printf("fetch store %s: %v", store, err)
+		return
+	}
+	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+		log.Printf("ensure token %s: %v", store, err)
+		return
+	}
+	sns := make([]string, len(list))
+	dpMap := make(map[string]*models.DropshipPurchase, len(list))
+	for i, dp := range list {
+		sns[i] = dp.KodeInvoiceChannel
+		dpMap[dp.KodeInvoiceChannel] = dp
+	}
+	details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
+			details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+		}
+	}
+	if err != nil {
+		log.Printf("batch fetch detail %s: %v", store, err)
+		return
+	}
+	completed := []string{}
+	timeMap := make(map[string]time.Time)
+	for _, det := range details {
+		sn, _ := det["order_sn"].(string)
+		statusVal, ok := det["order_status"]
+		if !ok {
+			statusVal = det["status"]
+		}
+		statusStr, _ := statusVal.(string)
+		var updateTime time.Time
+		if ts, ok := det["update_time"]; ok {
+			switch v := ts.(type) {
+			case float64:
+				updateTime = time.Unix(int64(v), 0)
+			case int64:
+				updateTime = time.Unix(v, 0)
+			case int:
+				updateTime = time.Unix(int64(v), 0)
+			case string:
+				if t, err := strconv.ParseInt(v, 10, 64); err == nil {
+					updateTime = time.Unix(t, 0)
+				}
+			}
+		}
+		if updateTime.IsZero() {
+			updateTime = time.Now()
+		}
+		dp := dpMap[sn]
+		if dp == nil {
 			continue
 		}
-		if err := s.ensureStoreTokenValid(ctx, st); err != nil {
-			log.Printf("ensure token %s: %v", store, err)
+		status := strings.ToLower(statusStr)
+		if status == "completed" {
+			completed = append(completed, sn)
+			timeMap[sn] = updateTime
 			continue
 		}
-		sns := make([]string, len(list))
-		dpMap := make(map[string]*models.DropshipPurchase, len(list))
-		for i, dp := range list {
-			sns[i] = dp.KodeInvoiceChannel
-			dpMap[dp.KodeInvoiceChannel] = dp
+		if status == "cancelled" {
+			if err := s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee"); err != nil {
+				log.Printf("cancel purchase %s: %v", dp.KodePesanan, err)
+			}
 		}
-		details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+	}
+	if len(completed) > 0 {
+		escMap, err := s.client.FetchShopeeEscrowDetails(ctx, *st.AccessToken, *st.ShopID, completed)
 		if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
 			if e := s.ensureStoreTokenValid(ctx, st); e == nil {
-				details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+				escMap, err = s.client.FetchShopeeEscrowDetails(ctx, *st.AccessToken, *st.ShopID, completed)
 			}
 		}
 		if err != nil {
-			log.Printf("batch fetch detail %s: %v", store, err)
-			continue
-		}
-		for _, det := range details {
-			sn, _ := det["order_sn"].(string)
-			statusVal, ok := det["order_status"]
-			if !ok {
-				statusVal = det["status"]
-			}
-			statusStr, _ := statusVal.(string)
-			var updateTime time.Time
-			if ts, ok := det["update_time"]; ok {
-				switch v := ts.(type) {
-				case float64:
-					updateTime = time.Unix(int64(v), 0)
-				case int64:
-					updateTime = time.Unix(v, 0)
-				case int:
-					updateTime = time.Unix(int64(v), 0)
-				case string:
-					if t, err := strconv.ParseInt(v, 10, 64); err == nil {
-						updateTime = time.Unix(t, 0)
-					}
-				}
-			}
-			if updateTime.IsZero() {
-				updateTime = time.Now()
-			}
-			dp := dpMap[sn]
-			if dp == nil {
-				continue
-			}
-			status := strings.ToLower(statusStr)
-			if status == "completed" {
-				if err := s.createEscrowSettlementJournal(ctx, sn, statusStr, updateTime); err != nil {
+			log.Printf("batch escrow detail %s: %v", store, err)
+		} else {
+			for sn, esc := range escMap {
+				if err := s.createEscrowSettlementJournal(ctx, sn, "completed", timeMap[sn], &esc); err != nil {
 					log.Printf("escrow settlement %s: %v", sn, err)
-				}
-				continue
-			}
-			if status == "cancelled" {
-				if err := s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee"); err != nil {
-					log.Printf("cancel purchase %s: %v", dp.KodePesanan, err)
 				}
 			}
 		}
 	}
-	return nil
 }

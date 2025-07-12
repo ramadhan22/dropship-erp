@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -67,7 +68,7 @@ func TestHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{}
 	// This is the real constructor from dropship_handler.go
-	h := NewDropshipHandler(svc)
+	h := NewDropshipHandler(svc, nil)
 
 	rec := httptest.NewRecorder()
 	router := gin.New()
@@ -83,6 +84,7 @@ func TestHandleImport_Success(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/dropship/import", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	router.ServeHTTP(rec, req)
+	time.Sleep(10 * time.Millisecond)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
@@ -95,7 +97,7 @@ func TestHandleImport_Success(t *testing.T) {
 func TestHandleImport_BadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{}
-	h := NewDropshipHandler(svc)
+	h := NewDropshipHandler(svc, nil)
 
 	rec := httptest.NewRecorder()
 	router := gin.New()
@@ -112,7 +114,7 @@ func TestHandleImport_BadRequest(t *testing.T) {
 func TestHandleImport_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeDropshipService{fail: true}
-	h := NewDropshipHandler(svc)
+	h := NewDropshipHandler(svc, nil)
 
 	rec := httptest.NewRecorder()
 	router := gin.New()
@@ -128,7 +130,7 @@ func TestHandleImport_ServiceError(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 }

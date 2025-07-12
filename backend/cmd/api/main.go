@@ -80,10 +80,12 @@ func main() {
 	pbSvc := service.NewPendingBalanceService(shClient)
 	walletSvc := service.NewWalletTransactionService(repo.ChannelRepo, shClient)
 	adsTopupSvc := service.NewAdsTopupService(walletSvc, repo.JournalRepo)
+	walletWdSvc := service.NewWalletWithdrawalService(walletSvc, repo.JournalRepo)
 	assetSvc := service.NewAssetAccountService(repo.AssetAccountRepo, repo.JournalRepo)
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
+	batchSvc := service.NewBatchService(repo.BatchRepo)
 
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
@@ -98,14 +100,15 @@ func main() {
 
 	apiGroup := router.Group("/api")
 	{
-		apiGroup.POST("/dropship/import", handlers.NewDropshipHandler(dropshipSvc).HandleImport)
-		apiGroup.GET("/dropship/purchases", handlers.NewDropshipHandler(dropshipSvc).HandleList)
-		apiGroup.GET("/dropship/purchases/summary", handlers.NewDropshipHandler(dropshipSvc).HandleSum)
-		apiGroup.GET("/dropship/purchases/daily", handlers.NewDropshipHandler(dropshipSvc).HandleDailyTotals)
-		apiGroup.GET("/dropship/purchases/monthly", handlers.NewDropshipHandler(dropshipSvc).HandleMonthlyTotals)
-		apiGroup.GET("/dropship/cancellations/summary", handlers.NewDropshipHandler(dropshipSvc).HandleCancelledSummary)
-		apiGroup.GET("/dropship/purchases/:id/details", handlers.NewDropshipHandler(dropshipSvc).HandleListDetails)
-		apiGroup.GET("/dropship/top-products", handlers.NewDropshipHandler(dropshipSvc).HandleTopProducts)
+		dh := handlers.NewDropshipHandler(dropshipSvc, batchSvc)
+		apiGroup.POST("/dropship/import", dh.HandleImport)
+		apiGroup.GET("/dropship/purchases", dh.HandleList)
+		apiGroup.GET("/dropship/purchases/summary", dh.HandleSum)
+		apiGroup.GET("/dropship/purchases/daily", dh.HandleDailyTotals)
+		apiGroup.GET("/dropship/purchases/monthly", dh.HandleMonthlyTotals)
+		apiGroup.GET("/dropship/cancellations/summary", dh.HandleCancelledSummary)
+		apiGroup.GET("/dropship/purchases/:id/details", dh.HandleListDetails)
+		apiGroup.GET("/dropship/top-products", dh.HandleTopProducts)
 		shHandler := handlers.NewShopeeHandler(shopeeSvc)
 		apiGroup.POST("/shopee/import", shHandler.HandleImport)
 		apiGroup.POST("/shopee/affiliate", shHandler.HandleImportAffiliate)
@@ -155,12 +158,15 @@ func main() {
 		handlers.NewPendingBalanceHandler(pbSvc).RegisterRoutes(apiGroup)
 		handlers.NewWalletHandler(walletSvc).RegisterRoutes(apiGroup)
 		handlers.NewAdsTopupHandler(adsTopupSvc).RegisterRoutes(apiGroup)
+		handlers.NewWalletWithdrawalHandler(walletWdSvc).RegisterRoutes(apiGroup)
 		handlers.NewAssetAccountHandler(assetSvc).RegisterRoutes(apiGroup)
+		handlers.NewBatchHandler(batchSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawHandler(shopeeSvc).RegisterRoutes(apiGroup)
 		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
+		handlers.NewDashboardHandler().RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
