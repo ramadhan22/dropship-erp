@@ -37,7 +37,7 @@ export default function Dashboard() {
 
   // metrics row should render even while loading, so do not early return
 
-  // Card component for each metric. It receives backend values and the global
+  // Card component for each metrics. It receives backend values and the global
   // loading state so we can render skeletons while data is being fetched.
   const SummaryCard = ({
     label,
@@ -58,7 +58,7 @@ export default function Dashboard() {
       <div className="text-xs font-semibold text-gray-400 uppercase mb-2">
         {label}
       </div>
-      {cardLoading || value === undefined ? (
+      {cardLoading || value === undefined || value === null ? (
         // Skeletons shown while loading data
         <>
           <div className="bg-gray-200 rounded w-16 h-6 animate-pulse mb-2" />
@@ -71,14 +71,14 @@ export default function Dashboard() {
             {value.toLocaleString()}
           </div>
           {/* percent change indicator with arrow and color logic */}
-          <div className="mt-2 flex flex-row items-center text-left">
+          <div className="mt-2 flex flex-row items-center text-start">
             {change && change > 0 && (
               <span className="text-green-600 mr-1">▲</span>
             )}
             {change && change < 0 && (
               <span className="text-red-600 mr-1">▼</span>
             )}
-            {change && change !== 0 ? (
+            {typeof change === "number" && change !== 0 ? (
               <span className={change > 0 ? "text-green-600" : "text-red-600"}>
                 {Math.abs(change * 100).toFixed(1)}%
               </span>
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const metricsLoading = loading || !data;
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-gray-50 min-h-screen">
       {/* Filter Controls */}
       <div className="flex gap-2">
         <select className="border p-1" value={orderType} onChange={(e) => setOrderType(e.target.value)}>
@@ -140,32 +140,36 @@ export default function Dashboard() {
         horizontally aligned with gaps, max width centers the row and
         overflow-x-auto allows scrolling on small screens.
       */}
-      <div className="flex flex-row gap-x-4 max-w-screen-lg mx-auto w-full overflow-x-auto">
-        <SummaryCard
-          label="TOTAL ORDERS"
-          value={metrics.total_orders?.value}
-          change={metrics.total_orders?.change}
-          loading={metricsLoading}
-        />
-        <SummaryCard
-          label="AVERAGE ORDER VALUE"
-          value={metrics.avg_order_value?.value}
-          change={metrics.avg_order_value?.change}
-          loading={metricsLoading}
-        />
-        <SummaryCard
-          label="TOTAL CANCELLED ORDERS"
-          value={metrics.total_cancelled?.value}
-          change={metrics.total_cancelled?.change}
-          loading={metricsLoading}
-        />
-        <SummaryCard
-          label="TOTAL CUSTOMERS"
-          value={metrics.total_customers?.value}
-          change={metrics.total_customers?.change}
-          loading={metricsLoading}
-        />
-      </div>
+      <>
+        {metrics && (
+          <div className="inline-flex gap-x-4 max-w-screen-lg mx-auto w-full overflow-x-auto px-4 scrollbar-thin shrink-0">
+            <SummaryCard
+              label="TOTAL ORDERS"
+              value={metrics.total_orders?.value}
+              change={metrics.total_orders?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="AVERAGE ORDER VALUE"
+              value={metrics.avg_order_value?.value}
+              change={metrics.avg_order_value?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="TOTAL CANCELLED ORDERS"
+              value={metrics.total_cancelled?.value}
+              change={metrics.total_cancelled?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="TOTAL CUSTOMERS"
+              value={metrics.total_customers?.value}
+              change={metrics.total_customers?.change}
+              loading={metricsLoading}
+            />
+          </div>
+        )}
+      </>
       {/* Charts */}
       <div className="grid grid-cols-2 gap-6 mt-8">
         <div className="bg-white rounded-xl shadow p-4 h-64">
@@ -194,26 +198,26 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4 mt-8">
         <SummaryCard
           label="Total Price"
-          value={s.total_price?.value}
-          change={s.total_price?.change}
+          value={metrics.total_price?.value}
+          change={metrics.total_price?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="Total Discounts"
-          value={s.total_discounts?.value}
-          change={s.total_discounts?.change}
+          value={metrics.total_discounts?.value}
+          change={metrics.total_discounts?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="Total Net Profit"
-          value={s.total_net_profit?.value}
-          change={s.total_net_profit?.change}
+          value={metrics.total_net_profit?.value}
+          change={metrics.total_net_profit?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="Outstanding Amount"
-          value={s.outstanding_amount?.value}
-          change={s.outstanding_amount?.change}
+          value={metrics.outstanding_amount?.value}
+          change={metrics.outstanding_amount?.change}
           loading={metricsLoading}
         />
       </div>
@@ -233,4 +237,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
