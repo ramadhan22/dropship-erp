@@ -64,7 +64,7 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 			return
 		}
 		defer f.Close()
-		if err := h.svc.ImportFromCSV(context.Background(), f, ch); err != nil {
+		if _, err := h.svc.ImportFromCSV(context.Background(), f, ch); err != nil {
 			if h.batch != nil {
 				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
 			}
