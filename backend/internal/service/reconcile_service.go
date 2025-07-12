@@ -709,7 +709,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
 		actShip = *v
 	}
-	diff := estShip - actShip
+	diff := actShip - estShip
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
@@ -718,6 +718,8 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	// directly in escrow.  When such an adjustment exists we simply transfer
 	// the escrow amount from the pending account to the Shopee balance.
 	logistikCase := logistikAmt > 0
+
+	escrowAmt = escrowAmt - shipDisc
 
 	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + diff + escrowAmt
 	if !logistikCase && math.Abs(debitTotal-orderPrice) > 0.01 {
