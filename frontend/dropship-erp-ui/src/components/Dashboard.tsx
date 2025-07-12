@@ -51,38 +51,40 @@ export default function Dashboard() {
     loading: boolean;
   }) => (
     <div
-      className="bg-white rounded-xl shadow p-6 flex flex-col min-w-[180px] flex-shrink-0"
-      aria-label={label}
+      className="bg-white rounded-xl shadow p-6 flex flex-col min-w-[180px]"
+      aria-label={`${label} card`}
     >
-      {/* metric label from backend */}
+      {/* metric label text */}
       <div className="text-xs font-semibold text-gray-400 uppercase mb-2">
         {label}
       </div>
       {cardLoading || value === undefined ? (
-        // Loading skeleton when metrics are still fetching
+        // Skeletons shown while loading data
         <>
-          <div className="h-6 bg-gray-200 rounded animate-pulse mb-2" />
-          <div className="h-4 bg-gray-200 rounded animate-pulse mt-2" />
+          <div className="bg-gray-200 rounded w-16 h-6 animate-pulse mb-2" />
+          <div className="bg-gray-200 rounded w-16 h-6 animate-pulse mt-2" />
         </>
       ) : (
         <>
-          {/* main numeric value */}
+          {/* numeric value from backend */}
           <div className="text-2xl font-bold text-gray-900">
             {value.toLocaleString()}
           </div>
-          {/* percent change indicator */}
-          <div
-            className={`mt-2 flex flex-row items-center text-left ${
-              change && change > 0
-                ? "text-green-600"
-                : change && change < 0
-                ? "text-red-600"
-                : "text-gray-400"
-            }`}
-          >
-            {change && change > 0 && <span className="mr-1">▲</span>}
-            {change && change < 0 && <span className="mr-1">▼</span>}
-            <span>{Math.abs((change ?? 0) * 100).toFixed(1)}%</span>
+          {/* percent change indicator with arrow and color logic */}
+          <div className="mt-2 flex flex-row items-center text-left">
+            {change && change > 0 && (
+              <span className="text-green-600 mr-1">▲</span>
+            )}
+            {change && change < 0 && (
+              <span className="text-red-600 mr-1">▼</span>
+            )}
+            {change && change !== 0 ? (
+              <span className={change > 0 ? "text-green-600" : "text-red-600"}>
+                {Math.abs(change * 100).toFixed(1)}%
+              </span>
+            ) : (
+              <span className="text-gray-400">—</span>
+            )}
           </div>
         </>
       )}
@@ -90,8 +92,11 @@ export default function Dashboard() {
   );
 
   // metrics values from backend; fallback to empty object when loading
+  // metrics values returned from the backend dashboard endpoint
   const charts = data?.charts || {};
-  const s = (data?.summary as any) || {};
+  // `summary` contains the metric numbers we need. Cast to any to avoid
+  // extensive type declarations while still supporting loading state.
+  const metrics = (data?.summary as any) || {};
   // global flag for metrics loading state
   const metricsLoading = loading || !data;
 
@@ -130,30 +135,34 @@ export default function Dashboard() {
       </div>
 
 
-      {/* Summary Cards - horizontal metrics row */}
+      {/*
+        Parent container for the four summary cards. The flex row keeps cards
+        horizontally aligned with gaps, max width centers the row and
+        overflow-x-auto allows scrolling on small screens.
+      */}
       <div className="flex flex-row gap-x-4 max-w-screen-lg mx-auto w-full overflow-x-auto">
         <SummaryCard
           label="TOTAL ORDERS"
-          value={s.total_orders?.value}
-          change={s.total_orders?.change}
+          value={metrics.total_orders?.value}
+          change={metrics.total_orders?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="AVERAGE ORDER VALUE"
-          value={s.avg_order_value?.value}
-          change={s.avg_order_value?.change}
+          value={metrics.avg_order_value?.value}
+          change={metrics.avg_order_value?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="TOTAL CANCELLED ORDERS"
-          value={s.total_cancelled?.value}
-          change={s.total_cancelled?.change}
+          value={metrics.total_cancelled?.value}
+          change={metrics.total_cancelled?.change}
           loading={metricsLoading}
         />
         <SummaryCard
           label="TOTAL CUSTOMERS"
-          value={s.total_customers?.value}
-          change={s.total_customers?.change}
+          value={metrics.total_customers?.value}
+          change={metrics.total_customers?.change}
           loading={metricsLoading}
         />
       </div>
