@@ -20,6 +20,8 @@ export default function BatchHistoryPage() {
     },
     { label: "Total", key: "total_data", align: "right" },
     { label: "Done", key: "done_data", align: "right" },
+    { label: "Status", key: "status" },
+    { label: "Error", key: "error_message" },
   ];
 
   return (

@@ -58,12 +58,21 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 	go func(fh *multipart.FileHeader, ch string, batchID int64) {
 		f, err := fh.Open()
 		if err != nil {
+			if h.batch != nil {
+				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
+			}
 			return
 		}
 		defer f.Close()
-		h.svc.ImportFromCSV(context.Background(), f, ch)
+		if _, err := h.svc.ImportFromCSV(context.Background(), f, ch); err != nil {
+			if h.batch != nil {
+				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
+			}
+			return
+		}
 		if h.batch != nil {
 			h.batch.UpdateDone(context.Background(), batchID, 1)
+			h.batch.UpdateStatus(context.Background(), batchID, "completed", "")
 		}
 	}(fileHeader, channel, id)
 

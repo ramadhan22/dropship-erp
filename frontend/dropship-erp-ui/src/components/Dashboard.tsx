@@ -96,7 +96,7 @@ export default function Dashboard() {
   const metricsLoading = loading || !data;
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4">
       {/* Filter Controls */}
       <div className="flex gap-2">
         <select className="border p-1" value={orderType} onChange={(e) => setOrderType(e.target.value)}>
@@ -129,6 +129,7 @@ export default function Dashboard() {
         </select>
       </div>
 
+
       {/* Summary Cards - horizontal metrics row */}
       <div className="flex flex-row gap-x-4 max-w-screen-lg mx-auto w-full overflow-x-auto">
         <SummaryCard
@@ -156,11 +157,10 @@ export default function Dashboard() {
           loading={metricsLoading}
         />
       </div>
-
       {/* Charts */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="font-semibold mb-2">Total Sales</h3>
+      <div className="grid grid-cols-2 gap-6 mt-8">
+        <div className="bg-white rounded-xl shadow p-4 h-64">
+          <h3 className="text-sm uppercase text-gray-400 mb-1">Total Sales</h3>
           <LineChart width={300} height={200} data={charts.total_sales}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
@@ -169,8 +169,8 @@ export default function Dashboard() {
             <Line type="monotone" dataKey="value" stroke="#8884d8" />
           </LineChart>
         </div>
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="font-semibold mb-2">Average Order Value</h3>
+        <div className="bg-white rounded-xl shadow p-4 h-64">
+          <h3 className="text-sm uppercase text-gray-400 mb-1">Average Order Value</h3>
           <LineChart width={300} height={200} data={charts.avg_order_value}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
@@ -182,16 +182,16 @@ export default function Dashboard() {
       </div>
 
       {/* Additional Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-4 mt-8">
         <SummaryCard label="Total Price" value={s.total_price.value} change={s.total_price.change} />
         <SummaryCard label="Total Discounts" value={s.total_discounts.value} change={s.total_discounts.change} />
         <SummaryCard label="Total Net Profit" value={s.total_net_profit.value} change={s.total_net_profit.change} />
         <SummaryCard label="Outstanding Amount" value={s.outstanding_amount.value} change={s.outstanding_amount.change} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 shadow rounded">
-          <h3 className="font-semibold mb-2">Number of Orders</h3>
+      <div className="grid grid-cols-2 gap-6 mt-8">
+        <div className="bg-white rounded-xl shadow p-4 h-64">
+          <h3 className="text-sm uppercase text-gray-400 mb-1">Number of Orders</h3>
           <LineChart width={300} height={200} data={charts.number_of_orders}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />

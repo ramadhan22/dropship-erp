@@ -6,4 +6,6 @@ type BatchHistory struct {
 	StartedAt   string `db:"started_at" json:"started_at"`
 	TotalData   int    `db:"total_data" json:"total_data"`
 	DoneData    int    `db:"done_data" json:"done_data"`
+	Status      string `db:"status" json:"status"`
+	ErrorMsg    string `db:"error_message" json:"error_message"`
 }
