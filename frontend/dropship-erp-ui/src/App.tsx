@@ -16,6 +16,7 @@ import PLPage from "./components/PLPage";
 import GLPage from "./components/GLPage";
 import SalesSummaryPage from "./components/SalesSummaryPage";
 import SalesProfitPage from "./components/SalesProfitPage";
+import Dashboard from "./components/Dashboard";
 import KasAccountPage from "./components/KasAccountPage";
 import PendingBalancePage from "./components/PendingBalancePage";
 import StoreDetailPage from "./components/StoreDetailPage";
@@ -31,7 +32,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
-        <Link to="/">Home</Link> | <Link to="/dropship">Dropship Import</Link> |{" "}
+        <Link to="/">Home</Link> | <Link to="/dashboard">Dashboard</Link> | <Link to="/dropship">Dropship Import</Link> |{" "}
         <Link to="/shopee">Shopee Sales</Link> |{" "}
         <Link to="/sales-profit">Sales Profit</Link> |{" "}
         <Link to="/shopee/adjustments">Adjustments</Link> |{" "}
@@ -57,6 +58,7 @@ export default function App() {
         <BreadcrumbsNav />
         <Routes>
           <Route path="/" element={<SalesSummaryPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dropship" element={<DropshipImport />} />
           <Route path="/shopee" element={<ShopeeSalesPage />} />
           <Route path="/sales-profit" element={<SalesProfitPage />} />
