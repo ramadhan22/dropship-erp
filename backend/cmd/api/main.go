@@ -164,6 +164,7 @@ func main() {
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
+		handlers.NewDashboardHandler().RegisterRoutes(apiGroup)
 	}
 
 	// 5) Start the HTTP server
