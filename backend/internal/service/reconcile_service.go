@@ -712,9 +712,6 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	if v := asFloat64(income, "actual_shipping_fee"); v != nil {
 		actShip = *v
 	}
-<<<<<<< HEAD
-	diff := actShip - estShip
-=======
 	buyerShip := 0.0
 	if v := asFloat64(income, "buyer_paid_shipping_fee"); v != nil {
 		buyerShip = *v
@@ -724,7 +721,6 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		shopeeRebate = *v
 	}
 	diff := actShip - buyerShip - shopeeRebate - shipDisc
->>>>>>> c7dc23c5ecf4c19c0e0e0808256c988182366383
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
