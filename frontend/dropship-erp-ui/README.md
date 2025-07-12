@@ -22,6 +22,7 @@ npm test
 
 - Sales summary dashboard with filtering and charts
 - Tailwind powered home dashboard page
+- ERP dashboard page with summary cards and charts
 - Import pages for dropship purchases, Shopee orders and affiliate data
 - Reconciliation dashboard and journal entry views
 - Profit & Loss, balance sheet and general ledger reports

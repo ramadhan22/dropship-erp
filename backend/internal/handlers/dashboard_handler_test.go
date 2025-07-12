@@ -1,17 +1,25 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
+
+type fakeDashService struct{}
+
+func (f *fakeDashService) GetDashboardData(ctx context.Context, _ service.DashboardFilters) (*service.DashboardData, error) {
+	return &service.DashboardData{Summary: map[string]service.SummaryItem{"total_orders": {Value: 1200}}}, nil
+}
 
 func TestDashboardHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := NewDashboardHandler()
+	h := NewDashboardHandler(&fakeDashService{})
 	r := gin.New()
 	h.RegisterRoutes(r)
 

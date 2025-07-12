@@ -128,16 +128,6 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 shadow rounded">
-          <h3 className="font-semibold mb-2">Number of Customers</h3>
-          <LineChart width={300} height={200} data={charts.number_of_customers}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#ff7300" />
-          </LineChart>
-        </div>
-        <div className="bg-white p-4 shadow rounded">
           <h3 className="font-semibold mb-2">Number of Orders</h3>
           <LineChart width={300} height={200} data={charts.number_of_orders}>
             <CartesianGrid strokeDasharray="3 3" />
