@@ -141,8 +141,8 @@ export default function Dashboard() {
         the Balance Sheet page.
       */}
       {metrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-screen-lg mx-auto w-full px-4">
-          <SummaryCard
+        <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+          <SummaryCard 
             label="TOTAL ORDERS"
             value={metrics.total_orders?.value}
             change={metrics.total_orders?.change}
@@ -169,7 +169,7 @@ export default function Dashboard() {
         </div>
       )}
       {/* Charts */}
-      <div className="grid grid-cols-2 gap-6 mt-8">
+      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
         <div className="bg-white rounded-xl shadow p-4 h-64">
           <h3 className="text-sm uppercase text-gray-400 mb-1">Total Sales</h3>
           <LineChart width={300} height={200} data={charts.total_sales}>
@@ -193,7 +193,7 @@ export default function Dashboard() {
       </div>
 
       {/* Additional Summary Cards */}
-      <div className="grid grid-cols-4 gap-4 mt-8">
+      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
         <SummaryCard
           label="Total Price"
           value={metrics.total_price?.value}
