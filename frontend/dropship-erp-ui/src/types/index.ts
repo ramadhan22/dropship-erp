@@ -595,6 +595,23 @@ export interface BatchHistory {
 }
 
 export interface DashboardData {
-  summary: Record<string, { value: number; change: number }>;
+  summary: DashboardMetrics;
   charts: Record<string, { date: string; value: number }[]>;
+}
+
+export interface DashboardMetric {
+  value: number;
+  change: number;
+}
+
+export interface DashboardMetrics {
+  total_orders?: DashboardMetric;
+  avg_order_value?: DashboardMetric;
+  total_cancelled?: DashboardMetric;
+  total_customers?: DashboardMetric;
+  total_price?: DashboardMetric;
+  total_discounts?: DashboardMetric;
+  total_net_profit?: DashboardMetric;
+  outstanding_amount?: DashboardMetric;
+  [key: string]: DashboardMetric | undefined;
 }
