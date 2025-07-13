@@ -14,7 +14,7 @@ INSERT INTO journal_entries (
   entry_date, description, source_type, source_id, shop_username, store, created_at
 ) VALUES (
   :entry_date, :description, :source_type, :source_id, :shop_username, :store, :created_at
-) RETURNING journal_id`
+) ON CONFLICT (source_type, source_id) DO NOTHING RETURNING journal_id`
 
 // JournalRepo manages the journal_entries and journal_lines tables,
 // which are at the heart of double-entry bookkeeping.
@@ -30,11 +30,6 @@ func NewJournalRepo(db DBTX) *JournalRepo {
 // CreateJournalEntry inserts a row into journal_entries and returns the new journal_id.
 // We need this so we can capture the returned primary key for inserting lines.
 func (r *JournalRepo) CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error) {
-	if e.SourceType != "" && e.SourceID != "" {
-		if old, err := r.GetJournalEntryBySource(ctx, e.SourceType, e.SourceID); err == nil && old != nil {
-			return 0, fmt.Errorf("journal entry exists")
-		}
-	}
 	rows, err := sqlx.NamedQueryContext(ctx, r.db, insertJournalSQL, e)
 	if err != nil {
 		return 0, err
@@ -46,6 +41,17 @@ func (r *JournalRepo) CreateJournalEntry(ctx context.Context, e *models.JournalE
 			return 0, err
 		}
 		return id, nil
+	}
+
+	// No row returned means a conflicting entry already exists.
+	if e.SourceType != "" && e.SourceID != "" {
+		old, err := r.GetJournalEntryBySource(ctx, e.SourceType, e.SourceID)
+		if err != nil {
+			return 0, err
+		}
+		if old != nil {
+			return old.JournalID, nil
+		}
 	}
 	return 0, fmt.Errorf("no id returned")
 }
