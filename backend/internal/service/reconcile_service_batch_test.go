@@ -73,6 +73,23 @@ func (f *fakeJournalRepoBatch) InsertJournalLine(ctx context.Context, l *models.
 	return nil
 }
 
+type fakeBatchSvc struct {
+	created []*models.BatchHistory
+	updated []int64
+}
+
+func (f *fakeBatchSvc) Create(ctx context.Context, b *models.BatchHistory) (int64, error) {
+	f.created = append(f.created, b)
+	return int64(len(f.created)), nil
+}
+func (f *fakeBatchSvc) UpdateDone(ctx context.Context, id int64, done int) error {
+	f.updated = append(f.updated, id)
+	return nil
+}
+func (f *fakeBatchSvc) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
+	return nil
+}
+
 func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	dp1 := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
 	dp2 := &models.DropshipPurchase{KodePesanan: "DP2", KodeInvoiceChannel: "INV2", NamaToko: "ShopA"}
@@ -103,7 +120,7 @@ func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
 	client.httpClient = srv.Client()
 
-	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client)
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil)
 
 	svc.processShopeeStatusBatch(context.Background(), "ShopA", []*models.DropshipPurchase{dp1, dp2})
 
@@ -121,5 +138,46 @@ func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	}
 	if !found1 || !found2 {
 		t.Fatalf("unexpected lookups %v", drop.lookups)
+	}
+}
+
+func TestUpdateShopeeStatuses_BatchHistory(t *testing.T) {
+	dp := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
+	drop := &fakeDropRepoBatch{data: map[string]*models.DropshipPurchase{"INV1": dp}}
+
+	now := time.Now()
+	exp := 3600 * 24
+	store := &models.Store{NamaToko: "ShopA", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+	srepo := &fakeStoreRepoBatch{store: store}
+	jrepo := &fakeJournalRepoBatch{}
+	batchSvc := &fakeBatchSvc{}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/order/get_order_detail":
+			fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"INV1","order_status":"COMPLETED","update_time":1}]}}`)
+		case "/api/v2/payment/get_escrow_detail_batch":
+			fmt.Fprint(w, `{"response":[{"order_sn":"INV1","escrow_detail":{"order_income":{"order_original_price":1,"escrow_amount":1}}}]}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
+	client.httpClient = srv.Client()
+
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, batchSvc)
+
+	svc.UpdateShopeeStatuses(context.Background(), []string{"INV1"})
+
+	if len(batchSvc.created) != 1 {
+		t.Fatalf("expected 1 batch record, got %d", len(batchSvc.created))
+	}
+	if batchSvc.created[0].TotalData != 1 {
+		t.Fatalf("unexpected TotalData %d", batchSvc.created[0].TotalData)
+	}
+	if len(batchSvc.updated) != 1 {
+		t.Fatalf("expected UpdateDone to be called once, got %d", len(batchSvc.updated))
 	}
 }

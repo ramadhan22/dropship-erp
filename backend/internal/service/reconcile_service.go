@@ -50,6 +50,12 @@ type ReconcileServiceDetailRepo interface {
 	GetOrderDetail(ctx context.Context, sn string) (*models.ShopeeOrderDetailRow, []models.ShopeeOrderItemRow, []models.ShopeeOrderPackageRow, error)
 }
 
+type ReconcileServiceBatchSvc interface {
+	Create(ctx context.Context, b *models.BatchHistory) (int64, error)
+	UpdateDone(ctx context.Context, id int64, done int) error
+	UpdateStatus(ctx context.Context, id int64, status, msg string) error
+}
+
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
 	db          *sqlx.DB
@@ -61,6 +67,7 @@ type ReconcileService struct {
 	storeRepo   ReconcileServiceStoreRepo
 	detailRepo  ReconcileServiceDetailRepo
 	client      *ShopeeClient
+	batchSvc    ReconcileServiceBatchSvc
 }
 
 // NewReconcileService constructs a ReconcileService.
@@ -74,6 +81,7 @@ func NewReconcileService(
 	drp ReconcileServiceDetailRepo,
 	ar *repository.ShopeeAdjustmentRepo,
 	c *ShopeeClient,
+	b ReconcileServiceBatchSvc,
 ) *ReconcileService {
 	return &ReconcileService{
 		db:          db,
@@ -85,6 +93,7 @@ func NewReconcileService(
 		storeRepo:   srp,
 		detailRepo:  drp,
 		client:      c,
+		batchSvc:    b,
 	}
 }
 
@@ -851,8 +860,21 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 	for store, list := range batches {
 		store := store
 		list := list
+		var batchID int64
+		if s.batchSvc != nil {
+			bh := &models.BatchHistory{ProcessType: "shopee_status_batch", TotalData: len(list), DoneData: 0}
+			var err error
+			batchID, err = s.batchSvc.Create(ctx, bh)
+			if err != nil {
+				log.Printf("create batch history %s: %v", store, err)
+			}
+		}
 		g.Go(func() error {
 			s.processShopeeStatusBatch(ctx, store, list)
+			if s.batchSvc != nil && batchID != 0 {
+				s.batchSvc.UpdateDone(ctx, batchID, len(list))
+				s.batchSvc.UpdateStatus(ctx, batchID, "completed", "")
+			}
 			return nil
 		})
 	}
