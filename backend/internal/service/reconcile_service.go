@@ -969,15 +969,21 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 				limit = 5
 			}
 			sem := make(chan struct{}, limit)
+
+			log.Printf("Processing %s", escMap)
+
 			for sn, esc := range escMap {
 				wg.Add(1)
 				sem <- struct{}{}
 				go func(sn string, esc ShopeeEscrowDetail) {
 					defer func() { <-sem; wg.Done() }()
+					log.Printf("Processing escrow settlement for %s", esc)
 					inv := sn
 					if dp, ok := dpMap[sn]; ok {
+						log.Printf("Found DropshipPurchase for %s", dp.KodeInvoiceChannel)
 						inv = dp.KodeInvoiceChannel
 					}
+					log.Printf("Processing escrow settlement for %s", inv)
 					if err := s.createEscrowSettlementJournal(ctx, inv, "completed", timeMap[sn], &esc); err != nil {
 						log.Printf("escrow settlement %s: %v", sn, err)
 					}

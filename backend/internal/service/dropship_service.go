@@ -251,6 +251,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	count := 0
 
 	for _, record := range allRecords {
+		if record[18] == "MR eStore Free Sample" {
+			log.Printf("processing MR eStore Free Sample")
+		}
 
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
@@ -336,6 +339,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			apiAmt := apiTotals[header.KodePesanan]
 
 			if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
+				log.Printf("ImportFromCSV insert purchase %s error: %v", header.KodePesanan, err)
 				if s.batchSvc != nil && batchID != 0 {
 					d := &models.BatchHistoryDetail{
 						BatchID:   batchID,
@@ -427,6 +431,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			pending = apiAmt
 		}
 		if strings.EqualFold(h.NamaToko, "MR eStore Free Sample") {
+			log.Printf("creating free sample journal for %s", kode)
 			if err := s.createFreeSampleJournal(ctx, jrTx, h, prod); err != nil {
 				log.Printf("journal %s: %v", kode, err)
 				if s.batchSvc != nil && batchID != 0 {
