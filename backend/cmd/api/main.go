@@ -54,6 +54,7 @@ func main() {
 		repo.ChannelRepo,
 		repo.OrderDetailRepo,
 		shClient,
+		cfg.MaxThreads,
 	)
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo)
 	batchSvc := service.NewBatchService(repo.BatchRepo)
@@ -65,6 +66,7 @@ func main() {
 		repo.ShopeeAdjustmentRepo,
 		shClient,
 		batchSvc,
+		cfg.MaxThreads,
 	)
 	metricSvc := service.NewMetricService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
