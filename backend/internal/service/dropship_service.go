@@ -179,7 +179,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			continue
 		}
 		fetched[h.KodePesanan] = true
-		batches[h.NamaToko] = append(batches[h.NamaToko], h)
+		if !strings.EqualFold(h.NamaToko, "MR eStore Free Sample") {
+			batches[h.NamaToko] = append(batches[h.NamaToko], h)
+		}
 	}
 
 	apiTotals := make(map[string]float64)
@@ -192,6 +194,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	sem := make(chan struct{}, limit)
 
 	for store, list := range batches {
+		if strings.EqualFold(store, "MR eStore Free Sample") {
+			continue
+		}
 		for i := 0; i < len(list); i += 50 {
 			end := i + 50
 			if end > len(list) {

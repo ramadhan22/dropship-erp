@@ -409,3 +409,28 @@ func TestImportFromCSV_SkipOnDetailError(t *testing.T) {
 		t.Errorf("expected no inserts, got %d", len(fakeRepo.insertedHeader))
 	}
 }
+
+func TestImportFromCSV_FreeSample(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-FS", "TRX1", "SKU1", "ProdukA", "10", "1", "10", "0", "0", "10", "10", "10", "0", "user", "online", "MR eStore Free Sample", "INVFS", "Gudang", "JNE", "Ya", "RESI", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row)
+	w.Flush()
+
+	fakeRepo := &fakeDropshipRepo{}
+	jfake := &fakeJournalRepoDrop{}
+	svc := NewDropshipService(nil, fakeRepo, jfake, nil, nil, nil, nil, 5)
+
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected count 1, got %d", count)
+	}
+	if len(jfake.entries) != 1 || len(jfake.lines) != 2 {
+		t.Fatalf("expected 1 journal entry and 2 lines, got %d/%d", len(jfake.entries), len(jfake.lines))
+	}
+}
