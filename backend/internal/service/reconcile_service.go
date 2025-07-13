@@ -637,6 +637,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		jrRepo = repository.NewJournalRepo(tx)
 	}
 
+	log.Printf("Fetching DropshipPurchase for invoice %s", invoice)
 	dp, err := dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
