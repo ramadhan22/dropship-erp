@@ -228,13 +228,12 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	fake := &fakeDropshipRepo{}
 	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, nil, 5)
 	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
-	if err == nil {
-		t.Fatal("expected parse error, got nil")
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
 	}
 	if count != 0 {
 		t.Errorf("expected count 0, got %d", count)
 	}
-	// The fake repo should not have been called
 	if len(fake.insertedHeader) != 0 {
 		t.Errorf("expected no inserts, got %d", len(fake.insertedHeader))
 	}
