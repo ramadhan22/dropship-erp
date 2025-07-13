@@ -23,8 +23,8 @@ Main features:
   Existing entries for the same order/date/type are replaced and they are also
   captured when importing settled orders.
   Adjustments can be browsed on the **Shopee Adjustments** page.
- - Multi-file imports are queued and processed in the background. The API
-   response reports how many files were queued so progress can be tracked.
+ - Multi-file imports are queued in `batch_history` and processed asynchronously
+   by a scheduler. The API response simply reports how many files were queued.
 Adjustments may be edited or deleted; updating replaces the original
 journal entry. Negative values are posted to a dedicated **Refund** account
 instead of the Discount account. The **Shipping Fee Discrepancy** sheet of the
