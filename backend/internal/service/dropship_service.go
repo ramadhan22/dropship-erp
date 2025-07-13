@@ -211,6 +211,16 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 					log.Printf("fetch batch detail store %s: %v", st, err)
 					for _, h := range batch {
 						skipped[h.KodePesanan] = true
+						if s.batchSvc != nil && batchID != 0 {
+							d := &models.BatchHistoryDetail{
+								BatchID:   batchID,
+								Reference: h.KodeInvoiceChannel,
+								Store:     h.NamaToko,
+								Status:    "failed",
+								ErrorMsg:  err.Error(),
+							}
+							_ = s.batchSvc.CreateDetail(ctx, d)
+						}
 					}
 					mu.Unlock()
 					return
@@ -240,7 +250,17 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		qty, err := strconv.Atoi(record[8])
 		if err != nil {
 			logutil.Errorf("ImportFromCSV parse qty error: %v", err)
-			return count, fmt.Errorf("parse qty '%s': %w", record[8], err)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: record[19],
+					Store:     record[18],
+					Status:    "failed",
+					ErrorMsg:  fmt.Sprintf("parse qty: %v", err),
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			continue
 		}
 		hargaProduk, _ := strconv.ParseFloat(record[7], 64)
 		totalHargaProduk, _ := strconv.ParseFloat(record[9], 64)
@@ -253,7 +273,17 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 
 		waktuPesanan, err := time.Parse("02 January 2006, 15:04:05", record[1])
 		if err != nil {
-			return count, fmt.Errorf("parse waktu_pesanan '%s': %w", record[1], err)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: record[19],
+					Store:     record[18],
+					Status:    "failed",
+					ErrorMsg:  fmt.Sprintf("parse waktu_pesanan: %v", err),
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			continue
 		}
 		waktuKirim, _ := time.Parse("02 January 2006, 15:04:05", record[24])
 
@@ -301,7 +331,18 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			apiAmt := apiTotals[header.KodePesanan]
 
 			if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
-				return count, fmt.Errorf("insert header %s: %w", header.KodePesanan, err)
+				if s.batchSvc != nil && batchID != 0 {
+					d := &models.BatchHistoryDetail{
+						BatchID:   batchID,
+						Reference: header.KodeInvoiceChannel,
+						Store:     header.NamaToko,
+						Status:    "failed",
+						ErrorMsg:  err.Error(),
+					}
+					_ = s.batchSvc.CreateDetail(ctx, d)
+				}
+				skipped[header.KodePesanan] = true
+				continue
 			}
 			inserted[header.KodePesanan] = true
 			headersMap[header.KodePesanan] = header
@@ -340,7 +381,18 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			PotensiKeuntungan:       potensi,
 		}
 		if err := repoTx.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
-			return count, fmt.Errorf("insert detail %s: %w", header.KodePesanan, err)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: header.KodeInvoiceChannel,
+					Store:     header.NamaToko,
+					Status:    "failed",
+					ErrorMsg:  err.Error(),
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			skipped[header.KodePesanan] = true
+			continue
 		}
 		// accumulate totals for journal creation later
 		t, ok := agg[header.KodePesanan]
@@ -367,7 +419,18 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			pending = apiAmt
 		}
 		if err := s.createPendingSalesJournal(ctx, jrTx, h, prod, pending); err != nil {
-			return count, fmt.Errorf("journal %s: %w", kode, err)
+			log.Printf("journal %s: %v", kode, err)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: h.KodeInvoiceChannel,
+					Store:     h.NamaToko,
+					Status:    "failed",
+					ErrorMsg:  err.Error(),
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			continue
 		}
 	}
 	if tx != nil {
