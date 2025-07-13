@@ -439,6 +439,8 @@ export interface SalesProfit {
   biaya_administrasi: number;
   biaya_layanan: number;
   biaya_voucher: number;
+  biaya_transaksi: number;
+  diskon_ongkir: number;
   biaya_affiliate: number;
   biaya_refund: number;
   selisih_ongkir: number;
