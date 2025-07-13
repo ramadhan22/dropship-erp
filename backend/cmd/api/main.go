@@ -47,17 +47,18 @@ func main() {
 
 	// 3) Initialize services with the appropriate repo interfaces
 	shClient := service.NewShopeeClient(cfg.Shopee)
+	batchSvc := service.NewBatchService(repo.BatchRepo, repo.BatchDetailRepo)
 	dropshipSvc := service.NewDropshipService(
 		repo.DB,
 		repo.DropshipRepo,
 		repo.JournalRepo,
 		repo.ChannelRepo,
 		repo.OrderDetailRepo,
+		batchSvc,
 		shClient,
 		cfg.MaxThreads,
 	)
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo)
-	batchSvc := service.NewBatchService(repo.BatchRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,

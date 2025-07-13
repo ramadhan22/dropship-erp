@@ -65,6 +65,7 @@ type DropshipService struct {
 	journalRepo DropshipJournalRepo
 	storeRepo   DropshipServiceStoreRepo
 	detailRepo  DropshipServiceDetailRepo
+	batchSvc    *BatchService
 	client      *ShopeeClient
 	maxThreads  int
 }
@@ -76,6 +77,7 @@ func NewDropshipService(
 	jr DropshipJournalRepo,
 	sr DropshipServiceStoreRepo,
 	dr DropshipServiceDetailRepo,
+	bs *BatchService,
 	c *ShopeeClient,
 	maxThreads int,
 ) *DropshipService {
@@ -85,6 +87,7 @@ func NewDropshipService(
 		journalRepo: jr,
 		storeRepo:   sr,
 		detailRepo:  dr,
+		batchSvc:    bs,
 		client:      c,
 		maxThreads:  maxThreads,
 	}
@@ -106,7 +109,7 @@ func NewDropshipService(
 //
 // Any parse error aborts the import and returns it.
 // ImportFromCSV inserts rows from a CSV reader and returns how many rows were inserted.
-func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
+func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string, batchID int64) (int, error) {
 	log.Printf("ImportFromCSV channel=%s", channel)
 	reader := csv.NewReader(r)
 	reader.ReuseRecord = true
@@ -282,6 +285,16 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		if !inserted[header.KodePesanan] && !skipped[header.KodePesanan] {
 			if existing[header.KodePesanan] {
 				skipped[header.KodePesanan] = true
+				if s.batchSvc != nil && batchID != 0 {
+					d := &models.BatchHistoryDetail{
+						BatchID:   batchID,
+						Reference: header.KodeInvoiceChannel,
+						Store:     header.NamaToko,
+						Status:    "failed",
+						ErrorMsg:  "data already exist",
+					}
+					_ = s.batchSvc.CreateDetail(ctx, d)
+				}
 				continue
 			}
 
@@ -292,6 +305,15 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			}
 			inserted[header.KodePesanan] = true
 			headersMap[header.KodePesanan] = header
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: header.KodeInvoiceChannel,
+					Store:     header.NamaToko,
+					Status:    "success",
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
 			if apiAmt > 0 {
 				t := agg[header.KodePesanan]
 				if t == nil {

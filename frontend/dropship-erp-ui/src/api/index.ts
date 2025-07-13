@@ -468,6 +468,10 @@ export function listBatchHistory() {
   return api.get<BatchHistory[]>("/batches/");
 }
 
+export function listBatchDetails(batchID: number) {
+  return api.get<BatchHistoryDetail[]>(`/batches/${batchID}/details`);
+}
+
 export function fetchDashboard(params: {
   order?: string;
   channel?: string;

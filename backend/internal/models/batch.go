@@ -9,3 +9,13 @@ type BatchHistory struct {
 	Status      string `db:"status" json:"status"`
 	ErrorMsg    string `db:"error_message" json:"error_message"`
 }
+
+// BatchHistoryDetail records the result of processing a single transaction within a batch.
+type BatchHistoryDetail struct {
+	ID        int64  `db:"id" json:"id"`
+	BatchID   int64  `db:"batch_id" json:"batch_id"`
+	Reference string `db:"reference" json:"reference"`
+	Store     string `db:"store" json:"store"`
+	Status    string `db:"status" json:"status"`
+	ErrorMsg  string `db:"error_message" json:"error_message"`
+}
