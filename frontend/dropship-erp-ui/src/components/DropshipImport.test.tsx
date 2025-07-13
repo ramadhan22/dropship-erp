@@ -33,9 +33,7 @@ describe("DropshipImport", () => {
   });
 
   it("shows success message on successful import", async () => {
-    (api.importDropship as jest.Mock)
-      .mockResolvedValueOnce({ data: { inserted: 2 } })
-      .mockResolvedValueOnce({ data: { inserted: 1 } });
+    (api.importDropship as jest.Mock).mockResolvedValue({ data: { queued: 2 } });
 
     render(
       <MemoryRouter>
@@ -54,10 +52,10 @@ describe("DropshipImport", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText(/Imported 3 rows from 2 files successfully!/i),
+        screen.getByText(/Queued 2 files successfully!/i),
       ).toBeInTheDocument(),
     );
-    expect(api.importDropship).toHaveBeenCalledTimes(2);
+    expect(api.importDropship).toHaveBeenCalledTimes(1);
   });
 
   it("shows error message on failure", async () => {

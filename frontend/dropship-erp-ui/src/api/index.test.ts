@@ -27,16 +27,17 @@ describe("API layer", () => {
   });
 
   it("importDropship calls api.post correctly and resolves data", async () => {
-    (api.post as jest.Mock).mockResolvedValue({ data: { inserted: 2 } });
+    (api.post as jest.Mock).mockResolvedValue({ data: { queued: 2 } });
 
-    const file = new File(["data"], "file.csv", { type: "text/csv" });
-    const result = await importDropship(file, "Shopee");
+    const fileA = new File(["data"], "a.csv", { type: "text/csv" });
+    const fileB = new File(["data"], "b.csv", { type: "text/csv" });
+    const result = await importDropship([fileA, fileB], "Shopee");
     expect(api.post).toHaveBeenCalledWith(
       "/dropship/import",
       expect.any(FormData),
       { headers: { "Content-Type": "multipart/form-data" } },
     );
-    expect(result).toEqual({ data: { inserted: 2 } });
+    expect(result).toEqual({ data: { queued: 2 } });
   });
 
   it("importShopee calls api.post correctly and resolves data", async () => {

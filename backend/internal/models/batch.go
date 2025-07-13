@@ -8,6 +8,8 @@ type BatchHistory struct {
 	DoneData    int    `db:"done_data" json:"done_data"`
 	Status      string `db:"status" json:"status"`
 	ErrorMsg    string `db:"error_message" json:"error_message"`
+	FileName    string `db:"file_name" json:"file_name"`
+	FilePath    string `db:"file_path" json:"file_path"`
 }
 
 // BatchHistoryDetail records the result of processing a single transaction within a batch.
