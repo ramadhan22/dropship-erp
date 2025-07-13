@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/csv"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -44,10 +45,23 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 	}
 	channel := c.PostForm("channel")
 
-	var id int64
+	var (
+		id    int64
+		total int
+	)
 	if h.batch != nil {
-		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: 1, DoneData: 0}
-		var err error
+		f, err2 := fileHeader.Open()
+		if err2 != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err2.Error()})
+			return
+		}
+		total, err2 = countCSVRows(f)
+		f.Close()
+		if err2 != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err2.Error()})
+			return
+		}
+		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: total, DoneData: 0}
 		id, err = h.batch.Create(context.Background(), batch)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -55,7 +69,7 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 		}
 	}
 
-	go func(fh *multipart.FileHeader, ch string, batchID int64) {
+	go func(fh *multipart.FileHeader, ch string, batchID int64, expected int) {
 		f, err := fh.Open()
 		if err != nil {
 			if h.batch != nil {
@@ -64,17 +78,23 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 			return
 		}
 		defer f.Close()
-		if _, err := h.svc.ImportFromCSV(context.Background(), f, ch); err != nil {
+		count, err := h.svc.ImportFromCSV(context.Background(), f, ch)
+		if err != nil {
 			if h.batch != nil {
 				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
+				h.batch.UpdateDone(context.Background(), batchID, count)
 			}
 			return
 		}
 		if h.batch != nil {
-			h.batch.UpdateDone(context.Background(), batchID, 1)
+			if expected > 0 {
+				h.batch.UpdateDone(context.Background(), batchID, expected)
+			} else {
+				h.batch.UpdateDone(context.Background(), batchID, count)
+			}
 			h.batch.UpdateStatus(context.Background(), batchID, "completed", "")
 		}
-	}(fileHeader, channel, id)
+	}(fileHeader, channel, id, total)
 
 	c.JSON(http.StatusOK, gin.H{"message": "processing in background", "batch_id": id})
 }
@@ -194,4 +214,24 @@ func (h *DropshipHandler) HandleCancelledSummary(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+// countCSVRows returns the number of data rows in a CSV reader.
+// It expects the first line to be a header and ignores it.
+func countCSVRows(r io.Reader) (int, error) {
+	reader := csv.NewReader(r)
+	if _, err := reader.Read(); err != nil {
+		return 0, err
+	}
+	n := 0
+	for {
+		if _, err := reader.Read(); err == io.EOF {
+			break
+		} else if err != nil {
+			return n, err
+		} else {
+			n++
+		}
+	}
+	return n, nil
 }
