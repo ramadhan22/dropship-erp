@@ -6,11 +6,7 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { useEffect, useState } from "react";
-import { getCurrentMonthRange } from "../utils/date";
+import { useCallback, useEffect, useState } from "react";
 import { listShopeeAdjustments } from "../api/shopeeAdjustments";
 import { getJournalLinesBySource } from "../api/journal";
 import {
@@ -21,6 +17,7 @@ import {
   fetchTopProducts,
   fetchCancelledSummary,
   getShopeeSettleDetail,
+  fetchDashboard,
 } from "../api";
 import type {
   JenisChannel,
@@ -30,6 +27,8 @@ import type {
   JournalLineDetail,
   ShopeeSettled,
   CancelledSummary,
+  DashboardData,
+  DashboardMetrics,
 } from "../types";
 import {
   LineChart,
@@ -41,22 +40,26 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import SummaryCard from "./SummaryCard";
 
 export default function SalesSummaryPage() {
+  const now = new Date();
+  const [orderType, setOrderType] = useState("");
   const [channels, setChannels] = useState<JenisChannel[]>([]);
   const [channel, setChannel] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
   const [store, setStore] = useState("");
-  const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
-  const [from, setFrom] = useState(firstOfMonth);
-  const [to, setTo] = useState(lastOfMonth);
-  const [period, setPeriod] = useState<"Daily" | "Monthly">("Daily");
+  const [period, setPeriod] = useState<"Monthly" | "Yearly">("Monthly");
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
   const [data, setData] = useState<{ date: string; total: number }[]>([]);
   const [countData, setCountData] = useState<{ date: string; count: number }[]>(
     [],
   );
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
   const [cancelSummary, setCancelSummary] = useState<CancelledSummary>({
     count: 0,
@@ -83,10 +86,48 @@ export default function SalesSummaryPage() {
     }
   }, [channel]);
 
+  const getRange = () => {
+    if (period === "Monthly") {
+      const fromDate = new Date(year, month - 1, 1);
+      const toDate = new Date(year, month, 0);
+      return {
+        from: fromDate.toISOString().split("T")[0],
+        to: toDate.toISOString().split("T")[0],
+      };
+    }
+    const fromDate = new Date(year, 0, 1);
+    const toDate = new Date(year, 11, 31);
+    return {
+      from: fromDate.toISOString().split("T")[0],
+      to: toDate.toISOString().split("T")[0],
+    };
+  };
+
+  const fetchDashboardData = useCallback(async () => {
+    setDashboardLoading(true);
+    try {
+      const res = await fetchDashboard({
+        order: orderType,
+        channel,
+        store,
+        period,
+        month,
+        year,
+      });
+      setDashboardData(res.data);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("dashboard fetch", err);
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [orderType, channel, store, period, month, year]);
+
   const fetchData = async () => {
+    const { from, to } = getRange();
     try {
       const res =
-        period === "Daily"
+        period === "Monthly"
           ? await fetchDailyPurchaseTotals({
               channel: channel || undefined,
               store,
@@ -100,19 +141,19 @@ export default function SalesSummaryPage() {
               to,
             });
       const arr = (res.data as any[]).sort((a, b) => {
-        const da = period === "Daily" ? a.date : a.month;
-        const db = period === "Daily" ? b.date : b.month;
+        const da = period === "Monthly" ? a.date : a.month;
+        const db = period === "Monthly" ? b.date : b.month;
         return da < db ? -1 : 1;
       });
       setData(
         arr.map((d: any) => ({
-          date: period === "Daily" ? d.date : d.month,
+          date: period === "Monthly" ? d.date : d.month,
           total: d.total,
         })),
       );
       setCountData(
         arr.map((d: any) => ({
-          date: period === "Daily" ? d.date : d.month,
+          date: period === "Monthly" ? d.date : d.month,
           count: d.count,
         })),
       );
@@ -141,10 +182,15 @@ export default function SalesSummaryPage() {
     }
   };
 
+  const charts = dashboardData?.charts || {};
+  const metrics: DashboardMetrics = dashboardData?.summary || {};
+  const metricsLoading = dashboardLoading || !dashboardData;
+
   useEffect(() => {
     fetchData();
+    fetchDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel, store, from, to, period]);
+  }, [channel, store, period, month, year, orderType, fetchDashboardData]);
 
   const openDetail = async (a: ShopeeAdjustment) => {
     const id = `${a.no_pesanan}-${a.tanggal_penyesuaian.replace(/-/g, "")}`;
@@ -170,7 +216,13 @@ export default function SalesSummaryPage() {
       <h2>Sales Summary</h2>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         <select
-          aria-label="Channel"
+          value={orderType}
+          onChange={(e) => setOrderType(e.target.value)}
+        >
+          <option value="">All Orders</option>
+          <option value="COD">COD</option>
+        </select>
+        <select
           value={channel}
           onChange={(e) => setChannel(e.target.value)}
         >
@@ -182,7 +234,6 @@ export default function SalesSummaryPage() {
           ))}
         </select>
         <select
-          aria-label="Store"
           value={store}
           onChange={(e) => setStore(e.target.value)}
         >
@@ -194,96 +245,248 @@ export default function SalesSummaryPage() {
           ))}
         </select>
         <select
-          aria-label="Period"
           value={period}
           onChange={(e) => setPeriod(e.target.value as any)}
         >
-          <option value="Daily">Daily</option>
           <option value="Monthly">Monthly</option>
+          <option value="Yearly">Yearly</option>
         </select>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            label="From"
-            format="yyyy-MM-dd"
-            value={new Date(from)}
-            onChange={(d) => {
-              if (!d) return;
-              setFrom(d.toISOString().split("T")[0]);
-            }}
-            slotProps={{ textField: { size: "small" } }}
-          />
-        </LocalizationProvider>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            label="To"
-            format="yyyy-MM-dd"
-            value={new Date(to)}
-            onChange={(d) => {
-              if (!d) return;
-              setTo(d.toISOString().split("T")[0]);
-            }}
-            slotProps={{ textField: { size: "small" } }}
-          />
-        </LocalizationProvider>
+        {period === "Monthly" && (
+          <select
+            value={month}
+            onChange={(e) => setMonth(Number(e.target.value))}
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        )}
+        <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          {Array.from({ length: 3 }, (_, i) => now.getFullYear() - i).map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
       </div>
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>
           {msg.text}
         </Alert>
       )}
-      <div style={{ marginBottom: "1rem" }}>
-        <strong>Total Revenue:</strong>{" "}
-        {totalRevenue.toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        })}{" "}
-        | <strong>Total Orders:</strong> {totalOrders}
-      </div>
-      <div style={{ marginBottom: "1rem" }}>
-        <strong>Cancelled Orders:</strong> {cancelSummary.count} |{" "}
-        <strong>Biaya Mitra:</strong>{" "}
-        {cancelSummary.biaya_mitra.toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        })}
-      </div>
-      <h3>Total Sales by Amount</h3>
-      <LineChart
-        width={600}
-        height={300}
-        data={data}
-        style={{ marginBottom: "1rem" }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis
-          tickFormatter={(v) =>
-            v.toLocaleString("id-ID", {
-              style: "currency",
-              currency: "IDR",
-              maximumFractionDigits: 0,
-            })
-          }
+      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+        <SummaryCard
+          label="Total Revenue"
+          value={totalRevenue}
+          loading={false}
         />
-        <Tooltip
-          formatter={(v: number) =>
-            v.toLocaleString("id-ID", {
-              style: "currency",
-              currency: "IDR",
-              maximumFractionDigits: 0,
-            })
-          }
+        <SummaryCard
+          label="Total Orders"
+          value={totalOrders}
+          loading={false}
         />
-        <Line type="monotone" dataKey="total" stroke="#8884d8" />
-      </LineChart>
-      <h3>Total Sales by Quantity</h3>
-      <BarChart width={600} height={300} data={countData}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis tickFormatter={(v) => v.toLocaleString("id-ID")}/> 
-        <Tooltip formatter={(v: number) => v.toLocaleString("id-ID")} />
-        <Bar dataKey="count" fill="#82ca9d" />
-      </BarChart>
+        <SummaryCard
+          label="Cancelled Orders"
+          value={cancelSummary.count}
+          loading={false}
+        />
+        <SummaryCard
+          label="Biaya Mitra"
+          value={cancelSummary.biaya_mitra}
+          loading={false}
+        />
+      </div>
+      <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+        <div style={{ flex: 1 }}>
+          <h3>Total Sales by Amount</h3>
+          <LineChart width={600} height={300} data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis
+              tickFormatter={(v) =>
+                v.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                  maximumFractionDigits: 0,
+                })
+              }
+            />
+            <Tooltip
+              formatter={(v: number) =>
+                v.toLocaleString("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                  maximumFractionDigits: 0,
+                })
+              }
+            />
+            <Line type="monotone" dataKey="total" stroke="#8884d8" />
+          </LineChart>
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3>Total Sales by Quantity</h3>
+          <BarChart width={600} height={300} data={countData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis tickFormatter={(v) => v.toLocaleString("id-ID")} />
+            <Tooltip formatter={(v: number) => v.toLocaleString("id-ID")} />
+            <Bar dataKey="count" fill="#82ca9d" />
+          </BarChart>
+        </div>
+      </div>
+      {dashboardData && (
+        <>
+          <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+            <SummaryCard
+              label="TOTAL ORDERS"
+              value={metrics.total_orders?.value}
+              change={metrics.total_orders?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="AVERAGE ORDER VALUE"
+              value={metrics.avg_order_value?.value}
+              change={metrics.avg_order_value?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="TOTAL CANCELLED ORDERS"
+              value={metrics.total_cancelled?.value}
+              change={metrics.total_cancelled?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="TOTAL CUSTOMERS"
+              value={metrics.total_customers?.value}
+              change={metrics.total_customers?.change}
+              loading={metricsLoading}
+            />
+          </div>
+          <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "0.75rem",
+                boxShadow:
+                  "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)",
+                padding: "1rem",
+                height: "16rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "0.875rem",
+                  textTransform: "uppercase",
+                  color: "#9ca3af",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Total Sales
+              </h3>
+              <LineChart width={650} height={200} data={charts.total_sales}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" />
+              </LineChart>
+            </div>
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "0.75rem",
+                boxShadow:
+                  "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)",
+                padding: "1rem",
+                height: "16rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "0.875rem",
+                  textTransform: "uppercase",
+                  color: "#9ca3af",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Average Order Value
+              </h3>
+              <LineChart width={650} height={200} data={charts.avg_order_value}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#82ca9d" />
+              </LineChart>
+            </div>
+          </div>
+          <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+            <SummaryCard
+              label="Total Price"
+              value={metrics.total_price?.value}
+              change={metrics.total_price?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="Total Discounts"
+              value={metrics.total_discounts?.value}
+              change={metrics.total_discounts?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="Total Net Profit"
+              value={metrics.total_net_profit?.value}
+              change={metrics.total_net_profit?.change}
+              loading={metricsLoading}
+            />
+            <SummaryCard
+              label="Outstanding Amount"
+              value={metrics.outstanding_amount?.value}
+              change={metrics.outstanding_amount?.change}
+              loading={metricsLoading}
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: "1.5rem",
+              marginTop: "2rem",
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "0.75rem",
+                boxShadow:
+                  "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)",
+                padding: "1rem",
+                height: "16rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "0.875rem",
+                  textTransform: "uppercase",
+                  color: "#9ca3af",
+                  marginBottom: "0.25rem",
+                }}
+              >
+                Number of Orders
+              </h3>
+              <LineChart width={650} height={200} data={charts.number_of_orders}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" />
+              </LineChart>
+            </div>
+          </div>
+        </>
+      )}
       {topProducts.length > 0 && (
         <div style={{ marginTop: "1rem" }}>
           <h3>Top Products</h3>
