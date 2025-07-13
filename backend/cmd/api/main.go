@@ -56,6 +56,7 @@ func main() {
 		shClient,
 	)
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo)
+	batchSvc := service.NewBatchService(repo.BatchRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
@@ -63,6 +64,7 @@ func main() {
 		repo.OrderDetailRepo,
 		repo.ShopeeAdjustmentRepo,
 		shClient,
+		batchSvc,
 	)
 	metricSvc := service.NewMetricService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
@@ -85,8 +87,6 @@ func main() {
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
-	batchSvc := service.NewBatchService(repo.BatchRepo)
-
 	// 4) Setup Gin router and API routes
 	router := gin.Default()
 	// CORS configuration – origins can be configured via config.yaml
