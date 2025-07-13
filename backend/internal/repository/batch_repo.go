@@ -59,3 +59,16 @@ func (r *BatchRepo) List(ctx context.Context) ([]models.BatchHistory, error) {
 	}
 	return list, err
 }
+
+// ListByProcessAndStatus returns batch records matching the given process type
+// and status ordered by ID.
+func (r *BatchRepo) ListByProcessAndStatus(ctx context.Context, typ, status string) ([]models.BatchHistory, error) {
+	var list []models.BatchHistory
+	err := r.db.SelectContext(ctx, &list,
+		`SELECT * FROM batch_history WHERE process_type=$1 AND status=$2 ORDER BY id`,
+		typ, status)
+	if list == nil {
+		list = []models.BatchHistory{}
+	}
+	return list, err
+}

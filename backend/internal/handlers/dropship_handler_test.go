@@ -89,8 +89,8 @@ func TestHandleImport_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
-	if svc.lastChan != "Shopee" {
-		t.Fatalf("expected channel passed to service")
+	if svc.lastChan != "" {
+		t.Fatalf("service should not be called")
 	}
 }
 

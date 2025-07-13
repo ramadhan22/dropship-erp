@@ -3,9 +3,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -58,6 +60,8 @@ func main() {
 		shClient,
 		cfg.MaxThreads,
 	)
+	// process pending dropship imports in the background
+	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
