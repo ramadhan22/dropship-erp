@@ -67,6 +67,8 @@ with environment variables. On startup the application runs database migrations
 automatically.
 Application logs are written to the directory specified by `logging.dir` in the
 config file. A new file named `YYYY-MM-DD.log` is created each day.
+Batch operations that fetch Shopee data in parallel respect the `max_threads`
+setting which limits how many goroutines run concurrently (defaults to `5`).
 
 Shopee API calls require credentials including a long-lived `refresh_token`.
 `ShopeeClient` refreshes the short-lived access token when it has expired rather

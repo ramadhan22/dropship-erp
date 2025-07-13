@@ -16,11 +16,12 @@ import (
 
 // Config holds all application configuration values.
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Shopee   ShopeeAPIConfig `mapstructure:"shopee_api"`
-	Logging  LoggingConfig
+	Server     ServerConfig
+	Database   DatabaseConfig
+	JWT        JWTConfig
+	Shopee     ShopeeAPIConfig `mapstructure:"shopee_api"`
+	Logging    LoggingConfig
+	MaxThreads int `mapstructure:"max_threads"`
 }
 
 // ServerConfig contains HTTP server settings.
@@ -74,6 +75,7 @@ func LoadConfig() (*Config, error) {
 	// Default CORS origin for local development
 	viper.SetDefault("server.cors_origins", []string{"http://localhost:5173"})
 	viper.SetDefault("logging.dir", "logs")
+	viper.SetDefault("max_threads", 5)
 
 	// Read from config.yaml
 	if err := viper.ReadInConfig(); err != nil {
@@ -89,6 +91,10 @@ func LoadConfig() (*Config, error) {
 	// Handle slice parsing from env vars
 	cfg.Server.CorsOrigins = viper.GetStringSlice("server.cors_origins")
 	cfg.Logging.Dir = viper.GetString("logging.dir")
+	cfg.MaxThreads = viper.GetInt("max_threads")
+	if cfg.MaxThreads <= 0 {
+		cfg.MaxThreads = 5
+	}
 
 	// Validate required fields
 	if cfg.Database.URL == "" {

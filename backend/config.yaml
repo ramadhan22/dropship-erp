@@ -9,6 +9,9 @@ server:
 logging:
   dir: "logs"
 
+# Maximum number of concurrent threads used by batch processes
+max_threads: 5
+
 database:
   url: "postgres://erp_user:erp_pass@localhost:5432/dropship_erp?sslmode=disable"
 

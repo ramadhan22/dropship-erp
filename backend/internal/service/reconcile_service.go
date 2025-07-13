@@ -68,6 +68,7 @@ type ReconcileService struct {
 	detailRepo  ReconcileServiceDetailRepo
 	client      *ShopeeClient
 	batchSvc    ReconcileServiceBatchSvc
+	maxThreads  int
 }
 
 // NewReconcileService constructs a ReconcileService.
@@ -82,6 +83,7 @@ func NewReconcileService(
 	ar *repository.ShopeeAdjustmentRepo,
 	c *ShopeeClient,
 	b ReconcileServiceBatchSvc,
+	maxThreads int,
 ) *ReconcileService {
 	return &ReconcileService{
 		db:          db,
@@ -94,6 +96,7 @@ func NewReconcileService(
 		detailRepo:  drp,
 		client:      c,
 		batchSvc:    b,
+		maxThreads:  maxThreads,
 	}
 }
 
@@ -961,7 +964,11 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			log.Printf("batch escrow detail %s: %v", store, err)
 		} else {
 			var wg sync.WaitGroup
-			sem := make(chan struct{}, 5)
+			limit := s.maxThreads
+			if limit <= 0 {
+				limit = 5
+			}
+			sem := make(chan struct{}, limit)
 			for sn, esc := range escMap {
 				wg.Add(1)
 				sem <- struct{}{}

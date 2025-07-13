@@ -66,6 +66,7 @@ type DropshipService struct {
 	storeRepo   DropshipServiceStoreRepo
 	detailRepo  DropshipServiceDetailRepo
 	client      *ShopeeClient
+	maxThreads  int
 }
 
 // NewDropshipService constructs a DropshipService with the given repository.
@@ -76,6 +77,7 @@ func NewDropshipService(
 	sr DropshipServiceStoreRepo,
 	dr DropshipServiceDetailRepo,
 	c *ShopeeClient,
+	maxThreads int,
 ) *DropshipService {
 	return &DropshipService{
 		db:          db,
@@ -84,6 +86,7 @@ func NewDropshipService(
 		storeRepo:   sr,
 		detailRepo:  dr,
 		client:      c,
+		maxThreads:  maxThreads,
 	}
 }
 
@@ -179,7 +182,11 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 	apiTotals := make(map[string]float64)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 5)
+	limit := s.maxThreads
+	if limit <= 0 {
+		limit = 5
+	}
+	sem := make(chan struct{}, limit)
 
 	for store, list := range batches {
 		for i := 0; i < len(list); i += 50 {
