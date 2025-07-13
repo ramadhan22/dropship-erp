@@ -276,6 +276,8 @@ type SalesProfit struct {
 	BiayaAdministrasi float64   `db:"biaya_administrasi" json:"biaya_administrasi"`
 	BiayaLayanan      float64   `db:"biaya_layanan" json:"biaya_layanan"`
 	BiayaVoucher      float64   `db:"biaya_voucher" json:"biaya_voucher"`
+	BiayaTransaksi    float64   `db:"biaya_transaksi" json:"biaya_transaksi"`
+	DiskonOngkir      float64   `db:"diskon_ongkir" json:"diskon_ongkir"`
 	BiayaAffiliate    float64   `db:"biaya_affiliate" json:"biaya_affiliate"`
 	BiayaRefund       float64   `db:"biaya_refund" json:"biaya_refund"`
 	SelisihOngkir     float64   `db:"selisih_ongkir" json:"selisih_ongkir"`

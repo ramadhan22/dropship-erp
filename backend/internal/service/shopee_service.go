@@ -671,7 +671,7 @@ func (s *ShopeeService) ListSalesProfit(
 	for i := range list {
 		p := list[i]
 		revenue := p.AmountSales + p.AdjustmentIncome
-		cost := p.ModalPurchase + p.BiayaMitraJakmall + p.BiayaAdministrasi + p.BiayaLayanan + p.BiayaVoucher + p.BiayaAffiliate + p.BiayaRefund + p.SelisihOngkir + p.Discount
+		cost := p.ModalPurchase + p.BiayaMitraJakmall + p.BiayaAdministrasi + p.BiayaLayanan + p.BiayaVoucher + p.BiayaTransaksi + p.DiskonOngkir + p.BiayaAffiliate + p.BiayaRefund + p.SelisihOngkir + p.Discount
 		profit := revenue - cost
 		list[i].Profit = profit
 		if revenue == 0 {

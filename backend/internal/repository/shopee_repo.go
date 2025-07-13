@@ -432,6 +432,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END) AS biaya_layanan,
                SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END) AS biaya_transaksi,
                SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END) AS biaya_voucher,
+               SUM(CASE WHEN jl.account_id = 55006 THEN jl.amount ELSE 0 END) AS diskon_ongkir,
                SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END) + COALESCE(aff.aff,0) AS biaya_affiliate,
                COALESCE(adj.refund,0) AS biaya_refund,
                COALESCE(adj.selisih,0) AS selisih_ongkir,
@@ -444,6 +445,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                    + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END)
+                   + SUM(CASE WHEN jl.account_id = 55006 THEN jl.amount ELSE 0 END)
                    + SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END)
                    + COALESCE(adj.refund,0)
                    + COALESCE(adj.selisih,0)
@@ -457,6 +459,7 @@ func (r *ShopeeRepo) ListSalesProfit(
                            + SUM(CASE WHEN jl.account_id = 52004 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 52011 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 55001 THEN jl.amount ELSE 0 END)
+                           + SUM(CASE WHEN jl.account_id = 55006 THEN jl.amount ELSE 0 END)
                            + SUM(CASE WHEN jl.account_id = 55002 THEN jl.amount ELSE 0 END)
                            + COALESCE(adj.refund,0)
                            + COALESCE(adj.selisih,0)
@@ -492,8 +495,8 @@ func (r *ShopeeRepo) ListSalesProfit(
               ) adj ON adj.kode_pesanan = je.source_id
               JOIN stores st ON dp.nama_toko = st.nama_toko
                JOIN jenis_channels jc ON st.jenis_channel_id = jc.jenis_channel_id
-               JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
-               WHERE je.source_type IN ('pending_sales','shopee_settled')`
+              LEFT JOIN shopee_settled ss ON ss.no_pesanan = je.source_id AND ss.is_settled_confirmed = TRUE
+               WHERE je.source_type IN ('pending_sales','shopee_settled','shopee_escrow')`
 	args := []interface{}{}
 	conds := []string{}
 	arg := 1
@@ -541,6 +544,8 @@ func (r *ShopeeRepo) ListSalesProfit(
 		"biaya_administrasi":  "biaya_administrasi",
 		"biaya_layanan":       "biaya_layanan",
 		"biaya_voucher":       "biaya_voucher",
+		"biaya_transaksi":     "biaya_transaksi",
+		"diskon_ongkir":       "diskon_ongkir",
 		"biaya_affiliate":     "biaya_affiliate",
 		"biaya_refund":        "biaya_refund",
 		"selisih_ongkir":      "selisih_ongkir",
@@ -567,6 +572,8 @@ func (r *ShopeeRepo) ListSalesProfit(
 		BiayaAdministrasi float64   `db:"biaya_administrasi"`
 		BiayaLayanan      float64   `db:"biaya_layanan"`
 		BiayaVoucher      float64   `db:"biaya_voucher"`
+		BiayaTransaksi    float64   `db:"biaya_transaksi"`
+		DiskonOngkir      float64   `db:"diskon_ongkir"`
 		BiayaAffiliate    float64   `db:"biaya_affiliate"`
 		BiayaRefund       float64   `db:"biaya_refund"`
 		SelisihOngkir     float64   `db:"selisih_ongkir"`
@@ -589,6 +596,8 @@ func (r *ShopeeRepo) ListSalesProfit(
 			BiayaAdministrasi: r.BiayaAdministrasi,
 			BiayaLayanan:      r.BiayaLayanan,
 			BiayaVoucher:      r.BiayaVoucher,
+			BiayaTransaksi:    r.BiayaTransaksi,
+			DiskonOngkir:      r.DiskonOngkir,
 			BiayaAffiliate:    r.BiayaAffiliate,
 			BiayaRefund:       r.BiayaRefund,
 			SelisihOngkir:     r.SelisihOngkir,

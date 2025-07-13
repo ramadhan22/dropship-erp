@@ -50,8 +50,9 @@ Discrepancy* adjustment when they differ.
 - Shopee reconciliation batches run in parallel for faster processing.
 - Automatically compute revenue, COGS, fees and net profit metrics.
  - Sales Profit page shows discounts and links to all related journal entries.
-   Adjustments including shipping fee discrepancies are now factored into profit
-   calculations.
+   Shipping discounts (account `5.5.0.6`) and escrow journals are included when
+   calculating profit. Adjustments including shipping fee discrepancies are also
+   factored into profit calculations.
 - View general ledger, balance sheet and profit and loss pages.
 - Manage channels, accounts and expenses. Expenses can be edited with a selectable date and the previous journal is reversed automatically.
 - Sales Summary dashboard now shows cancelled order count and total Biaya Mitra posted for those cancellations.

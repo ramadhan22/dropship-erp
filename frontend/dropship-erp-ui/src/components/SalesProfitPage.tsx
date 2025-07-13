@@ -116,6 +116,12 @@ export default function SalesProfitPage() {
       render: money,
     },
     {
+      label: "Diskon Ongkir",
+      key: "diskon_ongkir",
+      align: "right",
+      render: money,
+    },
+    {
       label: "Biaya Affiliate",
       key: "biaya_affiliate",
       align: "right",
