@@ -426,6 +426,8 @@ func (c *ShopeeClient) FetchShopeeEscrowDetails(ctx context.Context, accessToken
 
 	urlStr := c.BaseURL + path + "?" + q.Encode()
 	log.Printf("ShopeeClient request: POST %s", urlStr)
+	log.Printf("ShopeeClient request body: %s", buf.String())
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlStr, &buf)
 	if err != nil {
 		return nil, err
@@ -461,10 +463,15 @@ func (c *ShopeeClient) FetchShopeeEscrowDetails(ctx context.Context, accessToken
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
 
+	log.Printf("FetchShopeeEscrowDetails response: %+v", out)
+	log.Printf("FetchShopeeEscrowDetails response count: %d", len(out.Response))
+	log.Printf("FetchShopeeEscrowDetails response order_sns: %v", orderSNs)
+
 	res := make(map[string]ShopeeEscrowDetail, len(out.Response))
 	for _, item := range out.Response {
 		res[item.OrderSN] = item.EscrowDetail
 	}
+	log.Printf("FetchShopeeEscrowDetails mapped response: %v", res)
 	return res, nil
 }
 

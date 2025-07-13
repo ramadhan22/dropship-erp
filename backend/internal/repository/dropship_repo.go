@@ -132,6 +132,7 @@ func (r *DropshipRepo) GetDropshipPurchaseByID(ctx context.Context, kodePesanan 
 
 // GetDropshipPurchaseByInvoice retrieves a purchase by kode_invoice_channel.
 func (r *DropshipRepo) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error) {
+	log.Printf("DropshipRepo.GetDropshipPurchaseByInvoice %s", kodeInvoice)
 	var p models.DropshipPurchase
 	err := r.db.GetContext(ctx, &p,
 		`SELECT * FROM dropship_purchases WHERE kode_invoice_channel = $1`, kodeInvoice)
