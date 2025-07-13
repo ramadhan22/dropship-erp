@@ -421,6 +421,30 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		if apiAmt > 0 {
 			pending = apiAmt
 		}
+		if strings.EqualFold(h.NamaToko, "MR eStore Free Sample") {
+			if err := s.createFreeSampleJournal(ctx, jrTx, h, prod); err != nil {
+				log.Printf("journal %s: %v", kode, err)
+				if s.batchSvc != nil && batchID != 0 {
+					d := &models.BatchHistoryDetail{
+						BatchID:   batchID,
+						Reference: h.KodeInvoiceChannel,
+						Store:     h.NamaToko,
+						Status:    "failed",
+						ErrorMsg:  err.Error(),
+					}
+					_ = s.batchSvc.CreateDetail(ctx, d)
+				}
+				continue
+			}
+			if repoUp, ok := repoTx.(interface {
+				UpdatePurchaseStatus(context.Context, string, string) error
+			}); ok {
+				if err := repoUp.UpdatePurchaseStatus(ctx, h.KodePesanan, "Pesanan selesai"); err != nil {
+					log.Printf("update status %s: %v", h.KodePesanan, err)
+				}
+			}
+			continue
+		}
 		if err := s.createPendingSalesJournal(ctx, jrTx, h, prod, pending); err != nil {
 			log.Printf("journal %s: %v", kode, err)
 			if s.batchSvc != nil && batchID != 0 {
@@ -724,4 +748,36 @@ func saldoShopeeAccountID(store string) int64 {
 	default:
 		return 11011
 	}
+}
+
+func freeSampleAccountID() int64 { return 55007 }
+
+func (s *DropshipService) createFreeSampleJournal(ctx context.Context, jr DropshipJournalRepo, p *models.DropshipPurchase, totalProduk float64) error {
+	if jr == nil {
+		return nil
+	}
+	je := &models.JournalEntry{
+		EntryDate:    p.WaktuPesananTerbuat,
+		Description:  ptrString("Free sample " + p.KodeInvoiceChannel),
+		SourceType:   "free_sample",
+		SourceID:     p.KodeInvoiceChannel,
+		ShopUsername: p.NamaToko,
+		Store:        p.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	id, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+	amt := totalProduk + p.BiayaLainnya + p.BiayaMitraJakmall
+	lines := []models.JournalLine{
+		{JournalID: id, AccountID: 11009, IsDebit: false, Amount: amt, Memo: ptrString("Saldo Jakmall " + p.KodeInvoiceChannel)},
+		{JournalID: id, AccountID: freeSampleAccountID(), IsDebit: true, Amount: amt, Memo: ptrString("Free Sample " + p.KodeInvoiceChannel)},
+	}
+	for i := range lines {
+		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
