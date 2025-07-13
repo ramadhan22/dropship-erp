@@ -29,11 +29,14 @@ type Repository struct {
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
 // databaseURL should be a valid DSN, e.g. "postgres://user:pass@host:port/dbname?sslmode=disable".
 func NewPostgresRepository(databaseURL string) (*Repository, error) {
-	// Connect using sqlx
+	// Connect using sqlx and configure the connection pool
 	db, err := sqlx.Connect("postgres", databaseURL)
 	if err != nil {
 		return nil, err
 	}
+	// Limit the connection pool so imports don't exhaust Postgres slots
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
 
 	// Instantiate sub-repositories
 	batchRepo := NewBatchRepo(db)
