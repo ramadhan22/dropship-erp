@@ -596,6 +596,15 @@ export interface BatchHistory {
   error_message: string;
 }
 
+export interface BatchHistoryDetail {
+  id: number;
+  batch_id: number;
+  reference: string;
+  store: string;
+  status: string;
+  error_message: string;
+}
+
 export interface DashboardData {
   summary: DashboardMetrics;
   charts: Record<string, { date: string; value: number }[]>;

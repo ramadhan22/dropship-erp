@@ -190,10 +190,10 @@ func TestImportFromCSV_Success(t *testing.T) {
 	fake := &fakeDropshipRepo{}
 	jfake := &fakeJournalRepoDrop{}
 	srepo := &fakeStoreRepo{store: store}
-	svc := NewDropshipService(nil, fake, jfake, srepo, nil, client, 5)
+	svc := NewDropshipService(nil, fake, jfake, srepo, nil, nil, client, 5)
 
 	ctx := context.Background()
-	count, err := svc.ImportFromCSV(ctx, &buf, "")
+	count, err := svc.ImportFromCSV(ctx, &buf, "", 0)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -226,8 +226,8 @@ func TestImportFromCSV_ParseError(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, 5)
-	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, nil, 5)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
 	if err == nil {
 		t.Fatal("expected parse error, got nil")
 	}
@@ -250,8 +250,8 @@ func TestImportFromCSV_SkipExisting(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{existing: map[string]bool{"PS-EXIST": true}}
-	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, 5)
-	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, nil, 5)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -304,9 +304,9 @@ func TestImportFromCSV_JournalSumsProducts(t *testing.T) {
 	fake := &fakeDropshipRepo{}
 	jfake := &fakeJournalRepoDrop{}
 	srepo := &fakeStoreRepo{store: store}
-	svc := NewDropshipService(nil, fake, jfake, srepo, nil, client, 5)
+	svc := NewDropshipService(nil, fake, jfake, srepo, nil, nil, client, 5)
 
-	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -344,9 +344,9 @@ func TestImportFromCSV_ChannelFilter(t *testing.T) {
 	w.Flush()
 
 	fake := &fakeDropshipRepo{}
-	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, 5)
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, nil, 5)
 
-	count, err := svc.ImportFromCSV(context.Background(), &buf, "Tokopedia")
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "Tokopedia", 0)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}
@@ -397,9 +397,9 @@ func TestImportFromCSV_SkipOnDetailError(t *testing.T) {
 
 	fakeRepo := &fakeDropshipRepo{}
 	srepo := &fakeStoreRepo{store: store}
-	svc := NewDropshipService(nil, fakeRepo, nil, srepo, nil, client, 5)
+	svc := NewDropshipService(nil, fakeRepo, nil, srepo, nil, nil, client, 5)
 
-	count, err := svc.ImportFromCSV(context.Background(), &buf, "")
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
 	if err != nil {
 		t.Fatalf("ImportFromCSV error: %v", err)
 	}

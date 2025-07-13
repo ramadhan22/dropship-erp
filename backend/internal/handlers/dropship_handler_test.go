@@ -24,7 +24,7 @@ type fakeDropshipService struct {
 	lastChan string
 }
 
-func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error) {
+func (f *fakeDropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channel string, batchID int64) (int, error) {
 	f.lastChan = channel
 	if f.fail {
 		return 0, errors.New("fail import")

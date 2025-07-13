@@ -62,6 +62,8 @@ Discrepancy* adjustment when they differ.
 - A dedicated `PPh Final UMKM` account (`5.4.1`) tracks these tax expenses.
 - View Shopee wallet transactions by store on the **Wallet Transactions** page;
   pagination now uses a **More** button with filter dropdowns.
+- View batch import history on the **Batch History** page with a button to see
+  transaction-level results.
 
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations

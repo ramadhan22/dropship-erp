@@ -16,7 +16,7 @@ import (
 
 // DropshipServiceInterface defines only the method the handler needs.
 type DropshipServiceInterface interface {
-	ImportFromCSV(ctx context.Context, r io.Reader, channel string) (int, error)
+	ImportFromCSV(ctx context.Context, r io.Reader, channel string, batchID int64) (int, error)
 	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
@@ -78,7 +78,7 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 			return
 		}
 		defer f.Close()
-		count, err := h.svc.ImportFromCSV(context.Background(), f, ch)
+		count, err := h.svc.ImportFromCSV(context.Background(), f, ch, batchID)
 		if err != nil {
 			if h.batch != nil {
 				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
