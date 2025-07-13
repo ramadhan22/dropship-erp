@@ -403,6 +403,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		t.prod += totalHargaProduk
 		t.prodCh += totalHargaChannel
 		count++
+		if s.batchSvc != nil && batchID != 0 {
+			_ = s.batchSvc.UpdateDone(ctx, batchID, count)
+		}
 	}
 	// after processing all rows, create journal entries using summed totals
 	for kode := range inserted {

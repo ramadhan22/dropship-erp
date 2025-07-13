@@ -77,9 +77,11 @@ api.interceptors.response.use(
 );
 
 // Dropship import
-export function importDropship(file: File, channel?: string) {
+export function importDropship(files: File[], channel?: string) {
   const data = new FormData();
-  data.append("file", file);
+  for (const file of files) {
+    data.append("file", file);
+  }
   if (channel) {
     data.append("channel", channel);
   }

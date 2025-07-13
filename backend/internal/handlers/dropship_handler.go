@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/csv"
 	"io"
-	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -38,69 +40,77 @@ func NewDropshipHandler(svc DropshipServiceInterface, batch *service.BatchServic
 }
 
 func (h *DropshipHandler) HandleImport(c *gin.Context) {
-	fileHeader, err := c.FormFile("file")
+	form, err := c.MultipartForm()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
+	files := form.File["file"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		return
+	}
 	channel := c.PostForm("channel")
-
-	var id int64
-	if h.batch != nil {
-		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: 0, DoneData: 0}
-		id, err = h.batch.Create(context.Background(), batch)
-		if err != nil {
+	queued := len(files)
+	for _, fh := range files {
+		dir := filepath.Join("backend", "uploads", "dropship")
+		os.MkdirAll(dir, 0o755)
+		filename := time.Now().Format("20060102150405") + "_" + fh.Filename
+		path := filepath.Join(dir, filename)
+		if err := c.SaveUploadedFile(fh, path); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		var id int64
+		if h.batch != nil {
+			batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: 0, DoneData: 0, Status: "pending", FileName: fh.Filename, FilePath: path}
+			var err error
+			id, err = h.batch.Create(context.Background(), batch)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		go h.processFile(id, path, channel)
 	}
+	c.JSON(http.StatusOK, gin.H{"queued": queued})
+}
 
-	go func(fh *multipart.FileHeader, ch string, batchID int64) {
-		ctx := context.Background()
-		f, err := fh.Open()
-		if err != nil {
-			if h.batch != nil {
-				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
-			}
-			return
-		}
-		var expected int
+func (h *DropshipHandler) processFile(batchID int64, path, channel string) {
+	ctx := context.Background()
+	f, err := os.Open(path)
+	if err != nil {
 		if h.batch != nil {
-			expected, err = countCSVRows(f)
+			h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+		}
+		return
+	}
+	var total int
+	if h.batch != nil {
+		total, err = countCSVRows(f)
+		if err != nil {
 			f.Close()
-			if err != nil {
-				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
-				return
-			}
-			if err := h.batch.UpdateTotal(ctx, batchID, expected); err != nil {
-				// log but continue
-			}
-			f, err = fh.Open()
-			if err != nil {
-				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
-				return
-			}
-		}
-		defer f.Close()
-		count, err := h.svc.ImportFromCSV(ctx, f, ch, batchID)
-		if err != nil {
-			if h.batch != nil {
-				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
-				h.batch.UpdateDone(ctx, batchID, count)
-			}
+			h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
 			return
 		}
-		if h.batch != nil {
-			if expected > 0 {
-				h.batch.UpdateDone(ctx, batchID, expected)
-			} else {
-				h.batch.UpdateDone(ctx, batchID, count)
-			}
+		h.batch.UpdateTotal(ctx, batchID, total)
+		h.batch.UpdateStatus(ctx, batchID, "processing", "")
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			f.Close()
+			h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+			return
+		}
+	}
+	count, err := h.svc.ImportFromCSV(ctx, f, channel, batchID)
+	f.Close()
+	if h.batch != nil {
+		h.batch.UpdateDone(ctx, batchID, count)
+		if err != nil {
+			h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+		} else {
 			h.batch.UpdateStatus(ctx, batchID, "completed", "")
 		}
-	}(fileHeader, channel, id)
-
-	c.JSON(http.StatusOK, gin.H{"message": "processing in background", "batch_id": id})
+	}
 }
 
 // HandleList returns dropship purchases with optional filters and pagination.

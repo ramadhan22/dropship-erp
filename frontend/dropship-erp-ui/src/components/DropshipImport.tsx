@@ -201,17 +201,13 @@ export default function DropshipImport() {
   const handleSubmit = async () => {
     try {
       if (!files || files.length === 0) return;
-      let inserted = 0;
-      for (const f of Array.from(files)) {
-        const res = await importDropship(
-          f,
-          importChannel || undefined,
-        );
-        inserted += res.data.inserted;
-      }
+      const res = await importDropship(
+        Array.from(files),
+        importChannel || undefined,
+      );
       setMsg({
         type: "success",
-        text: `Imported ${inserted} rows from ${files.length} files successfully!`,
+        text: `Queued ${res.data.queued} files successfully!`,
       });
       setFiles(null);
       fetchData();

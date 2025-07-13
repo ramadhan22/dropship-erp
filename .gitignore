@@ -4,6 +4,7 @@
 # Node modules (frontend)
 frontend/dropship-erp-ui/node_modules
 frontend/dropship-erp-ui/build
+backend/uploads/
 
 # Go build artifacts
 backend/bin/

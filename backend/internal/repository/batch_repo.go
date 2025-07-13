@@ -13,8 +13,8 @@ type BatchRepo struct{ db DBTX }
 func NewBatchRepo(db DBTX) *BatchRepo { return &BatchRepo{db: db} }
 
 func (r *BatchRepo) Insert(ctx context.Context, b *models.BatchHistory) (int64, error) {
-	query := `INSERT INTO batch_history (process_type, started_at, total_data, done_data, status, error_message)
-              VALUES (:process_type, NOW(), :total_data, :done_data, :status, :error_message)
+	query := `INSERT INTO batch_history (process_type, started_at, total_data, done_data, status, error_message, file_name, file_path)
+              VALUES (:process_type, NOW(), :total_data, :done_data, :status, :error_message, :file_name, :file_path)
               RETURNING id`
 	rows, err := sqlx.NamedQueryContext(ctx, r.db, query, b)
 	if err != nil {
