@@ -45,23 +45,9 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 	}
 	channel := c.PostForm("channel")
 
-	var (
-		id    int64
-		total int
-	)
+	var id int64
 	if h.batch != nil {
-		f, err2 := fileHeader.Open()
-		if err2 != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err2.Error()})
-			return
-		}
-		total, err2 = countCSVRows(f)
-		f.Close()
-		if err2 != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err2.Error()})
-			return
-		}
-		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: total, DoneData: 0}
+		batch := &models.BatchHistory{ProcessType: "dropship_import", TotalData: 0, DoneData: 0}
 		id, err = h.batch.Create(context.Background(), batch)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -69,32 +55,50 @@ func (h *DropshipHandler) HandleImport(c *gin.Context) {
 		}
 	}
 
-	go func(fh *multipart.FileHeader, ch string, batchID int64, expected int) {
+	go func(fh *multipart.FileHeader, ch string, batchID int64) {
+		ctx := context.Background()
 		f, err := fh.Open()
 		if err != nil {
 			if h.batch != nil {
-				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
+				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
 			}
 			return
 		}
+		var expected int
+		if h.batch != nil {
+			expected, err = countCSVRows(f)
+			f.Close()
+			if err != nil {
+				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+				return
+			}
+			if err := h.batch.UpdateTotal(ctx, batchID, expected); err != nil {
+				// log but continue
+			}
+			f, err = fh.Open()
+			if err != nil {
+				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+				return
+			}
+		}
 		defer f.Close()
-		count, err := h.svc.ImportFromCSV(context.Background(), f, ch, batchID)
+		count, err := h.svc.ImportFromCSV(ctx, f, ch, batchID)
 		if err != nil {
 			if h.batch != nil {
-				h.batch.UpdateStatus(context.Background(), batchID, "failed", err.Error())
-				h.batch.UpdateDone(context.Background(), batchID, count)
+				h.batch.UpdateStatus(ctx, batchID, "failed", err.Error())
+				h.batch.UpdateDone(ctx, batchID, count)
 			}
 			return
 		}
 		if h.batch != nil {
 			if expected > 0 {
-				h.batch.UpdateDone(context.Background(), batchID, expected)
+				h.batch.UpdateDone(ctx, batchID, expected)
 			} else {
-				h.batch.UpdateDone(context.Background(), batchID, count)
+				h.batch.UpdateDone(ctx, batchID, count)
 			}
-			h.batch.UpdateStatus(context.Background(), batchID, "completed", "")
+			h.batch.UpdateStatus(ctx, batchID, "completed", "")
 		}
-	}(fileHeader, channel, id, total)
+	}(fileHeader, channel, id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "processing in background", "batch_id": id})
 }

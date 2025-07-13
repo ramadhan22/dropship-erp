@@ -25,6 +25,11 @@ func (s *BatchService) UpdateDone(ctx context.Context, id int64, done int) error
 	return s.repo.UpdateDone(ctx, id, done)
 }
 
+// UpdateTotal sets the total number of rows expected for a batch process.
+func (s *BatchService) UpdateTotal(ctx context.Context, id int64, total int) error {
+	return s.repo.UpdateTotal(ctx, id, total)
+}
+
 func (s *BatchService) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
 	return s.repo.UpdateStatus(ctx, id, status, msg)
 }

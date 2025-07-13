@@ -37,6 +37,13 @@ func (r *BatchRepo) UpdateDone(ctx context.Context, id int64, done int) error {
 	return err
 }
 
+// UpdateTotal sets the total_data count for a batch record.
+func (r *BatchRepo) UpdateTotal(ctx context.Context, id int64, total int) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE batch_history SET total_data=$2 WHERE id=$1`, id, total)
+	return err
+}
+
 func (r *BatchRepo) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE batch_history SET status=$2, error_message=$3 WHERE id=$1`,
