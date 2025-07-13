@@ -9,6 +9,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -937,11 +938,23 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 		if err != nil {
 			log.Printf("batch escrow detail %s: %v", store, err)
 		} else {
+			var wg sync.WaitGroup
+			sem := make(chan struct{}, 5)
 			for sn, esc := range escMap {
-				if err := s.createEscrowSettlementJournal(ctx, sn, "completed", timeMap[sn], &esc); err != nil {
-					log.Printf("escrow settlement %s: %v", sn, err)
-				}
+				wg.Add(1)
+				sem <- struct{}{}
+				go func(sn string, esc ShopeeEscrowDetail) {
+					defer func() { <-sem; wg.Done() }()
+					inv := sn
+					if dp, ok := dpMap[sn]; ok {
+						inv = dp.KodeInvoiceChannel
+					}
+					if err := s.createEscrowSettlementJournal(ctx, inv, "completed", timeMap[sn], &esc); err != nil {
+						log.Printf("escrow settlement %s: %v", sn, err)
+					}
+				}(sn, esc)
 			}
+			wg.Wait()
 		}
 	}
 }
