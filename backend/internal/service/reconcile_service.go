@@ -511,7 +511,7 @@ func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice st
 }
 
 func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models.Store) error {
-	log.Printf("TEST: ensureStoreTokenValid for store %d", st.StoreID)
+	log.Printf("ensureStoreTokenValid store=%d", st.StoreID)
 	// New location (e.g., Asia/Jakarta)
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 
@@ -895,10 +895,11 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 		return
 	}
 	sns := make([]string, len(list))
-	dpMap := make(map[string]*models.DropshipPurchase, len(list))
+	dpMap := make(map[string]*models.DropshipPurchase, len(list)*2)
 	for i, dp := range list {
 		sns[i] = dp.KodeInvoiceChannel
 		dpMap[dp.KodeInvoiceChannel] = dp
+		dpMap[dp.KodePesanan] = dp
 	}
 	details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
@@ -938,6 +939,13 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			updateTime = time.Now()
 		}
 		dp := dpMap[sn]
+		if dp == nil && s.dropRepo != nil {
+			if d, err := s.dropRepo.GetDropshipPurchaseByID(ctx, sn); err == nil && d != nil {
+				dp = d
+				dpMap[sn] = d
+				dpMap[d.KodeInvoiceChannel] = d
+			}
+		}
 		if dp == nil {
 			continue
 		}
@@ -970,20 +978,28 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			}
 			sem := make(chan struct{}, limit)
 
-			log.Printf("Processing %s", escMap)
+			log.Printf("processing %d escrow settlements", len(escMap))
 
 			for sn, esc := range escMap {
 				wg.Add(1)
 				sem <- struct{}{}
 				go func(sn string, esc ShopeeEscrowDetail) {
 					defer func() { <-sem; wg.Done() }()
-					log.Printf("Processing escrow settlement for %s", esc)
+					log.Printf("processing escrow for order %s", sn)
 					inv := sn
-					if dp, ok := dpMap[sn]; ok {
-						log.Printf("Found DropshipPurchase for %s", dp.KodeInvoiceChannel)
+					dp, ok := dpMap[sn]
+					if !ok && s.dropRepo != nil {
+						if d, err := s.dropRepo.GetDropshipPurchaseByID(ctx, sn); err == nil && d != nil {
+							dp = d
+							dpMap[sn] = d
+							dpMap[d.KodeInvoiceChannel] = d
+						}
+					}
+					if dp != nil {
+						log.Printf("found DropshipPurchase invoice %s", dp.KodeInvoiceChannel)
 						inv = dp.KodeInvoiceChannel
 					}
-					log.Printf("Processing escrow settlement for %s", inv)
+					log.Printf("creating escrow settlement journal for %s", inv)
 					if err := s.createEscrowSettlementJournal(ctx, inv, "completed", timeMap[sn], &esc); err != nil {
 						log.Printf("escrow settlement %s: %v", sn, err)
 					}

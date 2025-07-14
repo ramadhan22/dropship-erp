@@ -141,6 +141,53 @@ func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	}
 }
 
+func TestProcessShopeeStatusBatch_Escrow_OrderSNMismatch(t *testing.T) {
+	dp1 := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
+	dp2 := &models.DropshipPurchase{KodePesanan: "DP2", KodeInvoiceChannel: "INV2", NamaToko: "ShopA"}
+	drop := &fakeDropRepoBatch{data: map[string]*models.DropshipPurchase{"INV1": dp1, "INV2": dp2}}
+
+	now := time.Now()
+	exp := 3600 * 24
+	store := &models.Store{NamaToko: "ShopA", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+	srepo := &fakeStoreRepoBatch{store: store}
+	jrepo := &fakeJournalRepoBatch{}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v2/order/get_order_detail":
+			fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"DP1","order_status":"COMPLETED","update_time":1},{"order_sn":"DP2","order_status":"COMPLETED","update_time":1}]}}`)
+		case "/api/v2/payment/get_escrow_detail_batch":
+			fmt.Fprint(w, `{"response":[{"order_sn":"DP1","escrow_detail":{"order_income":{"order_original_price":1,"escrow_amount":1}}},{"order_sn":"DP2","escrow_detail":{"order_income":{"order_original_price":2,"escrow_amount":2}}}]}`)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
+	client.httpClient = srv.Client()
+
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil, 5)
+
+	svc.processShopeeStatusBatch(context.Background(), "ShopA", []*models.DropshipPurchase{dp1, dp2})
+
+	if len(drop.lookups) != 2 {
+		t.Fatalf("expected 2 lookups, got %d", len(drop.lookups))
+	}
+	found1, found2 := false, false
+	for _, v := range drop.lookups {
+		if v == "INV1" {
+			found1 = true
+		}
+		if v == "INV2" {
+			found2 = true
+		}
+	}
+	if !found1 || !found2 {
+		t.Fatalf("unexpected lookups %v", drop.lookups)
+	}
+}
+
 func TestUpdateShopeeStatuses_BatchHistory(t *testing.T) {
 	dp := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
 	drop := &fakeDropRepoBatch{data: map[string]*models.DropshipPurchase{"INV1": dp}}
