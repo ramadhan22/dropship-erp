@@ -469,7 +469,27 @@ func (c *ShopeeClient) FetchShopeeEscrowDetails(ctx context.Context, accessToken
 
 	res := make(map[string]ShopeeEscrowDetail, len(out.Response))
 	for _, item := range out.Response {
-		res[item.OrderSN] = item.EscrowDetail
+		sn := strings.TrimSpace(item.OrderSN)
+		// If OrderSN is empty, try fallback from EscrowDetail.OrderSN
+		if sn == "" {
+			// Attempt fallback if EscrowDetail is a struct and has OrderSN field
+			if item.EscrowDetail["order_sn"].(string) != "" {
+				sn = strings.TrimSpace(item.EscrowDetail["order_sn"].(string))
+			}
+			// If still blank, try fallback from EscrowDetail as map[string]interface{} (in case of map type)
+			if sn == "" {
+				if m, ok := any(item.EscrowDetail).(map[string]interface{}); ok {
+					if orderSNVal, ok2 := m["order_sn"].(string); ok2 && orderSNVal != "" {
+						sn = strings.TrimSpace(orderSNVal)
+					}
+				}
+			}
+		}
+		if sn == "" {
+			log.Printf("WARNING: EscrowDetail with empty order_sn: %+v", item)
+			continue
+		}
+		res[sn] = item.EscrowDetail
 	}
 	log.Printf("FetchShopeeEscrowDetails mapped response: %v", res)
 	return res, nil
