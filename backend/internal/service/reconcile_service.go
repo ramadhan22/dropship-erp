@@ -744,7 +744,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	// the escrow amount from the pending account to the Shopee balance.
 	logistikCase := logistikAmt > 0
 
-	escrowAmt = escrowAmt - shipDisc
+	// escrowAmt = escrowAmt - shipDisc
 
 	debitTotal := commission + service + voucher + discount + shipDisc + affiliate + diff + escrowAmt
 	if !logistikCase && math.Abs(debitTotal-orderPrice) > 0.01 {
