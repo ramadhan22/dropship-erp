@@ -1040,8 +1040,8 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 		batches[c.NamaToko] = append(batches[c.NamaToko], c)
 	}
 	for store, list := range batches {
-		for i := 0; i < len(list); i += 50 {
-			end := i + 50
+		for i := 0; i < len(list); i += batchSize {
+			end := i + batchSize
 			if end > len(list) {
 				end = len(list)
 			}
