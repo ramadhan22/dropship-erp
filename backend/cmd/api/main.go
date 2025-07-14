@@ -226,9 +226,9 @@ func main() {
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
 		
-		// Metrics endpoint
+		// Performance metrics endpoint (system monitoring)
 		if cfg.Performance.EnableMetrics {
-			apiGroup.GET("/metrics", middleware.GetMetricsHandler())
+			apiGroup.GET("/performance", middleware.GetMetricsHandler())
 		}
 	}
 

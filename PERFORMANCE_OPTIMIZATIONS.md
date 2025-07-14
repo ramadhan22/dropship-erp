@@ -51,7 +51,8 @@ err := service.BatchInsertPurchases(ctx, purchases)
 ```
 
 ### Performance Monitoring
-- **Metrics Endpoint**: `/api/metrics`
+- **Business Metrics Endpoint**: `/api/metrics` (shop/period specific)
+- **Performance Metrics Endpoint**: `/api/performance` (system monitoring)
 - **Slow Query Detection**: Queries >2s are logged
 - **Request Tracking**: Response times, error rates, cache hit rates
 
@@ -195,9 +196,16 @@ WHERE status_pesanan_terakhir != 'pesanan selesai';
 
 ### Performance Monitoring
 
-#### Metrics Endpoint
+#### Performance Metrics Endpoint
 ```bash
-GET /api/metrics
+# System performance monitoring
+GET /api/performance
+```
+
+#### Business Metrics Endpoint  
+```bash
+# Shop/period specific metrics
+GET /api/metrics?shop=MyStore&period=2024-01
 ```
 
 Returns:
@@ -303,8 +311,8 @@ const { data } = useInfiniteDropshipPurchases(filters, 50);
 
 ### Load Testing
 ```bash
-# Test API performance
-ab -n 1000 -c 10 http://localhost:8080/api/metrics
+# Test performance metrics
+ab -n 1000 -c 10 http://localhost:8080/api/performance
 
 # Test large dataset handling
 curl "http://localhost:8080/api/dropship/purchases?page_size=1000"
@@ -370,8 +378,11 @@ redis-cli FLUSHALL
 # Check slow query logs
 grep "SLOW QUERY" logs/*.log
 
-# Monitor database connections
-curl http://localhost:8080/api/metrics
+# Monitor system performance
+curl http://localhost:8080/api/performance
+
+# Monitor business metrics  
+curl http://localhost:8080/api/metrics?shop=MyStore&period=2024-01
 ```
 
 #### Frontend Performance Issues
