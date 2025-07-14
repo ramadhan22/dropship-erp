@@ -18,26 +18,26 @@ WHERE status_pesanan_terakhir != 'pesanan selesai';
 CREATE INDEX IF NOT EXISTS idx_journal_entries_created_at 
 ON journal_entries (created_at DESC);
 
--- Index for journal lines by account code (used in account balances)
-CREATE INDEX IF NOT EXISTS idx_journal_lines_account_code 
-ON journal_lines (account_code);
+-- Index for journal lines by account ID (used in account balances)
+CREATE INDEX IF NOT EXISTS idx_journal_lines_account_id 
+ON journal_lines (account_id);
 
 -- Composite index for journal lines filtering
 CREATE INDEX IF NOT EXISTS idx_journal_lines_composite 
-ON journal_lines (journal_entry_id, account_code, debit_amount, credit_amount);
+ON journal_lines (journal_id, account_id, amount, is_debit);
 
--- Index for shopee settled orders by order number (used in reconciliation)
-CREATE INDEX IF NOT EXISTS idx_shopee_settled_orders_no 
-ON shopee_settled_orders (no_pesanan);
+-- Index for shopee settled orders by order ID (used in reconciliation)
+CREATE INDEX IF NOT EXISTS idx_shopee_settled_orders_order_id 
+ON shopee_settled_orders (order_id);
 
 -- Index for dropship purchase details by kode pesanan (used in product analysis)
 CREATE INDEX IF NOT EXISTS idx_dropship_purchase_details_kode 
 ON dropship_purchase_details (kode_pesanan);
 
 -- Index for expenses by date (used in expense reporting)
-CREATE INDEX IF NOT EXISTS idx_expenses_tanggal 
-ON expenses (tanggal DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_date 
+ON expenses (date DESC);
 
--- Index for batch history by status and process type (used in monitoring)
-CREATE INDEX IF NOT EXISTS idx_batch_history_status_type 
-ON batch_history (status, process_type, created_at DESC);
+-- Index for batch history by process type and started time (used in monitoring)
+CREATE INDEX IF NOT EXISTS idx_batch_history_process_started 
+ON batch_history (process_type, started_at DESC);
