@@ -73,3 +73,12 @@ export function updateShopeeStatuses(
 ) {
   return api.post("/reconcile/update_statuses", { invoices }, config);
 }
+
+export function createReconcileBatch(
+  shop: string,
+  order: string,
+  from: string,
+  to: string,
+) {
+  return api.post("/reconcile/batch", { shop, order, from, to });
+}

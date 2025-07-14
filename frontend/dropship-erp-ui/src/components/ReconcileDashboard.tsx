@@ -20,7 +20,7 @@ import {
   reconcileCheck,
   cancelPurchase,
   updateShopeeStatus,
-  updateShopeeStatuses,
+  createReconcileBatch,
   fetchEscrowDetail,
   fetchShopeeDetail,
 } from "../api/reconcile";
@@ -195,62 +195,10 @@ export default function ReconcileDashboard() {
 
   const handleReconcileAll = async () => {
     try {
-      const all: ReconcileCandidate[] = [];
-      const pageSize = 1000;
-      let page = 1;
-      const skipLoading = {  };
-      while (true) {
-        const res = await listCandidates(
-          shop,
-          order,
-          from,
-          to,
-          page,
-          pageSize,
-          skipLoading,
-        );
-        all.push(...res.data.data);
-        if (all.length >= res.data.total) break;
-        page += 1;
-      }
-
-      for (let i = 0; i < all.length; i += 50) {
-        try {
-          await updateShopeeStatuses(
-            all.slice(i, i + 50).map((r) => r.kode_invoice_channel),
-            skipLoading,
-          );
-        } catch {
-          // ignore batch errors
-        }
-      }
-
-      setProgress({ done: 0, total: all.length });
-      const concurrency =
-        (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
-      let idx = 0;
-      const workers = Array.from({ length: concurrency }, async () => {
-        for (;;) {
-          const cur = idx++;
-          if (cur >= all.length) break;
-          try {
-            await reconcileCheck(all[cur].kode_pesanan, skipLoading);
-          } catch {
-            // ignore individual errors
-          }
-          setProgress((p) =>
-            p ? { ...p, done: Math.min(p.done + 1, p.total) } : p,
-          );
-        }
-      });
-      await Promise.all(workers);
-
-      setProgress(null);
-
-      setMsg({ type: "success", text: "Completed" });
-      reload();
+      await createReconcileBatch(shop, order, from, to);
+      setMsg({ type: "success", text: "Batch created" });
     } catch (e: any) {
-      setMsg({ type: "error", text: e.message });
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
   };
 

@@ -90,6 +90,16 @@ func (f *fakeBatchSvc) UpdateStatus(ctx context.Context, id int64, status, msg s
 	return nil
 }
 
+func (f *fakeBatchSvc) CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error {
+	return nil
+}
+func (f *fakeBatchSvc) ListDetails(ctx context.Context, id int64) ([]models.BatchHistoryDetail, error) {
+	return []models.BatchHistoryDetail{}, nil
+}
+func (f *fakeBatchSvc) UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error {
+	return nil
+}
+
 func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	dp1 := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
 	dp2 := &models.DropshipPurchase{KodePesanan: "DP2", KodeInvoiceChannel: "INV2", NamaToko: "ShopA"}

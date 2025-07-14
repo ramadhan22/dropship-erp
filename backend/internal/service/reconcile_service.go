@@ -54,6 +54,9 @@ type ReconcileServiceBatchSvc interface {
 	Create(ctx context.Context, b *models.BatchHistory) (int64, error)
 	UpdateDone(ctx context.Context, id int64, done int) error
 	UpdateStatus(ctx context.Context, id int64, status, msg string) error
+	CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error
+	ListDetails(ctx context.Context, batchID int64) ([]models.BatchHistoryDetail, error)
+	UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error
 }
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
@@ -907,6 +910,7 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
 		}
 	}
+
 	if err != nil {
 		log.Printf("batch fetch detail %s: %v", store, err)
 		return
@@ -1008,4 +1012,91 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			wg.Wait()
 		}
 	}
+}
+
+// CreateReconcileBatches groups reconciliation candidates by store and records
+// them as batch_history rows with associated details. Each batch contains at
+// most 50 invoices.
+func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, from, to string) error {
+	if s.batchSvc == nil {
+		return fmt.Errorf("batch service not configured")
+	}
+	pageSize := 1000
+	offset := 0
+	all := []models.ReconcileCandidate{}
+	for {
+		list, total, err := s.ListCandidates(ctx, shop, order, from, to, pageSize, offset)
+		if err != nil {
+			return err
+		}
+		all = append(all, list...)
+		if len(all) >= total {
+			break
+		}
+		offset += pageSize
+	}
+	batches := make(map[string][]models.ReconcileCandidate)
+	for _, c := range all {
+		batches[c.NamaToko] = append(batches[c.NamaToko], c)
+	}
+	for store, list := range batches {
+		for i := 0; i < len(list); i += 50 {
+			end := i + 50
+			if end > len(list) {
+				end = len(list)
+			}
+			subset := list[i:end]
+			bh := &models.BatchHistory{ProcessType: "reconcile_batch", TotalData: len(subset), DoneData: 0, Status: "pending"}
+			batchID, err := s.batchSvc.Create(ctx, bh)
+			if err != nil {
+				return err
+			}
+			for _, cand := range subset {
+				d := &models.BatchHistoryDetail{BatchID: batchID, Reference: cand.KodeInvoiceChannel, Store: store, Status: "pending"}
+				if err := s.batchSvc.CreateDetail(ctx, d); err != nil {
+					log.Printf("create batch detail %s: %v", store, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ProcessReconcileBatch processes a batch of reconciliation tasks sequentially.
+// Shopee statuses are updated in bulk before marking each purchase complete.
+func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) {
+	if s.batchSvc == nil {
+		return
+	}
+	details, err := s.batchSvc.ListDetails(ctx, id)
+	if err != nil {
+		log.Printf("list batch details %d: %v", id, err)
+		s.batchSvc.UpdateStatus(ctx, id, "failed", err.Error())
+		return
+	}
+	s.batchSvc.UpdateStatus(ctx, id, "processing", "")
+	invoices := make([]string, len(details))
+	for i, d := range details {
+		invoices[i] = d.Reference
+	}
+	if err := s.UpdateShopeeStatuses(ctx, invoices); err != nil {
+		log.Printf("update statuses batch %d: %v", id, err)
+	}
+	done := 0
+	for _, d := range details {
+		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, d.Reference)
+		if err != nil || dp == nil {
+			msg := fmt.Sprintf("fetch purchase %s: %v", d.Reference, err)
+			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", msg)
+			continue
+		}
+		if err := s.CheckAndMarkComplete(ctx, dp.KodePesanan); err != nil {
+			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", err.Error())
+			continue
+		}
+		done++
+		s.batchSvc.UpdateDone(ctx, id, done)
+		s.batchSvc.UpdateDetailStatus(ctx, d.ID, "success", "")
+	}
+	s.batchSvc.UpdateStatus(ctx, id, "completed", "")
 }
