@@ -14,6 +14,30 @@ max_threads: 5
 
 database:
   url: "postgres://erp_user:erp_pass@localhost:5432/dropship_erp?sslmode=disable"
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: "1h"
+
+# Redis cache configuration (optional - disabled by default)
+cache:
+  enabled: false
+  redis_url: "redis://localhost:6379"
+  password: ""
+  db: 0
+  max_retries: 3
+  dial_timeout: "5s"
+  read_timeout: "3s"
+  write_timeout: "3s"
+  default_ttl: "5m"
+
+# Performance tuning configuration
+performance:
+  batch_size: 100
+  slow_query_threshold: "2s"
+  shopee_rate_limit: 1000
+  shopee_retry_max_attempts: 3
+  shopee_retry_delay: "1s"
+  enable_metrics: true
 
 jwt:
   secret: "cuancuan88"
