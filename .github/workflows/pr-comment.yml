@@ -1,0 +1,113 @@
+name: PR Auto Comment
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  welcome:
+    name: Welcome & Guidelines
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Add PR Welcome Comment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const comment = `🚀 **Thank you for your contribution!**
+
+          Your pull request has been automatically reviewed. Here's what happens next:
+
+          ## 📋 Automated Checks
+          - ✅ **Backend Tests**: Go tests must pass
+          - ✅ **Backend Formatting**: Code must be properly formatted with \`gofmt\`
+          - ✅ **Backend Build**: Must compile successfully
+          - ⚠️ **Frontend Checks**: Currently limited due to existing issues
+
+          ## 📚 Guidelines
+          Please ensure your changes follow our [contribution guidelines](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/AGENTS.md):
+
+          ### Backend (Go)
+          - Run \`go test ./...\` in the \`backend\` directory
+          - Format code with \`gofmt -w .\`
+          - Follow existing patterns and conventions
+
+          ### Frontend (React/TypeScript)  
+          - Run \`npm test\` in \`frontend/dropship-erp-ui\`
+          - Run \`npm run lint\` to check code style
+          - Ensure \`npm run build\` succeeds
+
+          ### General
+          - Keep changes minimal and focused
+          - Update documentation if needed
+          - Add tests for new functionality
+          - Follow the existing code style
+
+          ## 🔄 Status Updates
+          The automated checks will run shortly. You can monitor their progress in the "Checks" tab above.
+
+          If any checks fail, please review the error messages and fix the issues. The checks will re-run automatically when you push new commits.
+
+          ---
+          *This comment was generated automatically. For questions, please refer to our [documentation](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/README.md).*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  check-requirements:
+    name: Check PR Requirements
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check PR size
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          const changedLines = files.reduce((total, file) => {
+            return total + file.additions + file.deletions;
+          }, 0);
+          
+          const changedFiles = files.length;
+          
+          let message = `📊 **PR Size Analysis**\n\n`;
+          message += `- **Files changed**: ${changedFiles}\n`;
+          message += `- **Lines changed**: ${changedLines}\n\n`;
+          
+          if (changedLines > 500) {
+            message += `⚠️ **Large PR Warning**: This PR changes ${changedLines} lines across ${changedFiles} files. Consider splitting it into smaller, focused PRs for easier review.\n\n`;
+          } else if (changedLines > 200) {
+            message += `📝 **Medium PR**: This PR has a moderate size. Please ensure it focuses on a single feature or fix.\n\n`;
+          } else {
+            message += `✅ **Good PR Size**: This PR is a manageable size for review.\n\n`;
+          }
+          
+          // Check for specific file types
+          const hasBackendChanges = files.some(file => file.filename.startsWith('backend/'));
+          const hasFrontendChanges = files.some(file => file.filename.startsWith('frontend/'));
+          const hasDocChanges = files.some(file => file.filename.endsWith('.md'));
+          const hasWorkflowChanges = files.some(file => file.filename.startsWith('.github/'));
+          
+          message += `🎯 **Change Summary**:\n`;
+          if (hasBackendChanges) message += `- 🔧 Backend changes detected\n`;
+          if (hasFrontendChanges) message += `- 🎨 Frontend changes detected\n`;
+          if (hasDocChanges) message += `- 📖 Documentation changes detected\n`;
+          if (hasWorkflowChanges) message += `- ⚙️ Workflow changes detected\n`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          });

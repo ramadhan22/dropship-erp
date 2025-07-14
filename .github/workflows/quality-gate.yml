@@ -1,0 +1,184 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main, master ]
+
+env:
+  GO_VERSION: '1.23'
+  NODE_VERSION: '18'
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      workflows: ${{ steps.changes.outputs.workflows }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          backend:
+            - 'backend/**'
+          frontend:
+            - 'frontend/**'
+          workflows:
+            - '.github/workflows/**'
+
+  go-quality:
+    name: Go Code Quality
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Download dependencies
+      working-directory: ./backend
+      run: go mod download
+      
+    - name: Verify Go modules
+      working-directory: ./backend
+      run: go mod verify
+      
+    - name: Format check
+      working-directory: ./backend
+      run: |
+        gofmt -d . > gofmt.diff
+        if [ -s gofmt.diff ]; then
+          echo "Code is not properly formatted:"
+          cat gofmt.diff
+          echo "Run 'gofmt -w .' to fix"
+          exit 1
+        fi
+        
+    - name: Go vet
+      working-directory: ./backend
+      run: go vet ./...
+      
+    - name: Run tests with race detection
+      working-directory: ./backend
+      run: go test -race -coverprofile=coverage.out ./...
+      
+    - name: Build
+      working-directory: ./backend
+      run: go build -v ./cmd/api
+
+  frontend-quality:
+    name: Frontend Code Quality  
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/dropship-erp-ui/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./frontend/dropship-erp-ui
+      run: npm ci
+      
+    - name: Type check
+      working-directory: ./frontend/dropship-erp-ui  
+      run: npx tsc --noEmit
+      
+    - name: Lint check
+      working-directory: ./frontend/dropship-erp-ui
+      run: npm run lint -- --max-warnings=0
+      
+    - name: Build check
+      working-directory: ./frontend/dropship-erp-ui
+      run: npm run build
+      
+    - name: Test with coverage
+      working-directory: ./frontend/dropship-erp-ui
+      run: npm test -- --watchAll=false --coverage --coverageReporters=text
+
+  security-check:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  all-checks:
+    name: All Quality Checks
+    runs-on: ubuntu-latest
+    needs: [changes, go-quality, frontend-quality, security-check]
+    if: always()
+    
+    steps:
+    - name: Check all results
+      run: |
+        echo "Change Detection: ${{ needs.changes.result }}"
+        echo "Go Quality: ${{ needs.go-quality.result }}"
+        echo "Frontend Quality: ${{ needs.frontend-quality.result }}"
+        echo "Security Check: ${{ needs.security-check.result }}"
+        
+        # If any required job failed, fail this job
+        if [[ "${{ needs.changes.result }}" == "failure" ]]; then
+          echo "❌ Change detection failed"
+          exit 1
+        fi
+        
+        if [[ "${{ needs.changes.outputs.backend }}" == "true" && "${{ needs.go-quality.result }}" != "success" ]]; then
+          echo "❌ Go quality checks failed"
+          exit 1
+        fi
+        
+        if [[ "${{ needs.changes.outputs.frontend }}" == "true" && "${{ needs.frontend-quality.result }}" != "success" ]]; then
+          echo "❌ Frontend quality checks failed"  
+          exit 1
+        fi
+        
+        if [[ "${{ needs.security-check.result }}" == "failure" ]]; then
+          echo "⚠️ Security scan failed"
+          # Don't fail for security scan failures, just warn
+        fi
+        
+        echo "✅ All applicable quality checks passed!"

@@ -191,6 +191,32 @@ tables should keep this mapping aligned.
 - **BalanceService** and **GLService** – read from journal tables and `accounts`
   for statements.
 
+## Automated PR Reviews
+
+This repository implements automated review for **every pull request opened**. The system includes:
+
+### 🤖 Automated Checks
+- **Backend Tests**: All Go tests must pass (`go test ./...`)
+- **Code Formatting**: Go code must be properly formatted (`gofmt`)
+- **Build Verification**: Backend must compile successfully
+- **Security Scanning**: Vulnerability detection with Trivy
+- **Change Detection**: Only relevant checks run based on modified files
+
+### 📋 Workflow Status
+- ✅ **Backend Reviews**: Fully functional
+- ⚠️ **Frontend Reviews**: Limited due to existing issues (80+ linting errors, test failures)
+- ✅ **Automated Comments**: Welcome messages and guidance for contributors
+- ✅ **Quality Gates**: Advanced conditional execution based on changes
+
+### 🚀 For Contributors
+When you open a PR, you'll automatically get:
+1. **Welcome comment** with guidelines and project information
+2. **Status checks** showing pass/fail for all automated tests
+3. **Detailed feedback** in workflow logs if anything fails
+4. **Security scan results** uploaded to GitHub Security tab
+
+See [.github/workflows/README.md](.github/workflows/README.md) for technical details.
+
 ## Contribution Guidelines
 
 Automated agents contributing to this repository should follow the

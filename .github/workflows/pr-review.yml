@@ -1,0 +1,148 @@
+---
+name: Automated PR Review
+
+"on":
+  pull_request:
+    branches: [main, master]
+  pull_request_target:
+    branches: [main, master]
+
+jobs:
+  backend-review:
+    name: Backend Review (Go)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Install dependencies
+      working-directory: ./backend
+      run: go mod download
+      
+    - name: Check Go formatting
+      working-directory: ./backend
+      run: |
+        unformatted=$(gofmt -l .)
+        if [ -n "$unformatted" ]; then
+          echo "❌ The following files are not properly formatted:"
+          echo "$unformatted"
+          echo "Please run 'gofmt -w .' to fix formatting issues."
+          exit 1
+        else
+          echo "✅ All Go files are properly formatted"
+        fi
+        
+    - name: Run Go tests
+      working-directory: ./backend
+      run: |
+        echo "🧪 Running Go tests..."
+        go test ./... -v
+        if [ $? -eq 0 ]; then
+          echo "✅ All Go tests passed"
+        else
+          echo "❌ Some Go tests failed"
+          exit 1
+        fi
+        
+    - name: Build backend
+      working-directory: ./backend
+      run: |
+        echo "🔨 Building backend..."
+        go build ./cmd/api
+        if [ $? -eq 0 ]; then
+          echo "✅ Backend builds successfully"
+        else
+          echo "❌ Backend build failed"
+          exit 1
+        fi
+
+  frontend-review:
+    name: Frontend Review (React/TypeScript)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/dropship-erp-ui/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./frontend/dropship-erp-ui
+      run: npm ci
+      
+    - name: Run ESLint
+      working-directory: ./frontend/dropship-erp-ui
+      run: |
+        echo "🔍 Running ESLint..."
+        npm run lint
+        if [ $? -eq 0 ]; then
+          echo "✅ ESLint passed"
+        else
+          echo "❌ ESLint found issues"
+          echo "Please fix linting issues before merging"
+          exit 1
+        fi
+        
+    - name: Build frontend
+      working-directory: ./frontend/dropship-erp-ui
+      run: |
+        echo "🔨 Building frontend..."
+        npm run build
+        if [ $? -eq 0 ]; then
+          echo "✅ Frontend builds successfully"
+        else
+          echo "❌ Frontend build failed"
+          exit 1
+        fi
+        
+    - name: Run frontend tests
+      working-directory: ./frontend/dropship-erp-ui
+      run: |
+        echo "🧪 Running frontend tests..."
+        npm test -- --watchAll=false --coverage=false
+        if [ $? -eq 0 ]; then
+          echo "✅ All frontend tests passed"
+        else
+          echo "❌ Some frontend tests failed"
+          exit 1
+        fi
+
+  review-summary:
+    name: Review Summary
+    runs-on: ubuntu-latest
+    needs: [backend-review, frontend-review]
+    if: always()
+    
+    steps:
+    - name: Check results
+      run: |
+        echo "📊 PR Review Summary:"
+        echo "Backend Review: ${{ needs.backend-review.result }}"
+        echo "Frontend Review: ${{ needs.frontend-review.result }}"
+        
+        if [ "${{ needs.backend-review.result }}" == "success" ] && [ "${{ needs.frontend-review.result }}" == "success" ]; then
+          echo "✅ All checks passed! PR is ready for human review."
+          exit 0
+        else
+          echo "❌ Some checks failed. Please fix the issues before merging."
+          exit 1
+        fi
