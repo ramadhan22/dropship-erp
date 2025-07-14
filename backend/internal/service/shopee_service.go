@@ -154,11 +154,12 @@ type ShopeeService struct {
 	dropshipRepo ShopeeDropshipRepo
 	journalRepo  ShopeeJournalRepo
 	adjRepo      *repository.ShopeeAdjustmentRepo
+	cfg          config.ShopeeAPIConfig
 }
 
 // NewShopeeService constructs a ShopeeService.
-func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo, ar *repository.ShopeeAdjustmentRepo) *ShopeeService {
-	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr, adjRepo: ar}
+func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo, ar *repository.ShopeeAdjustmentRepo, cfg config.ShopeeAPIConfig) *ShopeeService {
+	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr, adjRepo: ar, cfg: cfg}
 }
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
@@ -945,14 +946,14 @@ type withdrawResp struct {
 
 // WithdrawShopeeBalance moves funds from Shopee balance to bank account.
 func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string, amount float64) error {
-	cfg := config.MustLoadConfig()
+	cfg := s.cfg
 
 	form := url.Values{}
-	form.Set("shopid", cfg.Shopee.ShopID)
+	form.Set("shopid", cfg.ShopID)
 	form.Set("amount", fmt.Sprintf("%.2f", amount))
-	form.Set("access_token", cfg.Shopee.AccessToken)
+	form.Set("access_token", cfg.AccessToken)
 
-	urlStr := cfg.Shopee.BaseURL + "/api/v2/shop/withdraw"
+	urlStr := cfg.BaseURL + "/api/v2/shop/withdraw"
 	log.Printf("Shopee withdraw request: POST %s body=%s", urlStr, form.Encode())
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, urlStr, strings.NewReader(form.Encode()))
 	if err != nil {
