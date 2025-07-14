@@ -197,6 +197,7 @@ export default function ReconcileDashboard() {
     try {
       await createReconcileBatch(shop, order, from, to);
       setMsg({ type: "success", text: "Batch created" });
+      reload();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     }
