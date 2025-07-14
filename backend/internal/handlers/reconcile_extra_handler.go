@@ -22,6 +22,7 @@ type ReconcileExtraService interface {
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
+	CreateReconcileBatches(ctx context.Context, shop, order, from, to string) error
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -35,6 +36,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/unmatched", h.list)
 	grp.GET("/candidates", h.candidates)
 	grp.POST("/bulk", h.bulk)
+	grp.POST("/batch", h.createBatch)
 	grp.POST("/check", h.check)
 	grp.POST("/cancel", h.cancel)
 	grp.POST("/update_status", h.updateStatus)
@@ -189,6 +191,24 @@ func (h *ReconcileExtraHandler) updateStatuses(c *gin.Context) {
 		return
 	}
 	if err := h.svc.UpdateShopeeStatuses(context.Background(), req.Invoices); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
+	var req struct {
+		Shop  string `json:"shop"`
+		Order string `json:"order"`
+		From  string `json:"from"`
+		To    string `json:"to"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.From, req.To); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

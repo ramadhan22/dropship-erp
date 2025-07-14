@@ -434,3 +434,34 @@ func TestImportFromCSV_FreeSample(t *testing.T) {
 		t.Fatalf("expected 1 journal entry and 2 lines, got %d/%d", len(jfake.entries), len(jfake.lines))
 	}
 }
+
+func TestImportFromCSV_CleanSingleQuoteInKodeInvoiceChannel(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	// Note: the invoice field (index 19) has a leading single quote
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-123", "TRX1", "SKU1", "ProdukA", "15.75", "2", "31.50", "1", "0.5", "33.0", "15.75", "31.50", "2.0", "user", "online", "MR eStore Free Sample", "'INV1", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row)
+	w.Flush()
+
+	fake := &fakeDropshipRepo{}
+	svc := NewDropshipService(nil, fake, nil, nil, nil, nil, nil, 5)
+	count, err := svc.ImportFromCSV(context.Background(), &buf, "", 0)
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected count 1, got %d", count)
+	}
+
+	if len(fake.insertedHeader) != 1 {
+		t.Fatalf("expected 1 header insert, got %d", len(fake.insertedHeader))
+	}
+	
+	// Verify that the leading single quote was removed from KodeInvoiceChannel
+	inserted := fake.insertedHeader[0]
+	if inserted.KodeInvoiceChannel != "INV1" {
+		t.Errorf("expected KodeInvoiceChannel 'INV1', got '%s'", inserted.KodeInvoiceChannel)
+	}
+}

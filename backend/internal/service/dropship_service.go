@@ -169,7 +169,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		h := &models.DropshipPurchase{
 			KodePesanan:        record[3],
 			NamaToko:           record[18],
-			KodeInvoiceChannel: record[19],
+			KodeInvoiceChannel: strings.TrimPrefix(record[19], "'"),
 			JenisChannel:       record[17],
 		}
 		if channel != "" && h.JenisChannel != channel {
@@ -306,7 +306,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			DibuatOleh:            record[16],
 			JenisChannel:          record[17],
 			NamaToko:              record[18],
-			KodeInvoiceChannel:    record[19],
+			KodeInvoiceChannel:    strings.TrimPrefix(record[19], "'"),
 			GudangPengiriman:      record[20],
 			JenisEkspedisi:        record[21],
 			Cashless:              record[22],

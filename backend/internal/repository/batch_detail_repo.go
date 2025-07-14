@@ -28,3 +28,10 @@ func (r *BatchDetailRepo) ListByBatchID(ctx context.Context, id int64) ([]models
 	}
 	return list, err
 }
+
+func (r *BatchDetailRepo) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE batch_history_details SET status=$2, error_message=$3 WHERE id=$1`,
+		id, status, msg)
+	return err
+}

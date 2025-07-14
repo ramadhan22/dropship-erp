@@ -46,7 +46,7 @@ Discrepancy* adjustment when they differ.
   concurrently for faster imports.
 - Shopee order status is now fetched server-side when loading the Reconcile dashboard for faster rendering.
 - Filter reconcile candidates by date range to limit results.
-- Reconcile All now displays a progress dialog showing processed totals.
+- Reconcile All now creates batch records grouped by store (50 invoices per batch) and returns immediately. The scheduler processes these batches asynchronously.
 - Escrow details are fetched in batches of up to 50 orders when reconciling all, reducing API requests.
 - Shopee reconciliation batches run in parallel for faster processing.
 - Automatically compute revenue, COGS, fees and net profit metrics.
