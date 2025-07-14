@@ -166,10 +166,11 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 
 	batches := make(map[string][]*models.DropshipPurchase)
 	for _, record := range allRecords {
+		inv := strings.TrimPrefix(record[19], "'")
 		h := &models.DropshipPurchase{
 			KodePesanan:        record[3],
 			NamaToko:           record[18],
-			KodeInvoiceChannel: record[19],
+			KodeInvoiceChannel: inv,
 			JenisChannel:       record[17],
 		}
 		if channel != "" && h.JenisChannel != channel {
@@ -295,6 +296,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		}
 		waktuKirim, _ := time.Parse("02 January 2006, 15:04:05", record[24])
 
+		inv := strings.TrimPrefix(record[19], "'")
 		header := &models.DropshipPurchase{
 			KodePesanan:           record[3],
 			KodeTransaksi:         record[4],
@@ -306,7 +308,7 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			DibuatOleh:            record[16],
 			JenisChannel:          record[17],
 			NamaToko:              record[18],
-			KodeInvoiceChannel:    record[19],
+			KodeInvoiceChannel:    inv,
 			GudangPengiriman:      record[20],
 			JenisEkspedisi:        record[21],
 			Cashless:              record[22],

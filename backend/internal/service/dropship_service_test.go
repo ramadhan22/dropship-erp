@@ -218,6 +218,66 @@ func TestImportFromCSV_Success(t *testing.T) {
 	}
 }
 
+func TestImportFromCSV_CleanInvoiceQuote(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	headers := []string{"No", "waktu", "status", "kode", "trx", "sku", "nama", "harga", "qty", "total_harga", "biaya_lain", "biaya_mitra", "total_transaksi", "harga_ch", "total_harga_ch", "potensi", "dibuat", "channel", "toko", "invoice", "gudang", "ekspedisi", "cashless", "resi", "waktu_kirim", "provinsi", "kota"}
+	w.Write(headers)
+	row := []string{"1", "01 January 2025, 10:00:00", "selesai", "PS-123Q", "TRX1", "SKU1", "ProdukA", "15.75", "2", "31.50", "1", "0.5", "33.0", "15.75", "31.50", "2.0", "user", "online", "MyShop", "'INVQ", "GudangA", "JNE", "Ya", "RESI1", "02 January 2025, 10:00:00", "Jawa", "Bandung"}
+	w.Write(row)
+	w.Flush()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "access_token/get") {
+			fmt.Fprint(w, `{"response":{"access_token":"tok","refresh_token":"ref","expire_in":3600,"request_id":"1"}}`)
+			return
+		}
+		if strings.Contains(r.URL.Path, "get_order_detail") {
+			fmt.Fprint(w, `{"response":{"order_list":[{"order_sn":"INVQ","item_list":[{"model_original_price":"15.75","model_quantity_purchased":2}]}]}}`)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	oldTransport := http.DefaultTransport
+	http.DefaultTransport = testRoundTripper(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = strings.TrimPrefix(srv.URL, "http://")
+		return oldTransport.RoundTrip(req)
+	})
+	defer func() { http.DefaultTransport = oldTransport }()
+
+	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key", ShopID: "2"})
+	client.httpClient = srv.Client()
+
+	now := time.Now()
+	exp := 3600
+	store := &models.Store{NamaToko: "MyShop", AccessToken: ptrString("tok"), RefreshToken: ptrString("ref"), ShopID: ptrString("2"), ExpireIn: &exp, LastUpdated: &now}
+
+	fake := &fakeDropshipRepo{}
+	jfake := &fakeJournalRepoDrop{}
+	srepo := &fakeStoreRepo{store: store}
+	svc := NewDropshipService(nil, fake, jfake, srepo, nil, nil, client, 5)
+
+	ctx := context.Background()
+	count, err := svc.ImportFromCSV(ctx, &buf, "", 0)
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected count 1, got %d", count)
+	}
+
+	if len(fake.insertedHeader) != 1 {
+		t.Fatalf("expected 1 header insert, got %d", len(fake.insertedHeader))
+	}
+	inserted := fake.insertedHeader[0]
+	if inserted.KodeInvoiceChannel != "INVQ" {
+		t.Errorf("expected invoice 'INVQ', got '%s'", inserted.KodeInvoiceChannel)
+	}
+}
+
 func TestImportFromCSV_ParseError(t *testing.T) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
