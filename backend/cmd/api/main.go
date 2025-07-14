@@ -73,6 +73,7 @@ func main() {
 		batchSvc,
 		cfg.MaxThreads,
 	)
+	service.NewReconcileBatchScheduler(batchSvc, reconSvc, time.Minute).Start(context.Background())
 	metricSvc := service.NewMetricService(
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
 	)

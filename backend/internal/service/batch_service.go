@@ -52,6 +52,13 @@ func (s *BatchService) ListDetails(ctx context.Context, batchID int64) ([]models
 	return s.detailRepo.ListByBatchID(ctx, batchID)
 }
 
+func (s *BatchService) UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error {
+	if s.detailRepo == nil {
+		return nil
+	}
+	return s.detailRepo.UpdateStatus(ctx, id, status, msg)
+}
+
 // ListPendingByType returns batches with the given process type and status 'pending'.
 func (s *BatchService) ListPendingByType(ctx context.Context, typ string) ([]models.BatchHistory, error) {
 	return s.repo.ListByProcessAndStatus(ctx, typ, "pending")
