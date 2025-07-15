@@ -342,8 +342,8 @@ func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string,
 }
 
 // CheckAndMarkComplete verifies a purchase has been properly settled and updates 
-// its status accordingly. This method checks multiple sources to determine if 
-// an order is complete: escrow journals, shopee_settled entries, or existing status.
+// its status accordingly. This method checks if an order is complete by looking
+// for escrow settlement journals or existing completion status.
 func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan string) error {
 	log.Printf("CheckAndMarkComplete: %s", kodePesanan)
 	var tx *sqlx.Tx
@@ -369,21 +369,11 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 		return nil
 	}
 	
-	// Check multiple sources to determine if order is complete:
-	// 1. Check if escrow settlement journal exists (most reliable indicator)
+	// Check if escrow settlement journal exists (primary indicator of completion)
 	isSettled := s.hasEscrowSettlement(ctx, dp.KodeInvoiceChannel)
 	
-	// 2. Fallback to shopee_settled table check
 	if !isSettled {
-		exists, err := s.shopeeRepo.ExistsShopeeSettled(ctx, dp.KodeInvoiceChannel)
-		if err != nil {
-			return fmt.Errorf("check shopee settled: %w", err)
-		}
-		isSettled = exists
-	}
-	
-	if !isSettled {
-		return fmt.Errorf("order not yet settled - no escrow journal or shopee_settled entry found")
+		return fmt.Errorf("order not yet settled - no escrow settlement journal found")
 	}
 	
 	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
