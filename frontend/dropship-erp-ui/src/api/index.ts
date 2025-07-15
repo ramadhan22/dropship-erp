@@ -2,7 +2,6 @@ import axios from "axios";
 import { loadingEmitter } from "../loadingEmitter";
 import type {
   BalanceCategory,
-  Metric,
   JenisChannel,
   Store,
   StoreWithChannel,
@@ -10,7 +9,6 @@ import type {
   DropshipPurchaseDetail,
   Account,
   ShopeeSettled,
-  ShopeeSettledSummary,
   ShopeeAffiliateSale,
   ShopeeAffiliateSummary,
   SalesProfit,
@@ -21,6 +19,7 @@ import type {
   ShopeeOrderItemRow,
   ShopeeOrderPackageRow,
   BatchHistory,
+  BatchHistoryDetail,
 } from "../types";
 
 export interface ImportResponse {
@@ -90,17 +89,7 @@ export function importDropship(files: File[], channel?: string) {
   });
 }
 
-// Shopee import
-export function importShopee(files: File[]) {
-  const data = new FormData();
-  for (const file of files) {
-    data.append("file", file);
-  }
-  return api.post<ImportResponse>("/shopee/import", data, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-}
-
+// Shopee affiliate import
 export function importShopeeAffiliate(files: File[]) {
   const data = new FormData();
   for (const file of files) {
@@ -111,32 +100,10 @@ export function importShopeeAffiliate(files: File[]) {
   });
 }
 
-export const confirmShopeeSettle = (orderSN: string) =>
-  api.post<{ success: boolean }>(`/shopee/settle/${orderSN}`);
-
 export const getShopeeSettleDetail = (orderSN: string) =>
   api.get<{ data: ShopeeSettled; dropship_total: number }>(
     `/shopee/settled/${orderSN}`,
   );
-
-// Reconcile
-export function reconcile(purchaseId: string, orderId: string, shop: string) {
-  return api.post("/reconcile", {
-    purchase_id: purchaseId,
-    order_id: orderId,
-    shop,
-  });
-}
-
-// Compute metrics
-export function computeMetrics(shop: string, period: string) {
-  return api.post("/metrics", { shop, period });
-}
-
-// Fetch cached metrics
-export function fetchMetrics(shop: string, period: string) {
-  return api.get<Metric>(`/metrics?shop=${shop}&period=${period}`);
-}
 
 // Fetch balance sheet
 export function fetchBalanceSheet(shop: string, period: string) {
@@ -200,48 +167,6 @@ export async function listAllStores() {
     ),
   );
   return lists.flat();
-}
-
-export function listShopeeSettled(params: {
-  channel?: string;
-  store?: string;
-  from?: string;
-  to?: string;
-  order?: string;
-  sort?: string;
-  dir?: string;
-  page?: number;
-  page_size?: number;
-}) {
-  const q = new URLSearchParams();
-  if (params.channel) q.append("channel", params.channel);
-  if (params.store) q.append("store", params.store);
-  if (params.from) q.append("from", params.from);
-  if (params.to) q.append("to", params.to);
-  if (params.order) q.append("order", params.order);
-  if (params.sort) q.append("sort", params.sort);
-  if (params.dir) q.append("dir", params.dir);
-  if (params.page) q.append("page", String(params.page));
-  if (params.page_size) q.append("page_size", String(params.page_size));
-  return api.get<{ data: ShopeeSettled[]; total: number }>(
-    `/shopee/settled?${q.toString()}`,
-  );
-}
-
-export function sumShopeeSettled(params: {
-  channel?: string;
-  store?: string;
-  from?: string;
-  to?: string;
-}) {
-  const q = new URLSearchParams();
-  if (params.channel) q.append("channel", params.channel);
-  if (params.store) q.append("store", params.store);
-  if (params.from) q.append("from", params.from);
-  if (params.to) q.append("to", params.to);
-  return api.get<ShopeeSettledSummary>(
-    `/shopee/settled/summary?${q.toString()}`,
-  );
 }
 
 export function listShopeeAffiliate(params: {
@@ -445,9 +370,6 @@ export function getDropshipPurchaseDetails(id: string) {
 
 export const withdrawShopeeBalance = (store: string, amount: number) =>
   api.post("/withdraw", { store, amount });
-
-export const fetchPendingBalance = (store: string) =>
-  api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
 
 export function listOrderDetails(params: { store?: string; order?: string; page?: number; page_size?: number }) {
   const q = new URLSearchParams();
