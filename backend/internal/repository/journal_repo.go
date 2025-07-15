@@ -258,6 +258,16 @@ func (r *JournalRepo) GetJournalEntryBySource(ctx context.Context, sourceType, s
 	return &je, nil
 }
 
+// ExistsBySourceTypeAndID checks if a journal entry exists with the given source type and ID.
+// This is used to verify if certain types of transactions have been processed.
+func (r *JournalRepo) ExistsBySourceTypeAndID(ctx context.Context, sourceType, sourceID string) (bool, error) {
+	var exists bool
+	err := r.db.GetContext(ctx, &exists,
+		`SELECT EXISTS(SELECT 1 FROM journal_entries WHERE source_type=$1 AND source_id=$2)`,
+		sourceType, sourceID)
+	return exists, err
+}
+
 // ListEntriesBySourceID returns all journal entries that share the given source_id.
 func (r *JournalRepo) ListEntriesBySourceID(ctx context.Context, sourceID string) ([]models.JournalEntry, error) {
 	var list []models.JournalEntry

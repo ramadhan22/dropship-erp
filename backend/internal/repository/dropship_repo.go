@@ -153,6 +153,41 @@ func (r *DropshipRepo) GetDropshipPurchaseByTransaction(ctx context.Context, kod
 	return &p, nil
 }
 
+// GetDropshipPurchasesByInvoices retrieves multiple purchases by invoice codes in a single query.
+// This is an optimization to reduce N+1 query problems.
+func (r *DropshipRepo) GetDropshipPurchasesByInvoices(ctx context.Context, invoices []string) ([]*models.DropshipPurchase, error) {
+	if len(invoices) == 0 {
+		return []*models.DropshipPurchase{}, nil
+	}
+	log.Printf("DropshipRepo.GetDropshipPurchasesByInvoices fetching %d invoices", len(invoices))
+	
+	// Build IN clause with placeholders
+	placeholders := make([]string, len(invoices))
+	args := make([]interface{}, len(invoices))
+	for i, inv := range invoices {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = inv
+	}
+	
+	query := fmt.Sprintf(`SELECT * FROM dropship_purchases WHERE kode_invoice_channel IN (%s)`, 
+		strings.Join(placeholders, ","))
+	
+	var purchases []models.DropshipPurchase
+	err := r.db.SelectContext(ctx, &purchases, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert to slice of pointers
+	result := make([]*models.DropshipPurchase, len(purchases))
+	for i := range purchases {
+		result[i] = &purchases[i]
+	}
+	
+	log.Printf("DropshipRepo.GetDropshipPurchasesByInvoices found %d purchases", len(result))
+	return result, nil
+}
+
 // SumDetailByInvoice sums total_harga_produk_channel for a given invoice.
 func (r *DropshipRepo) SumDetailByInvoice(ctx context.Context, kodeInvoice string) (float64, error) {
 	var sum float64

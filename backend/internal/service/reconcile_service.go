@@ -202,6 +202,30 @@ func (s *ReconcileService) MatchAndJournal(
 // ptrString helper
 func ptrString(s string) *string { return &s }
 
+// bulkGetDropshipPurchasesByInvoices fetches multiple purchases efficiently
+func (s *ReconcileService) bulkGetDropshipPurchasesByInvoices(ctx context.Context, invoices []string) ([]*models.DropshipPurchase, error) {
+	// Check if the repository supports bulk operations
+	if bulkRepo, ok := s.dropRepo.(interface {
+		GetDropshipPurchasesByInvoices(ctx context.Context, invoices []string) ([]*models.DropshipPurchase, error)
+	}); ok {
+		return bulkRepo.GetDropshipPurchasesByInvoices(ctx, invoices)
+	}
+	
+	// Fallback to individual calls if bulk method not available
+	purchases := make([]*models.DropshipPurchase, 0, len(invoices))
+	for _, inv := range invoices {
+		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, inv)
+		if err != nil {
+			log.Printf("fetch purchase %s: %v", inv, err)
+			continue
+		}
+		if dp != nil {
+			purchases = append(purchases, dp)
+		}
+	}
+	return purchases, nil
+}
+
 func (s *ReconcileService) createAdjustmentJournal(ctx context.Context, jr ReconcileServiceJournalRepo, a *models.ShopeeAdjustment) error {
 	je := &models.JournalEntry{
 		EntryDate:    a.TanggalPenyesuaian,
@@ -317,8 +341,9 @@ func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string,
 	return nil
 }
 
-// CheckAndMarkComplete verifies a purchase has a corresponding shopee_settled
-// entry and updates its status to "pesanan selesai" if found.
+// CheckAndMarkComplete verifies a purchase has been properly settled and updates 
+// its status accordingly. This method checks multiple sources to determine if 
+// an order is complete: escrow journals, shopee_settled entries, or existing status.
 func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan string) error {
 	log.Printf("CheckAndMarkComplete: %s", kodePesanan)
 	var tx *sqlx.Tx
@@ -337,13 +362,30 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch DropshipPurchase %s: %w", kodePesanan, err)
 	}
-	exists, err := s.shopeeRepo.ExistsShopeeSettled(ctx, dp.KodeInvoiceChannel)
-	if err != nil {
-		return fmt.Errorf("check shopee settled: %w", err)
+	
+	// If already marked as complete, no need to check further
+	if dp.StatusPesananTerakhir == "Pesanan selesai" {
+		log.Printf("CheckAndMarkComplete: %s already marked as complete", kodePesanan)
+		return nil
 	}
-	if !exists {
-		return fmt.Errorf("shopee settled order not found")
+	
+	// Check multiple sources to determine if order is complete:
+	// 1. Check if escrow settlement journal exists (most reliable indicator)
+	isSettled := s.hasEscrowSettlement(ctx, dp.KodeInvoiceChannel)
+	
+	// 2. Fallback to shopee_settled table check
+	if !isSettled {
+		exists, err := s.shopeeRepo.ExistsShopeeSettled(ctx, dp.KodeInvoiceChannel)
+		if err != nil {
+			return fmt.Errorf("check shopee settled: %w", err)
+		}
+		isSettled = exists
 	}
+	
+	if !isSettled {
+		return fmt.Errorf("order not yet settled - no escrow journal or shopee_settled entry found")
+	}
+	
 	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -354,6 +396,21 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 	}
 	log.Printf("CheckAndMarkComplete done: %s", kodePesanan)
 	return nil
+}
+
+// hasEscrowSettlement checks if an escrow settlement journal exists for the given invoice
+func (s *ReconcileService) hasEscrowSettlement(ctx context.Context, invoice string) bool {
+	if journalRepo, ok := s.journalRepo.(interface {
+		ExistsBySourceTypeAndID(ctx context.Context, sourceType, sourceID string) (bool, error)
+	}); ok {
+		exists, err := journalRepo.ExistsBySourceTypeAndID(ctx, "shopee_escrow", invoice)
+		if err != nil {
+			log.Printf("check escrow journal for %s: %v", invoice, err)
+			return false
+		}
+		return exists
+	}
+	return false
 }
 
 // CancelPurchase reverses pending sales journals for the given purchase except
@@ -852,13 +909,20 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 	if len(invoices) == 0 {
 		return nil
 	}
+	
+	start := time.Now()
+	// Optimize: Bulk fetch all DropshipPurchases instead of individual calls
+	log.Printf("UpdateShopeeStatuses: fetching %d purchases in bulk", len(invoices))
+	purchases, err := s.bulkGetDropshipPurchasesByInvoices(ctx, invoices)
+	if err != nil {
+		log.Printf("bulk fetch purchases: %v", err)
+		return err
+	}
+	fetchDuration := time.Since(start)
+	log.Printf("UpdateShopeeStatuses: bulk fetch completed in %v for %d purchases", fetchDuration, len(purchases))
+	
 	batches := make(map[string][]*models.DropshipPurchase)
-	for _, inv := range invoices {
-		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, inv)
-		if err != nil || dp == nil {
-			log.Printf("fetch purchase %s: %v", inv, err)
-			continue
-		}
+	for _, dp := range purchases {
 		batches[dp.NamaToko] = append(batches[dp.NamaToko], dp)
 	}
 
@@ -1016,11 +1080,13 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 
 // CreateReconcileBatches groups reconciliation candidates by store and records
 // them as batch_history rows with associated details. Each batch contains at
-// most 50 invoices.
-func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, from, to string) error {
+// most 50 invoices. Returns information about the created batches.
+func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, from, to string) (*models.ReconcileBatchInfo, error) {
 	if s.batchSvc == nil {
-		return fmt.Errorf("batch service not configured")
+		return nil, fmt.Errorf("batch service not configured")
 	}
+	
+	log.Printf("CreateReconcileBatches: fetching candidates for shop=%s, order=%s, from=%s, to=%s", shop, order, from, to)
 	pageSize := 1000
 	batchSize := 50 // Process in batches of 50 orders
 	offset := 0
@@ -1028,7 +1094,7 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 	for {
 		list, total, err := s.ListCandidates(ctx, shop, order, from, to, pageSize, offset)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		all = append(all, list...)
 		if len(all) >= total {
@@ -1036,11 +1102,17 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 		}
 		offset += pageSize
 	}
+	
+	log.Printf("CreateReconcileBatches: found %d total candidates", len(all))
+	
 	batches := make(map[string][]models.ReconcileCandidate)
 	for _, c := range all {
 		batches[c.NamaToko] = append(batches[c.NamaToko], c)
 	}
+	
+	batchCount := 0
 	for store, list := range batches {
+		log.Printf("CreateReconcileBatches: processing %d candidates for store %s", len(list), store)
 		for i := 0; i < len(list); i += batchSize {
 			end := i + batchSize
 			if end > len(list) {
@@ -1050,8 +1122,10 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 			bh := &models.BatchHistory{ProcessType: "reconcile_batch", TotalData: len(subset), DoneData: 0, Status: "pending"}
 			batchID, err := s.batchSvc.Create(ctx, bh)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			batchCount++
+			
 			for _, cand := range subset {
 				d := &models.BatchHistoryDetail{BatchID: batchID, Reference: cand.KodeInvoiceChannel, Store: store, Status: "pending"}
 				if err := s.batchSvc.CreateDetail(ctx, d); err != nil {
@@ -1060,15 +1134,26 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 			}
 		}
 	}
-	return nil
+	
+	result := &models.ReconcileBatchInfo{
+		BatchCount:        batchCount,
+		TotalTransactions: len(all),
+	}
+	
+	log.Printf("CreateReconcileBatches: created %d batches for %d total transactions", result.BatchCount, result.TotalTransactions)
+	return result, nil
 }
 
-// ProcessReconcileBatch processes a batch of reconciliation tasks sequentially.
+// ProcessReconcileBatch processes a batch of reconciliation tasks with optimizations.
 // Shopee statuses are updated in bulk before marking each purchase complete.
 func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) {
 	if s.batchSvc == nil {
 		return
 	}
+	
+	start := time.Now()
+	log.Printf("ProcessReconcileBatch %d: starting batch processing", id)
+	
 	details, err := s.batchSvc.ListDetails(ctx, id)
 	if err != nil {
 		log.Printf("list batch details %d: %v", id, err)
@@ -1076,21 +1161,50 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 		return
 	}
 	s.batchSvc.UpdateStatus(ctx, id, "processing", "")
+	
 	invoices := make([]string, len(details))
 	for i, d := range details {
 		invoices[i] = d.Reference
 	}
+	
+	// Update Shopee statuses in bulk first
+	log.Printf("ProcessReconcileBatch %d: updating %d statuses", id, len(invoices))
+	statusStart := time.Now()
 	if err := s.UpdateShopeeStatuses(ctx, invoices); err != nil {
 		log.Printf("update statuses batch %d: %v", id, err)
 	}
+	statusDuration := time.Since(statusStart)
+	log.Printf("ProcessReconcileBatch %d: status update completed in %v", id, statusDuration)
+	
+	// Bulk fetch purchases to reduce database calls
+	log.Printf("ProcessReconcileBatch %d: bulk fetching purchases", id)
+	fetchStart := time.Now()
+	purchases, err := s.bulkGetDropshipPurchasesByInvoices(ctx, invoices)
+	if err != nil {
+		log.Printf("bulk fetch purchases batch %d: %v", id, err)
+		s.batchSvc.UpdateStatus(ctx, id, "failed", err.Error())
+		return
+	}
+	fetchDuration := time.Since(fetchStart)
+	log.Printf("ProcessReconcileBatch %d: bulk fetch completed in %v for %d purchases", id, fetchDuration, len(purchases))
+	
+	// Create lookup map for faster access
+	purchaseMap := make(map[string]*models.DropshipPurchase)
+	for _, dp := range purchases {
+		purchaseMap[dp.KodeInvoiceChannel] = dp
+	}
+	
+	// Process each detail with optimized lookups
 	done := 0
+	processStart := time.Now()
 	for _, d := range details {
-		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, d.Reference)
-		if err != nil || dp == nil {
-			msg := fmt.Sprintf("fetch purchase %s: %v", d.Reference, err)
+		dp, exists := purchaseMap[d.Reference]
+		if !exists {
+			msg := fmt.Sprintf("purchase not found for invoice %s", d.Reference)
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", msg)
 			continue
 		}
+		
 		if err := s.CheckAndMarkComplete(ctx, dp.KodePesanan); err != nil {
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", err.Error())
 			continue
@@ -1099,5 +1213,10 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 		s.batchSvc.UpdateDone(ctx, id, done)
 		s.batchSvc.UpdateDetailStatus(ctx, d.ID, "success", "")
 	}
+	processDuration := time.Since(processStart)
+	totalDuration := time.Since(start)
+	
 	s.batchSvc.UpdateStatus(ctx, id, "completed", "")
+	log.Printf("ProcessReconcileBatch %d completed in %v: %d/%d successful (status: %v, fetch: %v, process: %v)", 
+		id, totalDuration, done, len(details), statusDuration, fetchDuration, processDuration)
 }
