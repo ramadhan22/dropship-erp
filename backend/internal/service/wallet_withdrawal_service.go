@@ -45,6 +45,61 @@ func (s *WalletWithdrawalService) List(ctx context.Context, store string, p Wall
 	return txs, next, nil
 }
 
+// WalletTransactionLister interface for testing
+type WalletTransactionLister interface {
+	ListWalletTransactions(ctx context.Context, store string, p WalletTransactionParams) ([]WalletTransaction, bool, error)
+}
+
+// findSpmDisburseAddAmount finds SPM_DISBURSE_ADD transactions on the same day as the withdrawal
+// and returns the total amount to be deducted from the withdrawal.
+func (s *WalletWithdrawalService) findSpmDisburseAddAmount(ctx context.Context, store string, withdrawalTime int64) (float64, error) {
+	return findSpmDisburseAddAmountWithService(ctx, s.walletSvc, store, withdrawalTime)
+}
+
+// findSpmDisburseAddAmountWithService is the testable version that accepts an interface
+func findSpmDisburseAddAmountWithService(ctx context.Context, walletSvc WalletTransactionLister, store string, withdrawalTime int64) (float64, error) {
+	if walletSvc == nil {
+		return 0, fmt.Errorf("wallet service nil")
+	}
+
+	// Convert withdrawal time to start and end of day
+	withdrawalDate := time.Unix(withdrawalTime, 0)
+	startOfDay := time.Date(withdrawalDate.Year(), withdrawalDate.Month(), withdrawalDate.Day(), 0, 0, 0, 0, withdrawalDate.Location())
+	endOfDay := time.Date(withdrawalDate.Year(), withdrawalDate.Month(), withdrawalDate.Day(), 23, 59, 59, 999999999, withdrawalDate.Location())
+
+	fromUnix := startOfDay.Unix()
+	toUnix := endOfDay.Unix()
+
+	var totalDisburseAdd float64
+	page := 0
+
+	for {
+		params := WalletTransactionParams{
+			PageNo:          page,
+			PageSize:        50,
+			CreateTimeFrom:  &fromUnix,
+			CreateTimeTo:    &toUnix,
+			TransactionType: "SPM_DISBURSE_ADD",
+		}
+
+		txs, more, err := walletSvc.ListWalletTransactions(ctx, store, params)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch SPM_DISBURSE_ADD transactions: %w", err)
+		}
+
+		for _, tx := range txs {
+			totalDisburseAdd += tx.Amount
+		}
+
+		if !more {
+			break
+		}
+		page++
+	}
+
+	return totalDisburseAdd, nil
+}
+
 // CreateJournal posts a journal entry for the given transaction.
 func (s *WalletWithdrawalService) CreateJournal(ctx context.Context, store string, t WalletTransaction) error {
 	if s.journalRepo == nil {
@@ -54,10 +109,26 @@ func (s *WalletWithdrawalService) CreateJournal(ctx context.Context, store strin
 	if je, _ := s.journalRepo.GetJournalEntryBySource(ctx, "wallet_withdrawal", sid); je != nil {
 		return nil
 	}
-	amt := -t.Amount
+
+	// Check for SPM_DISBURSE_ADD transactions on the same day
+	disburseAddAmount, err := s.findSpmDisburseAddAmount(ctx, store, t.CreateTime)
+	if err != nil {
+		return fmt.Errorf("failed to check SPM_DISBURSE_ADD transactions: %w", err)
+	}
+
+	// Adjust withdrawal amount by deducting SPM_DISBURSE_ADD amount
+	adjustedAmount := t.Amount - disburseAddAmount
+	amt := -adjustedAmount
+
+	// Create description that reflects whether amount was adjusted
+	description := "Withdraw Shopee"
+	if disburseAddAmount > 0 {
+		description = fmt.Sprintf("Withdraw Shopee (adjusted by SPM_DISBURSE_ADD: %.2f)", disburseAddAmount)
+	}
+
 	je := &models.JournalEntry{
 		EntryDate:    time.Unix(t.CreateTime, 0),
-		Description:  stringPtr("Withdraw Shopee"),
+		Description:  stringPtr(description),
 		SourceType:   "wallet_withdrawal",
 		SourceID:     sid,
 		ShopUsername: store,
