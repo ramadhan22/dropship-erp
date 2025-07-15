@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -67,7 +68,17 @@ type DropshipService struct {
 	detailRepo  DropshipServiceDetailRepo
 	batchSvc    *BatchService
 	client      *ShopeeClient
+	cache       Cache // Add cache interface
 	maxThreads  int
+	batchSize   int
+}
+
+// Cache interface for dropship service
+type Cache interface {
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+	Delete(ctx context.Context, key string) error
+	Exists(ctx context.Context, key string) (bool, error)
 }
 
 // NewDropshipService constructs a DropshipService with the given repository.
@@ -79,7 +90,9 @@ func NewDropshipService(
 	dr DropshipServiceDetailRepo,
 	bs *BatchService,
 	c *ShopeeClient,
+	cache Cache,
 	maxThreads int,
+	batchSize int,
 ) *DropshipService {
 	return &DropshipService{
 		db:          db,
@@ -89,7 +102,9 @@ func NewDropshipService(
 		detailRepo:  dr,
 		batchSvc:    bs,
 		client:      c,
+		cache:       cache,
 		maxThreads:  maxThreads,
+		batchSize:   batchSize,
 	}
 }
 
@@ -790,4 +805,138 @@ func (s *DropshipService) createFreeSampleJournal(ctx context.Context, jr Dropsh
 		}
 	}
 	return nil
+}
+
+// ========== Performance Optimization Methods ==========
+
+// BatchInsertPurchases processes purchases in batches to improve performance
+func (s *DropshipService) BatchInsertPurchases(ctx context.Context, purchases []*models.DropshipPurchase) error {
+	if len(purchases) == 0 {
+		return nil
+	}
+
+	log.Printf("BatchInsertPurchases: processing %d purchases in batches of %d", len(purchases), s.batchSize)
+	
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Process in batches to avoid memory issues
+	for i := 0; i < len(purchases); i += s.batchSize {
+		end := i + s.batchSize
+		if end > len(purchases) {
+			end = len(purchases)
+		}
+		
+		batch := purchases[i:end]
+		log.Printf("Processing batch %d/%d (items %d-%d)", i/s.batchSize+1, (len(purchases)-1)/s.batchSize+1, i, end-1)
+		
+		for _, purchase := range batch {
+			if err := s.repo.InsertDropshipPurchase(ctx, purchase); err != nil {
+				return fmt.Errorf("failed to insert purchase %s: %w", purchase.KodePesanan, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	log.Printf("Successfully processed %d purchases", len(purchases))
+	return nil
+}
+
+// GetCachedPurchaseData retrieves purchase data from cache or database with cache-aside pattern
+func (s *DropshipService) GetCachedPurchaseData(ctx context.Context, channel, store, from, to string, limit, offset int) ([]models.DropshipPurchase, int, error) {
+	if s.cache == nil {
+		// Fallback to direct database query if cache is not available
+		return s.repo.ListDropshipPurchases(ctx, channel, store, from, to, "", "kode_pesanan", "asc", limit, offset)
+	}
+
+	// Generate cache key
+	cacheKey := fmt.Sprintf("purchases:%s:%s:%s:%s:%d:%d", channel, store, from, to, limit, offset)
+	
+	// Try to get from cache first
+	if data, err := s.cache.Get(ctx, cacheKey); err == nil {
+		var cached struct {
+			Purchases []models.DropshipPurchase `json:"purchases"`
+			Total     int                       `json:"total"`
+		}
+		if err := json.Unmarshal(data, &cached); err == nil {
+			log.Printf("Cache hit for key: %s", cacheKey)
+			return cached.Purchases, cached.Total, nil
+		}
+	}
+
+	// Cache miss - fetch from database
+	log.Printf("Cache miss for key: %s", cacheKey)
+	purchases, total, err := s.repo.ListDropshipPurchases(ctx, channel, store, from, to, "", "kode_pesanan", "asc", limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Store in cache for next time
+	cached := struct {
+		Purchases []models.DropshipPurchase `json:"purchases"`
+		Total     int                       `json:"total"`
+	}{
+		Purchases: purchases,
+		Total:     total,
+	}
+	
+	if data, err := json.Marshal(cached); err == nil {
+		// Cache for 5 minutes by default
+		if err := s.cache.Set(ctx, cacheKey, data, 5*time.Minute); err != nil {
+			log.Printf("Failed to cache data for key %s: %v", cacheKey, err)
+		}
+	}
+
+	return purchases, total, nil
+}
+
+// InvalidatePurchaseCache removes cached purchase data when data changes
+func (s *DropshipService) InvalidatePurchaseCache(ctx context.Context, patterns ...string) error {
+	if s.cache == nil {
+		return nil
+	}
+
+	// For now, we'll invalidate based on patterns
+	// In a production system, you might want to use Redis SCAN or maintain cache key sets
+	for _, pattern := range patterns {
+		if err := s.cache.Delete(ctx, pattern); err != nil {
+			log.Printf("Failed to invalidate cache pattern %s: %v", pattern, err)
+		}
+	}
+	return nil
+}
+
+// GetPurchaseSummaryCache retrieves cached purchase summary data
+func (s *DropshipService) GetPurchaseSummaryCache(ctx context.Context, channel, store, from, to string) (float64, error) {
+	if s.cache == nil {
+		return s.repo.SumDropshipPurchases(ctx, channel, store, from, to)
+	}
+
+	cacheKey := fmt.Sprintf("purchase_summary:%s:%s:%s:%s", channel, store, from, to)
+	
+	// Try cache first
+	if data, err := s.cache.Get(ctx, cacheKey); err == nil {
+		if total, err := strconv.ParseFloat(string(data), 64); err == nil {
+			return total, nil
+		}
+	}
+
+	// Cache miss - fetch from database
+	total, err := s.repo.SumDropshipPurchases(ctx, channel, store, from, to)
+	if err != nil {
+		return 0, err
+	}
+
+	// Cache the result
+	if err := s.cache.Set(ctx, cacheKey, []byte(fmt.Sprintf("%.2f", total)), 5*time.Minute); err != nil {
+		log.Printf("Failed to cache purchase summary: %v", err)
+	}
+
+	return total, nil
 }

@@ -1022,6 +1022,7 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 		return fmt.Errorf("batch service not configured")
 	}
 	pageSize := 1000
+	batchSize := 50 // Process in batches of 50 orders
 	offset := 0
 	all := []models.ReconcileCandidate{}
 	for {

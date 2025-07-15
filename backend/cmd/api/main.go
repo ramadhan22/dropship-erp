@@ -12,9 +12,11 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
+	"github.com/ramadhan22/dropship-erp/backend/internal/cache"
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/handlers"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
+	"github.com/ramadhan22/dropship-erp/backend/internal/middleware"
 	"github.com/ramadhan22/dropship-erp/backend/internal/migrations"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
@@ -34,10 +36,17 @@ func main() {
 	defer w.Close()
 	log.SetOutput(w)
 
-	// 2) Initialize repositories (Postgres DB connection)
+	// 2) Initialize repositories (Postgres DB connection with optimized pool settings)
 	repo, err := repository.NewPostgresRepository(cfg.Database.URL)
 	if err != nil {
 		logutil.Fatalf("DB connection failed: %v", err)
+	}
+	
+	// Apply optimized connection pool settings
+	repo.DB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	repo.DB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	if connLifetime := parseDuration(cfg.Database.ConnMaxLifetime, time.Hour); connLifetime > 0 {
+		repo.DB.SetConnMaxLifetime(connLifetime)
 	}
 	if err := migrations.Run(repo.DB.DB); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
@@ -47,7 +56,33 @@ func main() {
 		}
 	}
 
-	// 3) Initialize services with the appropriate repo interfaces
+	// 3) Initialize cache
+	var cacheInstance cache.Cache
+	if cfg.Cache.Enabled {
+		log.Printf("Initializing Redis cache...")
+		redisCache, err := cache.NewRedisCache(cache.CacheConfig{
+			RedisURL:     cfg.Cache.RedisURL,
+			Password:     cfg.Cache.Password,
+			DB:           cfg.Cache.DB,
+			MaxRetries:   cfg.Cache.MaxRetries,
+			DialTimeout:  parseDuration(cfg.Cache.DialTimeout, 5*time.Second),
+			ReadTimeout:  parseDuration(cfg.Cache.ReadTimeout, 3*time.Second),
+			WriteTimeout: parseDuration(cfg.Cache.WriteTimeout, 3*time.Second),
+			DefaultTTL:   parseDuration(cfg.Cache.DefaultTTL, 5*time.Minute),
+		})
+		if err != nil {
+			log.Printf("Failed to initialize Redis cache, falling back to no-op cache: %v", err)
+			cacheInstance = cache.NewNoopCache()
+		} else {
+			cacheInstance = redisCache
+			log.Printf("Redis cache initialized successfully")
+		}
+	} else {
+		log.Printf("Cache disabled, using no-op cache")
+		cacheInstance = cache.NewNoopCache()
+	}
+
+	// 4) Initialize services with the appropriate repo interfaces
 	shClient := service.NewShopeeClient(cfg.Shopee)
 	batchSvc := service.NewBatchService(repo.BatchRepo, repo.BatchDetailRepo)
 	dropshipSvc := service.NewDropshipService(
@@ -58,7 +93,9 @@ func main() {
 		repo.OrderDetailRepo,
 		batchSvc,
 		shClient,
+		cacheInstance,
 		cfg.MaxThreads,
+		cfg.Performance.BatchSize,
 	)
 	// process pending dropship imports in the background
 	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
@@ -95,8 +132,20 @@ func main() {
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
-	// 4) Setup Gin router and API routes
+	// 4) Setup performance monitoring
+	if cfg.Performance.EnableMetrics {
+		// Set slow query threshold
+		middleware.SetSlowQueryThreshold(parseDuration(cfg.Performance.SlowQueryThreshold, 2*time.Second))
+	}
+
+	// 5) Setup Gin router and API routes
 	router := gin.Default()
+	
+	// Add performance monitoring middleware
+	if cfg.Performance.EnableMetrics {
+		router.Use(middleware.PerformanceMiddleware())
+		router.Use(middleware.MetricsMiddleware())
+	}
 	// CORS configuration – origins can be configured via config.yaml
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.Server.CorsOrigins,
@@ -176,12 +225,28 @@ func main() {
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
+		
+		// Performance metrics endpoint (system monitoring)
+		if cfg.Performance.EnableMetrics {
+			apiGroup.GET("/performance", middleware.GetMetricsHandler())
+		}
 	}
 
-	// 5) Start the HTTP server
+	// 6) Start the HTTP server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("🚀 Server starting on %s", addr)
 	if err := router.Run(addr); err != nil {
 		logutil.Fatalf("Server failed: %v", err)
 	}
+}
+
+// parseDuration parses a duration string and returns a default value if parsing fails
+func parseDuration(durationStr string, defaultValue time.Duration) time.Duration {
+	if durationStr == "" {
+		return defaultValue
+	}
+	if duration, err := time.ParseDuration(durationStr); err == nil {
+		return duration
+	}
+	return defaultValue
 }

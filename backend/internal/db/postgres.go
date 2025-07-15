@@ -4,6 +4,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -21,9 +22,30 @@ func ConnectPostgres(dsn string) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 
-	// Optional: configure pool settings
+	// Set default pool settings (can be overridden with ConnectPostgresWithConfig)
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
+
+	return db, nil
+}
+
+// ConnectPostgresWithConfig opens a connection pool with custom configuration
+func ConnectPostgresWithConfig(dsn string, maxOpenConns, maxIdleConns int, connMaxLifetime string) (*sqlx.DB, error) {
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+
+	// Configure connection pool
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	
+	// Parse and set connection max lifetime if provided
+	if connMaxLifetime != "" {
+		if duration, err := time.ParseDuration(connMaxLifetime); err == nil {
+			db.SetConnMaxLifetime(duration)
+		}
+	}
 
 	return db, nil
 }

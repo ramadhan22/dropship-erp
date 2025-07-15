@@ -30,6 +30,14 @@ type ShopeeClient struct {
 	AccessToken  string
 	RefreshToken string
 	httpClient   *http.Client
+	rateLimiter  *RateLimiter
+	retryConfig  RetryConfig
+}
+
+// RetryConfig holds retry mechanism configuration
+type RetryConfig struct {
+	MaxAttempts int
+	BaseDelay   time.Duration
 }
 
 // NewShopeeClient constructs a ShopeeClient from configuration.
@@ -38,6 +46,15 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 	if base == "" {
 		base = "https://partner.test-stable.shopeemobile.com"
 	}
+	
+	// Create rate limiter for 1000 requests per hour (Shopee API limit)
+	rateLimiter := NewRateLimiter(1000, time.Hour/1000)
+	
+	retryConfig := RetryConfig{
+		MaxAttempts: 3,
+		BaseDelay:   time.Second,
+	}
+	
 	return &ShopeeClient{
 		BaseURL:      base,
 		PartnerID:    cfg.PartnerID,
@@ -46,7 +63,20 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 		AccessToken:  cfg.AccessToken,
 		RefreshToken: cfg.RefreshToken,
 		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		rateLimiter:  rateLimiter,
+		retryConfig:  retryConfig,
 	}
+}
+
+// NewShopeeClientWithConfig constructs a ShopeeClient with custom rate limiting and retry configuration
+func NewShopeeClientWithConfig(cfg config.ShopeeAPIConfig, rateLimit int, maxAttempts int, baseDelay time.Duration) *ShopeeClient {
+	client := NewShopeeClient(cfg)
+	client.rateLimiter = NewRateLimiter(rateLimit, time.Hour/time.Duration(rateLimit))
+	client.retryConfig = RetryConfig{
+		MaxAttempts: maxAttempts,
+		BaseDelay:   baseDelay,
+	}
+	return client
 }
 
 func (c *ShopeeClient) signWithToken(path string, ts int64, token string) string {
@@ -75,6 +105,71 @@ func (c *ShopeeClient) signSimple(path string, ts int64) string {
 	h.Write([]byte(msg))
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+// ========== Optimized HTTP Request Methods ==========
+
+// makeRequestWithRetry executes HTTP requests with rate limiting and retry logic
+func (c *ShopeeClient) makeRequestWithRetry(ctx context.Context, method, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
+	var resp *http.Response
+	var err error
+	
+	for attempt := 1; attempt <= c.retryConfig.MaxAttempts; attempt++ {
+		// Create request
+		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
+		if reqErr != nil {
+			return nil, fmt.Errorf("failed to create request: %w", reqErr)
+		}
+		
+		// Set headers
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
+		
+		// Log request
+		log.Printf("ShopeeClient request (attempt %d/%d): %s %s", attempt, c.retryConfig.MaxAttempts, method, url)
+		
+		// Execute request
+		resp, err = c.httpClient.Do(req)
+		if err == nil && resp.StatusCode < 500 {
+			// Success or client error (4xx) - don't retry client errors
+			return resp, nil
+		}
+		
+		// Close response body if present before retry
+		if resp != nil {
+			resp.Body.Close()
+		}
+		
+		// Don't sleep after the last attempt
+		if attempt < c.retryConfig.MaxAttempts {
+			// Exponential backoff: baseDelay * 2^(attempt-1)
+			delay := c.retryConfig.BaseDelay * time.Duration(1<<(attempt-1))
+			log.Printf("Request failed (attempt %d/%d), retrying in %v. Error: %v", 
+				attempt, c.retryConfig.MaxAttempts, delay, err)
+			
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+				// Continue to next attempt
+			}
+		}
+	}
+	
+	return resp, fmt.Errorf("request failed after %d attempts: %w", c.retryConfig.MaxAttempts, err)
+}
+
+// GetRateLimiterStats returns current rate limiter statistics  
+func (c *ShopeeClient) GetRateLimiterStats() (availableTokens int, maxTokens int) {
+	return c.rateLimiter.GetStats()
+}
+
+// ========== End Optimized Methods ==========
 
 // orderDetailResp only includes the order_status field we care about.
 type orderDetailResp struct {
