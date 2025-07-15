@@ -8,7 +8,6 @@ import type {
   DropshipPurchase,
   DropshipPurchaseDetail,
   Account,
-  ShopeeSettled,
   ShopeeAffiliateSale,
   ShopeeAffiliateSummary,
   SalesProfit,
@@ -99,11 +98,6 @@ export function importShopeeAffiliate(files: File[]) {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
-
-export const getShopeeSettleDetail = (orderSN: string) =>
-  api.get<{ data: ShopeeSettled; dropship_total: number }>(
-    `/shopee/settled/${orderSN}`,
-  );
 
 // Fetch balance sheet
 export function fetchBalanceSheet(shop: string, period: string) {
