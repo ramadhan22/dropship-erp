@@ -18,3 +18,6 @@ backend/pkg/
 
 # Environment files
 **/*.env
+
+# Uploads directory - temporary files
+backend/internal/handlers/backend/uploads/
