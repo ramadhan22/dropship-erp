@@ -195,8 +195,15 @@ export default function ReconcileDashboard() {
 
   const handleReconcileAll = async () => {
     try {
-      await createReconcileBatch(shop, order, from, to);
-      setMsg({ type: "success", text: "Batch created" });
+      const response = await createReconcileBatch(shop, order, from, to);
+      const data = response.data;
+      let message = "Reconcile batches created successfully";
+      if (data.batches_created && data.total_transactions) {
+        message = `Created ${data.batches_created} batches for ${data.total_transactions} transactions. Processing will begin shortly.`;
+      } else if (data.message) {
+        message = data.message;
+      }
+      setMsg({ type: "success", text: message });
       reload();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });

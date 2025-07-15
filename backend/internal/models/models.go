@@ -396,3 +396,9 @@ type ShopeeOrderPackageRow struct {
 	SortingGroup               *string `db:"sorting_group" json:"sorting_group,omitempty"`
 	GroupShipmentID            *string `db:"group_shipment_id" json:"group_shipment_id,omitempty"`
 }
+
+// ReconcileBatchInfo contains information about created reconcile batches
+type ReconcileBatchInfo struct {
+	BatchCount        int `json:"batch_count"`
+	TotalTransactions int `json:"total_transactions"`
+}

@@ -22,7 +22,7 @@ type ReconcileExtraService interface {
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
-	CreateReconcileBatches(ctx context.Context, shop, order, from, to string) error
+	CreateReconcileBatches(ctx context.Context, shop, order, from, to string) (*models.ReconcileBatchInfo, error)
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -208,9 +208,18 @@ func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.From, req.To); err != nil {
+	
+	// Call the service which will return batch information
+	batchInfo, err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.From, req.To)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Status(http.StatusOK)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Reconcile batches created successfully",
+		"batches_created": batchInfo.BatchCount,
+		"total_transactions": batchInfo.TotalTransactions,
+		"status": "processing will begin shortly",
+	})
 }
