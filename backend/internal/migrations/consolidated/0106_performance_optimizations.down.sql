@@ -1,4 +1,0 @@
--- Reverse performance optimizations
--- Note: Foreign key constraints were dropped for performance
--- If needed, they can be re-added manually
--- Manual cleanup required based on specific optimizations applied
