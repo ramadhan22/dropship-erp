@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		logutil.Fatalf("DB connection failed: %v", err)
 	}
-	
+
 	// Apply optimized connection pool settings
 	repo.DB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
 	repo.DB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
@@ -100,6 +100,7 @@ func main() {
 	// process pending dropship imports in the background
 	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo, cfg.Shopee)
+	reconcileSvc := service.NewReconcileService(repo.DB, repo.ReconcileRepo, shopeeSvc)
 	taxSvc := service.NewTaxService(repo.DB, repo.TaxRepo, repo.JournalRepo, repo.JournalRepo)
 	expenseSvc := service.NewExpenseService(repo.DB, repository.NewExpenseRepo(repo.DB), repo.JournalRepo)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
@@ -125,7 +126,7 @@ func main() {
 
 	// 5) Setup Gin router and API routes
 	router := gin.Default()
-	
+
 	// Add performance monitoring middleware
 	if cfg.Performance.EnableMetrics {
 		router.Use(middleware.PerformanceMiddleware())
@@ -198,9 +199,10 @@ func main() {
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
+		handlers.NewReconcileHandler(reconcileSvc).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
-		
+
 		// Performance metrics endpoint (system monitoring)
 		if cfg.Performance.EnableMetrics {
 			apiGroup.GET("/performance", middleware.GetMetricsHandler())

@@ -16,7 +16,6 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/teacat/shopeego v1.3.3
 	github.com/xuri/excelize/v2 v2.7.0
-	golang.org/x/sync v0.16.0
 )
 
 require (
