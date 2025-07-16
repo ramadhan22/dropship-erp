@@ -118,6 +118,41 @@ func (f *fakeDetailRepo) GetOrderDetail(ctx context.Context, sn string) (*models
 	return nil, nil, nil, errors.New("not found")
 }
 
+type fakeFailedRecRepo struct {
+	failures []models.FailedReconciliation
+}
+
+func (f *fakeFailedRecRepo) InsertFailedReconciliation(ctx context.Context, failed *models.FailedReconciliation) error {
+	f.failures = append(f.failures, *failed)
+	return nil
+}
+
+func (f *fakeFailedRecRepo) GetFailedReconciliationsByShop(ctx context.Context, shop string, limit, offset int) ([]models.FailedReconciliation, error) {
+	return f.failures, nil
+}
+
+func (f *fakeFailedRecRepo) GetFailedReconciliationsByBatch(ctx context.Context, batchID int64) ([]models.FailedReconciliation, error) {
+	return f.failures, nil
+}
+
+func (f *fakeFailedRecRepo) CountFailedReconciliationsByErrorType(ctx context.Context, shop string, since time.Time) (map[string]int, error) {
+	counts := make(map[string]int)
+	for _, fail := range f.failures {
+		if fail.Shop == shop && fail.FailedAt.After(since) {
+			counts[fail.ErrorType]++
+		}
+	}
+	return counts, nil
+}
+
+func (f *fakeFailedRecRepo) MarkAsRetried(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (f *fakeFailedRecRepo) GetUnretriedFailedReconciliations(ctx context.Context, shop string, limit int) ([]models.FailedReconciliation, error) {
+	return f.failures, nil
+}
+
 func TestMatchAndJournal_Success(t *testing.T) {
 	ctx := context.Background()
 
@@ -135,8 +170,9 @@ func TestMatchAndJournal_Success(t *testing.T) {
 	fJournal := &fakeJournalRepoRec{nextID: 0}
 	fRec := &fakeRecRepoRec{}
 	fDetail := &fakeDetailRepo{}
+	fFailed := &fakeFailedRecRepo{}
 
-	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, 5)
+	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, fFailed, 5, nil)
 	err := svc.MatchAndJournal(ctx, "DP-111", "SO-222", "ShopA")
 	if err != nil {
 		t.Fatalf("MatchAndJournal error: %v", err)

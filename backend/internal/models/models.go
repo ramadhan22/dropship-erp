@@ -159,6 +159,22 @@ type ReconcileCandidate struct {
 	ShopeeOrderStatus     string  `json:"shopee_order_status"`
 }
 
+// FailedReconciliation represents transactions that failed during reconciliation
+// and need to be reviewed or retried later.
+type FailedReconciliation struct {
+	ID          int64     `db:"id" json:"id"`
+	PurchaseID  string    `db:"purchase_id" json:"purchase_id"`
+	OrderID     *string   `db:"order_id" json:"order_id"`
+	Shop        string    `db:"shop" json:"shop"`
+	ErrorType   string    `db:"error_type" json:"error_type"`
+	ErrorMsg    string    `db:"error_message" json:"error_message"`
+	Context     *string   `db:"context" json:"context"` // Additional context as JSON
+	FailedAt    time.Time `db:"failed_at" json:"failed_at"`
+	Retried     bool      `db:"retried" json:"retried"`
+	RetriedAt   *time.Time `db:"retried_at" json:"retried_at"`
+	BatchID     *int64    `db:"batch_id" json:"batch_id"` // FK to batch_history if part of batch
+}
+
 // CachedMetric represents the D5 table: cached_metrics
 type CachedMetric struct {
 	ID                int64     `db:"id" json:"id"`
@@ -401,4 +417,26 @@ type ShopeeOrderPackageRow struct {
 type ReconcileBatchInfo struct {
 	BatchCount        int `json:"batch_count"`
 	TotalTransactions int `json:"total_transactions"`
+}
+
+// ReconciliationReport provides a summary of reconciliation results
+type ReconciliationReport struct {
+	TotalTransactions      int                     `json:"total_transactions"`
+	SuccessfulTransactions int                     `json:"successful_transactions"`
+	FailedTransactions     int                     `json:"failed_transactions"`
+	FailureRate           float64                 `json:"failure_rate"`
+	ProcessingStartTime   time.Time               `json:"processing_start_time"`
+	ProcessingEndTime     time.Time               `json:"processing_end_time"`
+	Duration              string                  `json:"duration"`
+	FailureCategories     map[string]int          `json:"failure_categories"`
+	FailedTransactionList []FailedReconciliation  `json:"failed_transaction_list,omitempty"`
+}
+
+// ReconciliationConfig holds configuration options for error handling behavior
+type ReconciliationConfig struct {
+	MaxAllowedFailures       int      `json:"max_allowed_failures"`        // Stop process if failures exceed this
+	FailureThresholdPercent  float64  `json:"failure_threshold_percent"`   // Alert if failure rate exceeds this
+	CriticalErrorTypes       []string `json:"critical_error_types"`        // Error types that should halt processing
+	RetryFailedTransactions  bool     `json:"retry_failed_transactions"`   // Whether to automatically retry failed transactions
+	GenerateDetailedReport   bool     `json:"generate_detailed_report"`    // Whether to include failed transaction details in report
 }
