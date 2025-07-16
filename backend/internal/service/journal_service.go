@@ -14,6 +14,7 @@ import (
 type JournalRepoInterface interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+	InsertJournalLines(ctx context.Context, lines []models.JournalLine) error
 	ListJournalEntries(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error)
 	GetJournalEntry(ctx context.Context, id int64) (*models.JournalEntry, error)
 	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
@@ -103,10 +104,10 @@ func (s *JournalService) Create(
 		}
 		for i := range lines {
 			lines[i].JournalID = id
-			if err := s.repo.InsertJournalLine(ctx, &lines[i]); err != nil {
-				logutil.Errorf("JournalService.Create line error: %v", err)
-				return 0, err
-			}
+		}
+		if err := s.repo.InsertJournalLines(ctx, lines); err != nil {
+			logutil.Errorf("JournalService.Create lines error: %v", err)
+			return 0, err
 		}
 		log.Printf("JournalService.Create done id=%d", id)
 		return id, nil
@@ -126,10 +127,10 @@ func (s *JournalService) Create(
 	}
 	for i := range lines {
 		lines[i].JournalID = id
-		if err := repoTx.InsertJournalLine(ctx, &lines[i]); err != nil {
-			logutil.Errorf("JournalService.Create line error: %v", err)
-			return 0, err
-		}
+	}
+	if err := repoTx.InsertJournalLines(ctx, lines); err != nil {
+		logutil.Errorf("JournalService.Create lines error: %v", err)
+		return 0, err
 	}
 	if err := tx.Commit(); err != nil {
 		logutil.Errorf("JournalService.Create commit error: %v", err)
@@ -174,10 +175,10 @@ func (s *JournalService) BulkCreateJournalEntries(ctx context.Context, entries [
 		// Create journal lines
 		for j := range entryWithLines.Lines {
 			entryWithLines.Lines[j].JournalID = id
-			if err := repoTx.InsertJournalLine(ctx, &entryWithLines.Lines[j]); err != nil {
-				logutil.Errorf("BulkCreateJournalEntries line %d/%d error: %v", i, j, err)
-				return nil, err
-			}
+		}
+		if err := repoTx.InsertJournalLines(ctx, entryWithLines.Lines); err != nil {
+			logutil.Errorf("BulkCreateJournalEntries lines %d error: %v", i, err)
+			return nil, err
 		}
 
 		entryIDs = append(entryIDs, id)

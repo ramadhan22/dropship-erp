@@ -78,10 +78,9 @@ func createWithdrawalJournal(ctx context.Context, jr *repository.JournalRepo, w 
 		{JournalID: jid, AccountID: 11014, IsDebit: true, Amount: w.Amount},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(w.Store), IsDebit: false, Amount: w.Amount},
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }

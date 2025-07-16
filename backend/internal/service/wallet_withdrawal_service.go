@@ -143,10 +143,9 @@ func (s *WalletWithdrawalService) CreateJournal(ctx context.Context, store strin
 		{JournalID: jid, AccountID: 11014, IsDebit: true, Amount: -t.Amount},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(store), IsDebit: false, Amount: -t.Amount},
 	}
-	for i := range lines {
-		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := s.journalRepo.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }

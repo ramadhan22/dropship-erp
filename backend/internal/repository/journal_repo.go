@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -64,6 +65,61 @@ func (r *JournalRepo) InsertJournalLine(ctx context.Context, l *models.JournalLi
         ) VALUES ($1, $2, $3, $4, $5)`
 	_, err := r.db.ExecContext(ctx, query,
 		l.JournalID, l.AccountID, l.IsDebit, l.Amount, l.Memo)
+	return err
+}
+
+// InsertJournalLines inserts multiple journal lines in a single batch operation.
+// This is more efficient than calling InsertJournalLine multiple times.
+// Validates that total debits equal total credits before insertion.
+func (r *JournalRepo) InsertJournalLines(ctx context.Context, lines []models.JournalLine) error {
+	if len(lines) == 0 {
+		return nil
+	}
+
+	// Validate that debits equal credits
+	var totalDebit, totalCredit float64
+	for _, line := range lines {
+		if line.IsDebit {
+			totalDebit += line.Amount
+		} else {
+			totalCredit += line.Amount
+		}
+	}
+	
+	if totalDebit != totalCredit {
+		return fmt.Errorf("debits %.2f do not equal credits %.2f", totalDebit, totalCredit)
+	}
+
+	// For single line, use the existing method
+	if len(lines) == 1 {
+		return r.InsertJournalLine(ctx, &lines[0])
+	}
+
+	// Build bulk insert query with multiple VALUE clauses
+	query := `
+        INSERT INTO journal_lines (
+          journal_id, account_id, is_debit, amount, memo
+        ) VALUES `
+
+	values := make([]interface{}, 0, len(lines)*5)
+	valuePlaceholders := make([]string, 0, len(lines))
+
+	for i, line := range lines {
+		// Create placeholder for this row: ($1, $2, $3, $4, $5)
+		start := i*5 + 1
+		placeholder := fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			start, start+1, start+2, start+3, start+4)
+		valuePlaceholders = append(valuePlaceholders, placeholder)
+
+		// Add values for this row
+		values = append(values,
+			line.JournalID, line.AccountID, line.IsDebit, line.Amount, line.Memo)
+	}
+
+	// Combine query with all value placeholders
+	query += strings.Join(valuePlaceholders, ", ")
+
+	_, err := r.db.ExecContext(ctx, query, values...)
 	return err
 }
 

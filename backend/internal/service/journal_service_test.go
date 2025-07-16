@@ -27,6 +27,13 @@ func (f *fakeJournalRepo) InsertJournalLine(ctx context.Context, l *models.Journ
 	return nil
 }
 
+func (f *fakeJournalRepo) InsertJournalLines(ctx context.Context, lines []models.JournalLine) error {
+	for _, l := range lines {
+		f.lines = append(f.lines, l)
+	}
+	return nil
+}
+
 func (f *fakeJournalRepo) ListJournalEntries(ctx context.Context, from, to, desc string) ([]models.JournalEntry, error) {
 	return nil, nil
 }

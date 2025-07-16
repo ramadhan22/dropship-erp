@@ -72,6 +72,12 @@ func (f *fakeJournalRepoBatch) InsertJournalLine(ctx context.Context, l *models.
 	f.lines = append(f.lines, l)
 	return nil
 }
+func (f *fakeJournalRepoBatch) InsertJournalLines(ctx context.Context, lines []models.JournalLine) error {
+	for i := range lines {
+		f.lines = append(f.lines, &lines[i])
+	}
+	return nil
+}
 
 type fakeBatchSvc struct {
 	created []*models.BatchHistory

@@ -95,10 +95,9 @@ func (s *TaxService) PayTax(ctx context.Context, tp *models.TaxPayment) error {
 		{JournalID: jid, AccountID: taxExpenseAcctID, IsDebit: true, Amount: tp.TaxAmount},
 		{JournalID: jid, AccountID: bankAcctID, IsDebit: false, Amount: tp.TaxAmount},
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	if err := repo.MarkPaid(ctx, tp.ID, tp.PaidAt); err != nil {
 		return err

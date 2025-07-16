@@ -109,6 +109,12 @@ func (f *fakeJournalRepoDrop) InsertJournalLine(ctx context.Context, l *models.J
 	f.lines = append(f.lines, l)
 	return nil
 }
+func (f *fakeJournalRepoDrop) InsertJournalLines(ctx context.Context, lines []models.JournalLine) error {
+	for i := range lines {
+		f.lines = append(f.lines, &lines[i])
+	}
+	return nil
+}
 func (f *fakeJournalRepoDrop) GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error) {
 	for _, e := range f.entries {
 		if e.SourceType == sourceType && e.SourceID == sourceID {

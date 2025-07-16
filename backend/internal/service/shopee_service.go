@@ -141,6 +141,7 @@ type ShopeeDropshipRepo interface {
 type ShopeeJournalRepo interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+	InsertJournalLines(ctx context.Context, lines []models.JournalLine) error
 	GetJournalEntryBySource(ctx context.Context, sourceType, sourceID string) (*models.JournalEntry, error)
 	GetLinesByJournalID(ctx context.Context, id int64) ([]repository.JournalLineDetail, error)
 	UpdateJournalLineAmount(ctx context.Context, lineID int64, amount float64) error
@@ -736,11 +737,15 @@ func (s *ShopeeService) createSettlementJournal(ctx context.Context, jr ShopeeJo
 		{JournalID: id, AccountID: 52011, IsDebit: true, Amount: transFee, Memo: ptrString("Biaya Transaksi " + entry.NoPesanan)},
 		{JournalID: id, AccountID: saldoShopeeAccountID(entry.NamaToko), IsDebit: true, Amount: saldo, Memo: ptrString("Saldo Shopee " + entry.NoPesanan)},
 	}
+	// Filter out lines with zero amounts and use bulk insert
+	validLines := make([]models.JournalLine, 0, len(lines))
 	for i := range lines {
-		if lines[i].Amount == 0 {
-			continue
+		if lines[i].Amount != 0 {
+			validLines = append(validLines, lines[i])
 		}
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+	}
+	if len(validLines) > 0 {
+		if err := jr.InsertJournalLines(ctx, validLines); err != nil {
 			return err
 		}
 	}
@@ -783,11 +788,15 @@ func (s *ShopeeService) addAffiliateToJournal(ctx context.Context, sale *models.
 		{JournalID: jid, AccountID: 55002, IsDebit: true, Amount: sale.Pengeluaran, Memo: ptrString("Biaya Affiliate " + sale.KodePesanan)},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(sale.NamaToko), IsDebit: false, Amount: sale.Pengeluaran, Memo: ptrString("Saldo Shopee " + sale.KodePesanan)},
 	}
+	// Filter out lines with zero amounts and use bulk insert
+	validLines := make([]models.JournalLine, 0, len(lines))
 	for i := range lines {
-		if lines[i].Amount == 0 {
-			continue
+		if lines[i].Amount != 0 {
+			validLines = append(validLines, lines[i])
 		}
-		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+	}
+	if len(validLines) > 0 {
+		if err := s.journalRepo.InsertJournalLines(ctx, validLines); err != nil {
 			return err
 		}
 	}
@@ -841,10 +850,9 @@ func (s *ShopeeService) createGrossUpJournal(ctx context.Context, jr ShopeeJourn
 		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: true, Amount: diff},
 		{JournalID: id, AccountID: 4001, IsDebit: false, Amount: diff},
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }
@@ -867,10 +875,9 @@ func (s *ShopeeService) createDiscountJournal(ctx context.Context, jr ShopeeJour
 		{JournalID: id, AccountID: pendingAccountID(o.NamaToko), IsDebit: false, Amount: disc},
 		{JournalID: id, AccountID: 55004, IsDebit: true, Amount: disc},
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1016,20 +1023,18 @@ func createWithdrawJournal(ctx context.Context, jr ShopeeJournalRepo, store stri
 			{JournalID: jid, AccountID: 55003, IsDebit: true, Amount: fee},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
 		}
-		for i := range lines {
-			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-				return err
-			}
+		// Use bulk insert for lines
+		if err := jr.InsertJournalLines(ctx, lines); err != nil {
+			return err
 		}
 	} else {
 		lines := []models.JournalLine{
 			{JournalID: jid, AccountID: bankAcc, IsDebit: true, Amount: amount},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: amount},
 		}
-		for i := range lines {
-			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-				return err
-			}
+		// Use bulk insert for lines
+		if err := jr.InsertJournalLines(ctx, lines); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1239,10 +1244,9 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: true, Amount: amt},
 			{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: amt},
 		}
-		for i := range lines {
-			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-				return err
-			}
+		// Use bulk insert for lines
+		if err := jr.InsertJournalLines(ctx, lines); err != nil {
+			return err
 		}
 	} else {
 		aamt := -amt
@@ -1254,10 +1258,9 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 			{JournalID: jid, AccountID: acc, IsDebit: true, Amount: aamt},
 			{JournalID: jid, AccountID: saldoAcc, IsDebit: false, Amount: aamt},
 		}
-		for i := range lines {
-			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-				return err
-			}
+		// Use bulk insert for lines
+		if err := jr.InsertJournalLines(ctx, lines); err != nil {
+			return err
 		}
 	}
 	return nil

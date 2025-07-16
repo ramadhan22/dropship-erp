@@ -68,10 +68,9 @@ func (s *AdsTopupService) CreateJournal(ctx context.Context, store string, t Wal
 		{JournalID: jid, AccountID: 55003, IsDebit: true, Amount: amt},
 		{JournalID: jid, AccountID: saldoShopeeAccountID(store), IsDebit: false, Amount: amt},
 	}
-	for i := range lines {
-		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := s.journalRepo.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }

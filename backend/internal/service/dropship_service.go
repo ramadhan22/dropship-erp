@@ -41,6 +41,7 @@ type DropshipRepoInterface interface {
 type DropshipJournalRepo interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+	InsertJournalLines(ctx context.Context, lines []models.JournalLine) error
 }
 
 // DropshipServiceStoreRepo provides access to store credentials used when
@@ -745,10 +746,9 @@ func (s *DropshipService) createPendingSalesJournal(ctx context.Context, jr Drop
 		// inserted using the order code. These duplicated the invoice
 		// lines above and caused double recognition of the accounts.
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }
@@ -799,10 +799,9 @@ func (s *DropshipService) createFreeSampleJournal(ctx context.Context, jr Dropsh
 		{JournalID: id, AccountID: 11009, IsDebit: false, Amount: amt, Memo: ptrString("Saldo Jakmall " + p.KodeInvoiceChannel)},
 		{JournalID: id, AccountID: freeSampleAccountID(), IsDebit: true, Amount: amt, Memo: ptrString("Free Sample " + p.KodeInvoiceChannel)},
 	}
-	for i := range lines {
-		if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
-			return err
-		}
+	// Use bulk insert for lines
+	if err := jr.InsertJournalLines(ctx, lines); err != nil {
+		return err
 	}
 	return nil
 }

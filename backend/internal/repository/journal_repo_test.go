@@ -147,3 +147,140 @@ func TestCreateJournalEntryAndLinesAndBalance(t *testing.T) {
 	tempCleanupAccount(t, testDB, acc1)
 	tempCleanupAccount(t, testDB, acc2)
 }
+
+func TestInsertJournalLinesBulk(t *testing.T) {
+	ctx := context.Background()
+	jrepo := NewJournalRepo(testDB)
+	now := time.Now()
+
+	// 1. Insert test accounts
+	acc1 := insertTestAccount(t, testDB, "BULK100", "Bulk Test Asset", "Asset", nil)
+	acc2 := insertTestAccount(t, testDB, "BULK200", "Bulk Test Expense", "Expense", nil)
+	acc3 := insertTestAccount(t, testDB, "BULK300", "Bulk Test Revenue", "Revenue", nil)
+
+	// 2. Create a JournalEntry
+	je := &models.JournalEntry{
+		EntryDate:   now,
+		Description: ptrString("Bulk Insert Test"),
+		SourceType:  "bulk_test", SourceID: "BULK-1", ShopUsername: "BulkShop",
+	}
+	journalID, err := jrepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		t.Fatalf("CreateJournalEntry failed: %v", err)
+	}
+
+	// 3. Test bulk insert with multiple lines
+	lines := []models.JournalLine{
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 150, Memo: ptrString("Bulk debit 1")},
+		{JournalID: journalID, AccountID: acc2, IsDebit: true, Amount: 50, Memo: ptrString("Bulk debit 2")},
+		{JournalID: journalID, AccountID: acc3, IsDebit: false, Amount: 200, Memo: ptrString("Bulk credit")},
+	}
+
+	if err := jrepo.InsertJournalLines(ctx, lines); err != nil {
+		t.Fatalf("InsertJournalLines failed: %v", err)
+	}
+
+	// 4. Verify all lines were inserted
+	insertedLines, err := jrepo.GetLinesByJournalID(ctx, journalID)
+	if err != nil {
+		t.Fatalf("GetLinesByJournalID failed: %v", err)
+	}
+
+	if len(insertedLines) != 3 {
+		t.Errorf("Expected 3 lines, got %d", len(insertedLines))
+	}
+
+	// 5. Test edge cases
+
+	// Test empty slice
+	if err := jrepo.InsertJournalLines(ctx, []models.JournalLine{}); err != nil {
+		t.Errorf("InsertJournalLines with empty slice should not error: %v", err)
+	}
+
+	// Test single line (should use InsertJournalLine internally)
+	singleLine := []models.JournalLine{
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 25, Memo: ptrString("Single line test")},
+	}
+	if err := jrepo.InsertJournalLines(ctx, singleLine); err != nil {
+		t.Fatalf("InsertJournalLines with single line failed: %v", err)
+	}
+
+	// Verify the single line was inserted
+	finalLines, err := jrepo.GetLinesByJournalID(ctx, journalID)
+	if err != nil {
+		t.Fatalf("GetLinesByJournalID failed: %v", err)
+	}
+
+	if len(finalLines) != 4 {
+		t.Errorf("Expected 4 lines total, got %d", len(finalLines))
+	}
+
+	// 6. Cleanup
+	testDB.ExecContext(ctx, "DELETE FROM journal_entries WHERE journal_id = $1", journalID)
+	tempCleanupAccount(t, testDB, acc1)
+	tempCleanupAccount(t, testDB, acc2)
+	tempCleanupAccount(t, testDB, acc3)
+}
+
+func TestInsertJournalLinesValidation(t *testing.T) {
+	ctx := context.Background()
+	jrepo := NewJournalRepo(testDB)
+	now := time.Now()
+
+	// 1. Insert test accounts
+	acc1 := insertTestAccount(t, testDB, "VAL100", "Validation Test Asset", "Asset", nil)
+	acc2 := insertTestAccount(t, testDB, "VAL200", "Validation Test Expense", "Expense", nil)
+
+	// 2. Create a JournalEntry
+	je := &models.JournalEntry{
+		EntryDate:   now,
+		Description: ptrString("Validation Test"),
+		SourceType:  "validation_test", SourceID: "VAL-1", ShopUsername: "ValidationShop",
+	}
+	journalID, err := jrepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		t.Fatalf("CreateJournalEntry failed: %v", err)
+	}
+
+	// 3. Test balanced lines (should succeed)
+	balancedLines := []models.JournalLine{
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 100, Memo: ptrString("Balanced debit")},
+		{JournalID: journalID, AccountID: acc2, IsDebit: false, Amount: 100, Memo: ptrString("Balanced credit")},
+	}
+
+	if err := jrepo.InsertJournalLines(ctx, balancedLines); err != nil {
+		t.Errorf("InsertJournalLines with balanced amounts should succeed: %v", err)
+	}
+
+	// 4. Test unbalanced lines (should fail)
+	unbalancedLines := []models.JournalLine{
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 150, Memo: ptrString("Unbalanced debit")},
+		{JournalID: journalID, AccountID: acc2, IsDebit: false, Amount: 100, Memo: ptrString("Unbalanced credit")},
+	}
+
+	err = jrepo.InsertJournalLines(ctx, unbalancedLines)
+	if err == nil {
+		t.Error("InsertJournalLines with unbalanced amounts should fail")
+	}
+	expectedErrorMsg := "debits 150.00 do not equal credits 100.00"
+	if err.Error() != expectedErrorMsg {
+		t.Errorf("Expected error message '%s', got '%s'", expectedErrorMsg, err.Error())
+	}
+
+	// 5. Test complex balanced scenario with multiple debits and credits
+	complexBalancedLines := []models.JournalLine{
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 75, Memo: ptrString("Debit 1")},
+		{JournalID: journalID, AccountID: acc1, IsDebit: true, Amount: 25, Memo: ptrString("Debit 2")},
+		{JournalID: journalID, AccountID: acc2, IsDebit: false, Amount: 60, Memo: ptrString("Credit 1")},
+		{JournalID: journalID, AccountID: acc2, IsDebit: false, Amount: 40, Memo: ptrString("Credit 2")},
+	}
+
+	if err := jrepo.InsertJournalLines(ctx, complexBalancedLines); err != nil {
+		t.Errorf("InsertJournalLines with complex balanced amounts should succeed: %v", err)
+	}
+
+	// 6. Cleanup
+	testDB.ExecContext(ctx, "DELETE FROM journal_entries WHERE journal_id = $1", journalID)
+	tempCleanupAccount(t, testDB, acc1)
+	tempCleanupAccount(t, testDB, acc2)
+}
