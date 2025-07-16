@@ -163,6 +163,7 @@ func main() {
 		dh := handlers.NewDropshipHandler(dropshipSvc, batchSvc)
 		apiGroup.POST("/dropship/import", dh.HandleImport)
 		apiGroup.GET("/dropship/purchases", dh.HandleList)
+		apiGroup.GET("/dropship/purchases/filtered", middleware.FilterMiddleware(), dh.HandleListFiltered)
 		apiGroup.GET("/dropship/purchases/summary", dh.HandleSum)
 		apiGroup.GET("/dropship/purchases/daily", dh.HandleDailyTotals)
 		apiGroup.GET("/dropship/purchases/monthly", dh.HandleMonthlyTotals)
