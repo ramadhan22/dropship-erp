@@ -142,3 +142,70 @@ func TestWithdrawalDescriptionGeneration(t *testing.T) {
 		})
 	}
 }
+
+func TestAdjustWithdrawalAmounts(t *testing.T) {
+	// Test the adjustment logic in isolation
+	baseTime := time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name                string
+		withdrawalAmount    float64
+		withdrawalTime      int64
+		allTransactions     []WalletTransaction
+		expectedAdjusted    float64
+	}{
+		{
+			name:             "Withdrawal with SPM_DISBURSE_ADD same day",
+			withdrawalAmount: 100.0,
+			withdrawalTime:   baseTime.Unix(),
+			allTransactions: []WalletTransaction{
+				{TransactionID: 1, TransactionType: "SPM_DISBURSE_ADD", Amount: 25.0, CreateTime: baseTime.Unix()},
+			},
+			expectedAdjusted: 75.0,
+		},
+		{
+			name:             "Withdrawal with multiple SPM_DISBURSE_ADD same day",
+			withdrawalAmount: 200.0,
+			withdrawalTime:   baseTime.Unix(),
+			allTransactions: []WalletTransaction{
+				{TransactionID: 1, TransactionType: "SPM_DISBURSE_ADD", Amount: 30.0, CreateTime: baseTime.Unix()},
+				{TransactionID: 2, TransactionType: "SPM_DISBURSE_ADD", Amount: 20.0, CreateTime: baseTime.Add(2 * time.Hour).Unix()},
+			},
+			expectedAdjusted: 150.0, // 200 - 30 - 20
+		},
+		{
+			name:             "Withdrawal with no SPM_DISBURSE_ADD",
+			withdrawalAmount: 100.0,
+			withdrawalTime:   baseTime.Unix(),
+			allTransactions:  []WalletTransaction{},
+			expectedAdjusted: 100.0,
+		},
+		{
+			name:             "Withdrawal with SPM_DISBURSE_ADD different day",
+			withdrawalAmount: 100.0,
+			withdrawalTime:   baseTime.Unix(),
+			allTransactions: []WalletTransaction{
+				{TransactionID: 1, TransactionType: "SPM_DISBURSE_ADD", Amount: 25.0, CreateTime: baseTime.AddDate(0, 0, -1).Unix()},
+			},
+			expectedAdjusted: 100.0, // No adjustment for different day
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockWalletSvc := &mockWalletTransactionService{
+				transactions: tt.allTransactions,
+			}
+
+			disburseAddAmount, err := findSpmDisburseAddAmountWithService(context.Background(), mockWalletSvc, "test-store", tt.withdrawalTime)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			adjustedAmount := tt.withdrawalAmount - disburseAddAmount
+			if adjustedAmount != tt.expectedAdjusted {
+				t.Errorf("expected adjusted amount %.2f, got %.2f", tt.expectedAdjusted, adjustedAmount)
+			}
+		})
+	}
+}
