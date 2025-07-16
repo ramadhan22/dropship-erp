@@ -1,6 +1,5 @@
 // Example: How to use the optimized components in a purchase list page
 
-import React from 'react';
 import { Box, Typography } from '@mui/material';
 import InfiniteScrollTable from './InfiniteScrollTable';
 import { useInfiniteDropshipPurchases } from '../hooks/useDropshipPurchases';
@@ -56,12 +55,12 @@ const purchaseColumns: Column<DropshipPurchase>[] = [
 // Example optimized purchase list component
 export function OptimizedPurchaseList() {
   // Use filters from URL params or state
-  const filters = {
-    channel: '',
-    store: '',
-    from: '',
-    to: '',
-  };
+  // const filters = {
+  //   channel: '',
+  //   store: '',
+  //   from: '',
+  //   to: '',
+  // };
 
   return (
     <Box p={3}>

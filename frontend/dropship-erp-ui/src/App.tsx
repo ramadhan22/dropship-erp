@@ -27,6 +27,7 @@ import ShopeeOrderDetailPage from "./components/ShopeeOrderDetailPage";
 import WalletTransactionPage from "./components/WalletTransactionPage";
 import AdsTopupPage from "./components/AdsTopupPage";
 import BatchHistoryPage from "./components/BatchHistoryPage";
+import AdsPerformancePage from "./components/AdsPerformancePage";
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
         <Link to="/tax-payment">Tax Payment</Link> |{" "}
         <Link to="/withdrawals">Withdrawals</Link> |{" "}
         <Link to="/ads-topups">Ads Topup</Link> |{" "}
+        <Link to="/ads-performance">Ads Dashboard</Link> |{" "}
         <Link to="/wallet-transactions">Wallet Txn</Link> |{" "}
         <Link to="/batches">Batches</Link>
       </nav>
@@ -85,6 +87,7 @@ export default function App() {
           <Route path="/order-details" element={<ShopeeOrderDetailPage />} />
           <Route path="/withdrawals" element={<WithdrawalPage />} />
           <Route path="/ads-topups" element={<AdsTopupPage />} />
+          <Route path="/ads-performance" element={<AdsPerformancePage />} />
           <Route path="/batches" element={<BatchHistoryPage />} />
           <Route
             path="/wallet-transactions"

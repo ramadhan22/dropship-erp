@@ -132,7 +132,7 @@ export default function ReconcileDashboard() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+  const [progress] = useState<{ done: number; total: number } | null>(
     null,
   );
   const [detail, setDetail] = useState<
