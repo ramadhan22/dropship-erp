@@ -136,7 +136,7 @@ func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
 	client.httpClient = srv.Client()
 
-	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil, 5)
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil, nil, 5, nil)
 
 	svc.processShopeeStatusBatch(context.Background(), "ShopA", []*models.DropshipPurchase{dp1, dp2})
 
@@ -183,7 +183,7 @@ func TestProcessShopeeStatusBatch_Escrow_OrderSNMismatch(t *testing.T) {
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
 	client.httpClient = srv.Client()
 
-	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil, 5)
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, nil, nil, 5, nil)
 
 	svc.processShopeeStatusBatch(context.Background(), "ShopA", []*models.DropshipPurchase{dp1, dp2})
 
@@ -230,7 +230,7 @@ func TestUpdateShopeeStatuses_BatchHistory(t *testing.T) {
 	client := NewShopeeClient(config.ShopeeAPIConfig{BaseURLShopee: srv.URL, PartnerID: "1", PartnerKey: "key"})
 	client.httpClient = srv.Client()
 
-	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, batchSvc, 5)
+	svc := NewReconcileService(nil, drop, nil, jrepo, nil, srepo, nil, nil, client, batchSvc, nil, 5, nil)
 
 	svc.UpdateShopeeStatuses(context.Background(), []string{"INV1"})
 

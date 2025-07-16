@@ -108,7 +108,9 @@ func main() {
 		repo.ShopeeAdjustmentRepo,
 		shClient,
 		batchSvc,
+		repo.FailedReconciliationRepo,
 		cfg.MaxThreads,
+		nil, // Use default reconciliation config
 	)
 	service.NewReconcileBatchScheduler(batchSvc, reconSvc, time.Minute).Start(context.Background())
 	metricSvc := service.NewMetricService(
