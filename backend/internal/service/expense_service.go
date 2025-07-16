@@ -63,17 +63,30 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 		logutil.Errorf("CreateExpense journal error: %v", err)
 		return err
 	}
+	// Prepare all journal lines for bulk insert
+	lines := make([]models.JournalLine, 0, len(e.Lines)+1)
 	for i := range e.Lines {
 		l := e.Lines[i]
-		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
-		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
-			logutil.Errorf("CreateExpense line error: %v", err)
-			return err
-		}
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: l.AccountID, 
+			IsDebit:   true, 
+			Amount:    l.Amount, 
+			Memo:      &e.Description,
+		})
 	}
-	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
-	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
-		logutil.Errorf("CreateExpense asset line error: %v", err)
+	// Add asset line
+	lines = append(lines, models.JournalLine{
+		JournalID: jid, 
+		AccountID: e.AssetAccountID, 
+		IsDebit:   false, 
+		Amount:    total, 
+		Memo:      &e.Description,
+	})
+	
+	// Use bulk insert for all lines
+	if err := jRepo.InsertJournalLines(ctx, lines); err != nil {
+		logutil.Errorf("CreateExpense lines error: %v", err)
 		return err
 	}
 	if tx != nil {
@@ -136,11 +149,20 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 		if err != nil {
 			return err
 		}
+		// Prepare reverse lines for bulk insert
+		reverseLines := make([]models.JournalLine, 0, len(lines))
 		for _, l := range lines {
-			rl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: !l.IsDebit, Amount: l.Amount, Memo: rev.Description}
-			if err := jRepo.InsertJournalLine(ctx, rl); err != nil {
-				return err
-			}
+			reverseLines = append(reverseLines, models.JournalLine{
+				JournalID: jid, 
+				AccountID: l.AccountID, 
+				IsDebit:   !l.IsDebit, 
+				Amount:    l.Amount, 
+				Memo:      rev.Description,
+			})
+		}
+		// Use bulk insert for reverse lines
+		if err := jRepo.InsertJournalLines(ctx, reverseLines); err != nil {
+			return err
 		}
 	}
 
@@ -167,17 +189,30 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 		logutil.Errorf("UpdateExpense journal error: %v", err)
 		return err
 	}
+	// Prepare all journal lines for bulk insert
+	lines := make([]models.JournalLine, 0, len(e.Lines)+1)
 	for i := range e.Lines {
 		l := e.Lines[i]
-		jl := &models.JournalLine{JournalID: jid, AccountID: l.AccountID, IsDebit: true, Amount: l.Amount, Memo: &e.Description}
-		if err := jRepo.InsertJournalLine(ctx, jl); err != nil {
-			logutil.Errorf("UpdateExpense line error: %v", err)
-			return err
-		}
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: l.AccountID, 
+			IsDebit:   true, 
+			Amount:    l.Amount, 
+			Memo:      &e.Description,
+		})
 	}
-	jlAsset := &models.JournalLine{JournalID: jid, AccountID: e.AssetAccountID, IsDebit: false, Amount: total, Memo: &e.Description}
-	if err := jRepo.InsertJournalLine(ctx, jlAsset); err != nil {
-		logutil.Errorf("UpdateExpense asset line error: %v", err)
+	// Add asset line
+	lines = append(lines, models.JournalLine{
+		JournalID: jid, 
+		AccountID: e.AssetAccountID, 
+		IsDebit:   false, 
+		Amount:    total, 
+		Memo:      &e.Description,
+	})
+	
+	// Use bulk insert for all lines
+	if err := jRepo.InsertJournalLines(ctx, lines); err != nil {
+		logutil.Errorf("UpdateExpense lines error: %v", err)
 		return err
 	}
 	if tx != nil {

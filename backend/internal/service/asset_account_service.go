@@ -90,12 +90,12 @@ func (s *AssetAccountService) AdjustBalance(ctx context.Context, id int64, newBa
 		return err
 	}
 	amt := math.Abs(diff)
-	jl1 := &models.JournalLine{JournalID: jid, AccountID: aa.AccountID, IsDebit: diff > 0, Amount: amt}
-	jl2 := &models.JournalLine{JournalID: jid, AccountID: 3001, IsDebit: diff < 0, Amount: amt}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl1); err != nil {
-		return err
+	lines := []models.JournalLine{
+		{JournalID: jid, AccountID: aa.AccountID, IsDebit: diff > 0, Amount: amt},
+		{JournalID: jid, AccountID: 3001, IsDebit: diff < 0, Amount: amt},
 	}
-	if err := s.journalRepo.InsertJournalLine(ctx, jl2); err != nil {
+	// Use bulk insert for lines
+	if err := s.journalRepo.InsertJournalLines(ctx, lines); err != nil {
 		return err
 	}
 	return nil

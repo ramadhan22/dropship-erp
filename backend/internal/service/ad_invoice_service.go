@@ -212,12 +212,12 @@ func (s *AdInvoiceService) ImportInvoicePDF(ctx context.Context, r io.Reader) er
 		if err != nil {
 			return err
 		}
-		jl1 := &models.JournalLine{JournalID: jid, AccountID: 55003, IsDebit: true, Amount: inv.Total, Memo: strPtr("Biaya Iklan " + inv.InvoiceNo)}
-		jl2 := &models.JournalLine{JournalID: jid, AccountID: adsSaldoShopeeAccountID(inv.Store), IsDebit: false, Amount: inv.Total, Memo: strPtr("Pembayaran Iklan " + inv.InvoiceNo)}
-		if err := s.journalRepo.InsertJournalLine(ctx, jl1); err != nil {
-			return err
+		lines := []models.JournalLine{
+			{JournalID: jid, AccountID: 55003, IsDebit: true, Amount: inv.Total, Memo: strPtr("Biaya Iklan " + inv.InvoiceNo)},
+			{JournalID: jid, AccountID: adsSaldoShopeeAccountID(inv.Store), IsDebit: false, Amount: inv.Total, Memo: strPtr("Pembayaran Iklan " + inv.InvoiceNo)},
 		}
-		if err := s.journalRepo.InsertJournalLine(ctx, jl2); err != nil {
+		// Use bulk insert for lines
+		if err := s.journalRepo.InsertJournalLines(ctx, lines); err != nil {
 			return err
 		}
 	}

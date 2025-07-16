@@ -36,6 +36,7 @@ type ReconcileServiceShopeeRepo interface {
 type ReconcileServiceJournalRepo interface {
 	CreateJournalEntry(ctx context.Context, e *models.JournalEntry) (int64, error)
 	InsertJournalLine(ctx context.Context, l *models.JournalLine) error
+	InsertJournalLines(ctx context.Context, lines []models.JournalLine) error
 }
 type ReconcileServiceRecRepo interface {
 	InsertReconciledTransaction(ctx context.Context, r *models.ReconciledTransaction) error
@@ -455,11 +456,15 @@ func (s *ReconcileService) CancelPurchaseAt(ctx context.Context, kodePesanan str
 		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: false, Amount: prodCh, Memo: ptrString("Pending receivable " + dp.KodeInvoiceChannel)},
 		{JournalID: jid, AccountID: 4001, IsDebit: true, Amount: prodCh, Memo: ptrString("Sales " + dp.KodeInvoiceChannel)},
 	}
+	// Filter out lines with zero amounts and use bulk insert
+	validLines := make([]models.JournalLine, 0, len(lines))
 	for i := range lines {
-		if lines[i].Amount == 0 {
-			continue
+		if lines[i].Amount != 0 {
+			validLines = append(validLines, lines[i])
 		}
-		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+	}
+	if len(validLines) > 0 {
+		if err := jrRepo.InsertJournalLines(ctx, validLines); err != nil {
 			return err
 		}
 	}
@@ -934,11 +939,15 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		return fmt.Errorf("unbalanced journal entries: debits %.2f != credits %.2f", totalDebits, totalCredits)
 	}
 
+	// Filter out lines with zero amounts and use bulk insert
+	validLines := make([]models.JournalLine, 0, len(lines))
 	for i := range lines {
-		if lines[i].Amount == 0 {
-			continue
+		if lines[i].Amount != 0 {
+			validLines = append(validLines, lines[i])
 		}
-		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+	}
+	if len(validLines) > 0 {
+		if err := jrRepo.InsertJournalLines(ctx, validLines); err != nil {
 			return err
 		}
 	}
@@ -1120,12 +1129,15 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 		{JournalID: jid, AccountID: 52009, IsDebit: true, Amount: actualReturnAmount, Memo: ptrString("Refund " + invoice)},
 	}
 
-	// Only add non-zero amount lines
+	// Filter out lines with zero amounts and use bulk insert
+	validLines := make([]models.JournalLine, 0, len(lines))
 	for i := range lines {
-		if lines[i].Amount == 0 {
-			continue
+		if lines[i].Amount != 0 {
+			validLines = append(validLines, lines[i])
 		}
-		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+	}
+	if len(validLines) > 0 {
+		if err := jrRepo.InsertJournalLines(ctx, validLines); err != nil {
 			return err
 		}
 	}
