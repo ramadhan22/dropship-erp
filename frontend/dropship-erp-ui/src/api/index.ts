@@ -53,25 +53,30 @@ export const api = axios.create({
   baseURL: BASE_URL,
 });
 
+// Extend axios config type to include our custom loading flag
+interface CustomAxiosRequestConfig {
+  _withLoading?: boolean;
+}
+
 // Global loading indicator hooks into axios requests
 api.interceptors.request.use((config) => {
   if (!config.headers?.["X-Skip-Loading"]) {
     loadingEmitter.start();
     // mark so we know to end later
-    (config as any)._withLoading = true;
+    (config as CustomAxiosRequestConfig)._withLoading = true;
   }
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-    if ((res.config as any)._withLoading) {
+    if ((res.config as CustomAxiosRequestConfig)._withLoading) {
       loadingEmitter.end();
     }
     return res;
   },
   (err) => {
-    if ((err.config as any)._withLoading) {
+    if ((err.config as CustomAxiosRequestConfig)._withLoading) {
       loadingEmitter.end();
     }
     return Promise.reject(err);
