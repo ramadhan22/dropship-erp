@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -34,6 +35,18 @@ func (s *WalletWithdrawalService) List(ctx context.Context, store string, p Wall
 	if err != nil {
 		return nil, false, err
 	}
+	
+	// Adjust withdrawal amounts by SPM_DISBURSE_ADD transactions on the same day
+	for i := range txs {
+		disburseAddAmount, err := s.findSpmDisburseAddAmount(ctx, store, txs[i].CreateTime)
+		if err != nil {
+			// Log the error but don't fail the entire request
+			log.Printf("Warning: failed to check SPM_DISBURSE_ADD for transaction %d: %v", txs[i].TransactionID, err)
+		} else if disburseAddAmount > 0 {
+			txs[i].Amount = txs[i].Amount - disburseAddAmount
+		}
+	}
+	
 	if s.journalRepo != nil {
 		for i := range txs {
 			sid := fmt.Sprintf("%d", txs[i].TransactionID)
