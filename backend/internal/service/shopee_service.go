@@ -1262,3 +1262,205 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 	}
 	return nil
 }
+
+// CreateReturnedOrderJournal creates a journal entry for handling returned order escrow settlements.
+// This function implements the specific business logic for processing Shopee order returns
+// based on escrow detail data including seller return refunds and shipping fees.
+func (s *ShopeeService) CreateReturnedOrderJournal(ctx context.Context, orderSN string, escrowDetail ShopeeEscrowDetail, settlementDate time.Time) error {
+	log.Printf("Creating returned order journal for order %s", orderSN)
+	
+	// Get the original settled order to find store information
+	order, err := s.repo.GetBySN(ctx, orderSN)
+	if err != nil {
+		return fmt.Errorf("failed to get order %s: %w", orderSN, err)
+	}
+	
+	// Extract amounts from escrow detail
+	sellerReturnRefund, _ := parseFloat(fmt.Sprint(escrowDetail["seller_return_refund"]))
+	reverseShippingFee, _ := parseFloat(fmt.Sprint(escrowDetail["reverse_shipping_fee"]))
+	commissionFee, _ := parseFloat(fmt.Sprint(escrowDetail["commission_fee"]))
+	serviceFee, _ := parseFloat(fmt.Sprint(escrowDetail["service_fee"]))
+	
+	// Seller return refund should be negative, take absolute value for calculations
+	returnRefundAmt := abs(sellerReturnRefund)
+	
+	if returnRefundAmt == 0 {
+		return fmt.Errorf("no return refund amount found in escrow detail")
+	}
+	
+	log.Printf("Processing return: refund=%.2f, shipping=%.2f, commission=%.2f, service=%.2f", 
+		returnRefundAmt, reverseShippingFee, commissionFee, serviceFee)
+	
+	// Calculate jakmall adjustment from original settlement journal
+	jakmallAdjustment, err := s.calculateJakmallAdjustment(ctx, orderSN, returnRefundAmt)
+	if err != nil {
+		log.Printf("Warning: failed to calculate jakmall adjustment for %s: %v", orderSN, err)
+		jakmallAdjustment = 0 // Continue without jakmall adjustment if calculation fails
+	}
+	
+	jr := s.journalRepo
+	if s.db != nil {
+		tx, err := s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("failed to begin transaction: %w", err)
+		}
+		defer tx.Rollback()
+		jr = repository.NewJournalRepo(tx)
+		
+		if err := s.createReturnJournalEntry(ctx, jr, order, returnRefundAmt, reverseShippingFee, 
+			commissionFee, serviceFee, jakmallAdjustment, settlementDate); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+	
+	return s.createReturnJournalEntry(ctx, jr, order, returnRefundAmt, reverseShippingFee, 
+		commissionFee, serviceFee, jakmallAdjustment, settlementDate)
+}
+
+// createReturnJournalEntry creates the actual journal entry with balanced debits and credits
+func (s *ShopeeService) createReturnJournalEntry(ctx context.Context, jr ShopeeJournalRepo, order *models.ShopeeSettled, 
+	returnRefundAmt, reverseShippingFee, commissionFee, serviceFee, jakmallAdjustment float64, settlementDate time.Time) error {
+	
+	je := &models.JournalEntry{
+		EntryDate:    settlementDate,
+		Description:  ptrString("Returned order settlement " + order.NoPesanan),
+		SourceType:   "shopee_return",
+		SourceID:     order.NoPesanan + "-return",
+		ShopUsername: order.NamaToko,
+		Store:        order.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	
+	jid, err := jr.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return fmt.Errorf("failed to create journal entry: %w", err)
+	}
+	
+	var lines []models.JournalLine
+	
+	// 1. Store Pending Balance Reduction (Credit pending account by return refund amount)
+	if returnRefundAmt > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: pendingAccountID(order.NamaToko), 
+			IsDebit:   false, 
+			Amount:    returnRefundAmt,
+			Memo:      ptrString("Return refund pending reduction " + order.NoPesanan),
+		})
+	}
+	
+	// 2. Store Sales Reduction (Debit sales account by return refund amount)
+	if returnRefundAmt > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: 4001, // Sales/Revenue account
+			IsDebit:   true, 
+			Amount:    returnRefundAmt,
+			Memo:      ptrString("Return sales reduction " + order.NoPesanan),
+		})
+	}
+	
+	// 3. Saldo Jakmall Adjustment (if calculated successfully)
+	if jakmallAdjustment > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: saldoShopeeAccountID(order.NamaToko), 
+			IsDebit:   true, 
+			Amount:    jakmallAdjustment,
+			Memo:      ptrString("Jakmall adjustment " + order.NoPesanan),
+		})
+	}
+	
+	// 4. Return Shipping Fee
+	if reverseShippingFee > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: 52010, // Shipping expense account (Selisih Ongkir)
+			IsDebit:   true, 
+			Amount:    reverseShippingFee,
+			Memo:      ptrString("Return shipping fee " + order.NoPesanan),
+		})
+	}
+	
+	// 5. Commission Fee (keep as expense)
+	if commissionFee > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: 52006, // Biaya Administrasi
+			IsDebit:   true, 
+			Amount:    commissionFee,
+			Memo:      ptrString("Return commission fee " + order.NoPesanan),
+		})
+	}
+	
+	// 6. Service Fee (keep as expense)
+	if serviceFee > 0 {
+		lines = append(lines, models.JournalLine{
+			JournalID: jid, 
+			AccountID: 52004, // Biaya Layanan
+			IsDebit:   true, 
+			Amount:    serviceFee,
+			Memo:      ptrString("Return service fee " + order.NoPesanan),
+		})
+	}
+	
+	// Insert all journal lines
+	for i := range lines {
+		if lines[i].Amount > 0 {
+			if err := jr.InsertJournalLine(ctx, &lines[i]); err != nil {
+				return fmt.Errorf("failed to insert journal line: %w", err)
+			}
+		}
+	}
+	
+	log.Printf("Created returned order journal entry %d for order %s", jid, order.NoPesanan)
+	return nil
+}
+
+// calculateJakmallAdjustment finds the original settlement journal and calculates
+// the jakmall percentage to apply for the return adjustment
+func (s *ShopeeService) calculateJakmallAdjustment(ctx context.Context, orderSN string, returnRefundAmt float64) (float64, error) {
+	// Look for the original settlement journal entry
+	originalJE, err := s.journalRepo.GetJournalEntryBySource(ctx, "shopee_settled", orderSN)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find original settlement journal: %w", err)
+	}
+	
+	if originalJE == nil {
+		return 0, fmt.Errorf("no original settlement journal found for order %s", orderSN)
+	}
+	
+	// Get the journal lines to analyze the distribution
+	lines, err := s.journalRepo.GetLinesByJournalID(ctx, originalJE.JournalID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get journal lines: %w", err)
+	}
+	
+	var totalSales, jakmallAmount float64
+	
+	// Find the sales amount (pending account credit) and jakmall amount (saldo shopee debit)
+	for _, line := range lines {
+		if line.AccountID == pendingAccountID(originalJE.Store) && !line.IsDebit {
+			// This is the pending credit (original sales amount)
+			totalSales = line.Amount
+		}
+		if line.AccountID == saldoShopeeAccountID(originalJE.Store) && line.IsDebit {
+			// This is the saldo shopee debit (jakmall portion)
+			jakmallAmount = line.Amount
+		}
+	}
+	
+	if totalSales == 0 {
+		return 0, fmt.Errorf("could not determine original sales amount from journal")
+	}
+	
+	// Calculate jakmall percentage and apply to return amount
+	jakmallPercentage := jakmallAmount / totalSales
+	jakmallAdjustment := returnRefundAmt * jakmallPercentage
+	
+	log.Printf("Jakmall calculation: totalSales=%.2f, jakmallAmount=%.2f, percentage=%.4f, adjustment=%.2f", 
+		totalSales, jakmallAmount, jakmallPercentage, jakmallAdjustment)
+	
+	return jakmallAdjustment, nil
+}
