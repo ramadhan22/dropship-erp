@@ -671,6 +671,60 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 		}
 		return nil
 	}
+	
+	// Handle returned orders - both full and partial returns
+	if status == "returned" || status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "return") {
+		// Check if return journal already exists to avoid duplicates
+		if s.HasReturnJournal(ctx, invoice) {
+			log.Printf("Return journal already exists for %s, skipping", invoice)
+			return nil
+		}
+		
+		// Get escrow detail to determine return amounts
+		escDetail, err := s.GetShopeeEscrowDetail(ctx, invoice)
+		if err != nil {
+			return fmt.Errorf("get escrow detail for return %s: %w", invoice, err)
+		}
+		
+		// Determine if this is a partial return and extract return amount
+		isPartialReturn := status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "partial")
+		returnAmount := 0.0
+		
+		// For partial returns, extract the actual return amount from escrow detail
+		if isPartialReturn {
+			m := map[string]any(*escDetail)
+			if income, ok := m["order_income"].(map[string]any); ok {
+				if refundAmt, ok := income["refund_amount"]; ok {
+					if v := asFloat64(map[string]any{"refund_amount": refundAmt}, "refund_amount"); v != nil {
+						returnAmount = *v
+					}
+				}
+				// Fallback: calculate from order adjustments if refund_amount not available
+				if returnAmount == 0 {
+					if adjList, ok := income["order_adjustment"].([]any); ok {
+						for _, a := range adjList {
+							am, ok := a.(map[string]any)
+							if !ok {
+								continue
+							}
+							reason, _ := am["adjustment_reason"].(string)
+							if strings.Contains(strings.ToLower(reason), "return") || strings.Contains(strings.ToLower(reason), "refund") {
+								if v := asFloat64(am, "amount"); v != nil {
+									returnAmount += math.Abs(*v)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		if err := s.createReturnedOrderJournal(ctx, invoice, statusStr, updateTime, escDetail, isPartialReturn, returnAmount); err != nil {
+			return err
+		}
+		return nil
+	}
+	
 	if status != "cancelled" {
 		return nil
 	}
@@ -895,6 +949,248 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 	}
 	return nil
 }
+
+// createReturnedOrderJournal handles journal entries for returned orders in escrow settlements.
+// It reverses the original escrow settlement and records appropriate refund entries.
+func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoice, status string, updateTime time.Time, escDetail *ShopeeEscrowDetail, isPartialReturn bool, returnAmount float64) error {
+	log.Printf("createReturnedOrderJournal %s (partial: %t, amount: %.2f)", invoice, isPartialReturn, returnAmount)
+
+	var tx *sqlx.Tx
+	dropRepo := s.dropRepo
+	jrRepo := s.journalRepo
+	if s.db != nil {
+		var err error
+		tx, err = s.db.BeginTxx(ctx, nil)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+		dropRepo = repository.NewDropshipRepo(tx)
+		jrRepo = repository.NewJournalRepo(tx)
+	}
+
+	log.Printf("Fetching DropshipPurchase for returned invoice %s", invoice)
+	dp, err := dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+	if err != nil || dp == nil {
+		return fmt.Errorf("fetch purchase %s: %w", invoice, err)
+	}
+
+	// Get escrow detail if not provided
+	if escDetail == nil {
+		escDetail, err = s.GetShopeeEscrowDetail(ctx, invoice)
+		if err != nil {
+			return err
+		}
+	}
+
+	m := map[string]any(*escDetail)
+	income, _ := m["order_income"].(map[string]any)
+	
+	// Extract amounts from escrow detail
+	orderPrice := 0.0
+	if v := asFloat64(income, "order_original_price"); v != nil {
+		orderPrice = *v
+	}
+	commission := 0.0
+	if v := asFloat64(income, "commission_fee"); v != nil {
+		commission = *v
+	}
+	service := 0.0
+	if v := asFloat64(income, "service_fee"); v != nil {
+		service = *v
+	}
+	voucher := 0.0
+	if v := asFloat64(income, "voucher_from_seller"); v != nil {
+		voucher = *v
+	}
+	if v := asFloat64(income, "seller_coin_cash_back"); v != nil {
+		voucher += *v
+	}
+	discount := 0.0
+	if v := asFloat64(income, "order_seller_discount"); v != nil {
+		discount = *v
+	}
+	affiliate := 0.0
+	if v := asFloat64(income, "order_ams_commission_fee"); v != nil {
+		affiliate = *v
+	}
+	shipDisc := 0.0
+	if v := asFloat64(income, "seller_shipping_discount"); v != nil {
+		shipDisc = *v
+	}
+
+	// Handle BD Marketing adjustments for affiliate fees
+	if adjList, ok := income["order_adjustment"].([]any); ok {
+		for _, a := range adjList {
+			am, ok := a.(map[string]any)
+			if !ok {
+				continue
+			}
+			reason, _ := am["adjustment_reason"].(string)
+			if strings.EqualFold(reason, "BD Marketing") {
+				if v := asFloat64(am, "amount"); v != nil {
+					affiliate += math.Abs(*v)
+				}
+			}
+		}
+	}
+
+	// Calculate return proportion for partial returns
+	returnProportion := 1.0
+	if isPartialReturn && orderPrice > 0 {
+		returnProportion = returnAmount / orderPrice
+	}
+
+	// Scale amounts proportionally for partial returns
+	returnCommission := commission * returnProportion
+	returnService := service * returnProportion
+	returnVoucher := voucher * returnProportion
+	returnDiscount := discount * returnProportion
+	returnShipDisc := shipDisc * returnProportion
+	returnAffiliate := affiliate * returnProportion
+	actualReturnAmount := orderPrice * returnProportion
+
+	je := &models.JournalEntry{
+		EntryDate:    updateTime,
+		Description:  ptrString(fmt.Sprintf("Shopee return %s%s", invoice, func() string {
+			if isPartialReturn {
+				return fmt.Sprintf(" (partial %.2f)", actualReturnAmount)
+			}
+			return ""
+		}())),
+		SourceType:   "shopee_return",
+		SourceID:     invoice,
+		ShopUsername: dp.NamaToko,
+		Store:        dp.NamaToko,
+		CreatedAt:    time.Now(),
+	}
+	jid, err := jrRepo.CreateJournalEntry(ctx, je)
+	if err != nil {
+		return err
+	}
+
+	var lines []models.JournalLine
+
+	// For returned orders, we need to reverse the escrow settlement journal entries
+	// and record the refund to the customer
+	lines = []models.JournalLine{
+		// Reverse the pending account credit (now debit)
+		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: true, Amount: actualReturnAmount, Memo: ptrString("Reverse pending " + invoice)},
+		
+		// Reverse the expense account debits (now credits)
+		{JournalID: jid, AccountID: 52006, IsDebit: false, Amount: returnCommission, Memo: ptrString("Reverse commission " + invoice)},
+		{JournalID: jid, AccountID: 52004, IsDebit: false, Amount: returnService, Memo: ptrString("Reverse service fee " + invoice)},
+		{JournalID: jid, AccountID: 55001, IsDebit: false, Amount: returnVoucher, Memo: ptrString("Reverse voucher " + invoice)},
+		{JournalID: jid, AccountID: 55004, IsDebit: false, Amount: returnDiscount, Memo: ptrString("Reverse discount " + invoice)},
+		{JournalID: jid, AccountID: 55006, IsDebit: false, Amount: returnShipDisc, Memo: ptrString("Reverse shipping discount " + invoice)},
+		{JournalID: jid, AccountID: 55002, IsDebit: false, Amount: returnAffiliate, Memo: ptrString("Reverse affiliate " + invoice)},
+		
+		// Record refund to customer using refund account
+		{JournalID: jid, AccountID: 52009, IsDebit: true, Amount: actualReturnAmount, Memo: ptrString("Refund " + invoice)},
+	}
+
+	// Only add non-zero amount lines
+	for i := range lines {
+		if lines[i].Amount == 0 {
+			continue
+		}
+		if err := jrRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
+			return err
+		}
+	}
+
+	// Update order detail status if available
+	if s.detailRepo != nil {
+		returnStatus := "returned"
+		if isPartialReturn {
+			returnStatus = "partial_return"
+		}
+		if err := s.detailRepo.UpdateOrderDetailStatus(ctx, dp.KodeInvoiceChannel, returnStatus, returnStatus, updateTime); err != nil {
+			log.Printf("update order detail status %s: %v", invoice, err)
+		}
+	}
+
+	// Update purchase status
+	purchaseStatus := "Pesanan dikembalikan"
+	if isPartialReturn {
+		purchaseStatus = "Sebagian dikembalikan"
+	}
+	if err := dropRepo.UpdatePurchaseStatus(ctx, dp.KodePesanan, purchaseStatus); err != nil {
+		return fmt.Errorf("update purchase status: %w", err)
+	}
+
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+
+	log.Printf("createReturnedOrderJournal completed: %s", invoice)
+	return nil
+}
+
+// ProcessReturnedOrder handles manual return processing from the reconcile dashboard.
+// This method allows updating escrow status for returned orders with proper journal entries.
+func (s *ReconcileService) ProcessReturnedOrder(ctx context.Context, invoice string, isPartialReturn bool, returnAmount float64) error {
+	log.Printf("ProcessReturnedOrder: %s (partial: %t, amount: %.2f)", invoice, isPartialReturn, returnAmount)
+	
+	// Get current order detail to validate status
+	detail, err := s.GetShopeeOrderDetail(ctx, invoice)
+	if err != nil {
+		return fmt.Errorf("get order detail for return %s: %w", invoice, err)
+	}
+	
+	statusVal, ok := (*detail)["order_status"]
+	if !ok {
+		statusVal = (*detail)["status"]
+	}
+	statusStr, _ := statusVal.(string)
+	
+	// Extract update time
+	var updateTime time.Time
+	if ts, ok := (*detail)["update_time"]; ok {
+		switch v := ts.(type) {
+		case float64:
+			updateTime = time.Unix(int64(v), 0)
+		case int64:
+			updateTime = time.Unix(v, 0)
+		case int:
+			updateTime = time.Unix(int64(v), 0)
+		case string:
+			if t, err := strconv.ParseInt(v, 10, 64); err == nil {
+				updateTime = time.Unix(t, 0)
+			}
+		}
+	}
+	if updateTime.IsZero() {
+		updateTime = time.Now()
+	}
+	
+	// Get escrow detail for return processing
+	escDetail, err := s.GetShopeeEscrowDetail(ctx, invoice)
+	if err != nil {
+		return fmt.Errorf("get escrow detail for return %s: %w", invoice, err)
+	}
+	
+	// Create returned order journal entry
+	return s.createReturnedOrderJournal(ctx, invoice, statusStr, updateTime, escDetail, isPartialReturn, returnAmount)
+}
+
+// HasReturnJournal checks if a return journal entry already exists for the given invoice
+func (s *ReconcileService) HasReturnJournal(ctx context.Context, invoice string) bool {
+	if journalRepo, ok := s.journalRepo.(interface {
+		ExistsBySourceTypeAndID(ctx context.Context, sourceType, sourceID string) (bool, error)
+	}); ok {
+		exists, err := journalRepo.ExistsBySourceTypeAndID(ctx, "shopee_return", invoice)
+		if err != nil {
+			log.Printf("check return journal for %s: %v", invoice, err)
+			return false
+		}
+		return exists
+	}
+	return false
+}
+
 func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []string) error {
 	if len(invoices) == 0 {
 		return nil
@@ -970,7 +1266,9 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 		return
 	}
 	completed := []string{}
+	returned := []string{} // Track returned orders for separate processing
 	timeMap := make(map[string]time.Time)
+	statusMap := make(map[string]string) // Track status strings for returned orders
 	for _, det := range details {
 		sn, _ := det["order_sn"].(string)
 		statusVal, ok := det["order_status"]
@@ -1013,6 +1311,15 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			timeMap[sn] = updateTime
 			continue
 		}
+		
+		// Handle returned orders
+		if status == "returned" || status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "return") {
+			returned = append(returned, sn)
+			timeMap[sn] = updateTime
+			statusMap[sn] = statusStr
+			continue
+		}
+		
 		if status == "cancelled" {
 			if err := s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee"); err != nil {
 				log.Printf("cancel purchase %s: %v", dp.KodePesanan, err)
@@ -1060,6 +1367,73 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 					log.Printf("creating escrow settlement journal for %s", inv)
 					if err := s.createEscrowSettlementJournal(ctx, inv, "completed", timeMap[sn], &esc); err != nil {
 						log.Printf("escrow settlement %s: %v", sn, err)
+					}
+				}(sn, esc)
+			}
+			wg.Wait()
+		}
+	}
+	
+	// Process returned orders if any
+	if len(returned) > 0 {
+		log.Printf("processing %d returned orders", len(returned))
+		escMap, err := s.client.FetchShopeeEscrowDetails(ctx, *st.AccessToken, *st.ShopID, returned)
+		if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+			if e := s.ensureStoreTokenValid(ctx, st); e == nil {
+				escMap, err = s.client.FetchShopeeEscrowDetails(ctx, *st.AccessToken, *st.ShopID, returned)
+			}
+		}
+		if err != nil {
+			log.Printf("batch escrow detail for returns %s: %v", store, err)
+		} else {
+			var wg sync.WaitGroup
+			limit := s.maxThreads
+			if limit <= 0 {
+				limit = 5
+			}
+			sem := make(chan struct{}, limit)
+
+			log.Printf("processing %d returned order escrow details", len(escMap))
+
+			for sn, esc := range escMap {
+				wg.Add(1)
+				sem <- struct{}{}
+				go func(sn string, esc ShopeeEscrowDetail) {
+					defer func() { <-sem; wg.Done() }()
+					log.Printf("processing return escrow for order %s", sn)
+					inv := sn
+					dp, ok := dpMap[sn]
+					if !ok && s.dropRepo != nil {
+						if d, err := s.dropRepo.GetDropshipPurchaseByID(ctx, sn); err == nil && d != nil {
+							dp = d
+							dpMap[sn] = d
+							dpMap[d.KodeInvoiceChannel] = d
+						}
+					}
+					if dp != nil {
+						log.Printf("found DropshipPurchase invoice %s for return", dp.KodeInvoiceChannel)
+						inv = dp.KodeInvoiceChannel
+					}
+					
+					// Determine if partial return and extract return amount
+					statusStr := statusMap[sn]
+					isPartialReturn := strings.Contains(strings.ToLower(statusStr), "partial") || strings.Contains(strings.ToLower(statusStr), "partial_return")
+					returnAmount := 0.0
+					
+					if isPartialReturn {
+						m := map[string]any(esc)
+						if income, ok := m["order_income"].(map[string]any); ok {
+							if refundAmt, ok := income["refund_amount"]; ok {
+								if v := asFloat64(map[string]any{"refund_amount": refundAmt}, "refund_amount"); v != nil {
+									returnAmount = *v
+								}
+							}
+						}
+					}
+					
+					log.Printf("creating returned order journal for %s (partial: %t, amount: %.2f)", inv, isPartialReturn, returnAmount)
+					if err := s.createReturnedOrderJournal(ctx, inv, statusStr, timeMap[sn], &esc, isPartialReturn, returnAmount); err != nil {
+						log.Printf("returned order journal %s: %v", sn, err)
 					}
 				}(sn, esc)
 			}
