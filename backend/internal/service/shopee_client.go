@@ -108,6 +108,38 @@ func (c *ShopeeClient) signSimple(path string, ts int64) string {
 
 // ========== Optimized HTTP Request Methods ==========
 
+// makeGetRequest makes a GET request with query parameters
+func (c *ShopeeClient) makeGetRequest(ctx context.Context, path string, params map[string]interface{}) ([]byte, error) {
+	// Build query string
+	q := url.Values{}
+	for key, value := range params {
+		q.Set(key, fmt.Sprintf("%v", value))
+	}
+	
+	fullURL := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", fullURL)
+	
+	// Use rate limiter
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit wait failed: %w", err)
+	}
+	
+	// Make request with retry
+	resp, err := c.makeRequestWithRetry(ctx, "GET", fullURL, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	
+	log.Printf("ShopeeClient response: %s", string(body))
+	return body, nil
+}
+
 // makeRequestWithRetry executes HTTP requests with rate limiting and retry logic
 func (c *ShopeeClient) makeRequestWithRetry(ctx context.Context, method, url string, body io.Reader, headers map[string]string) (*http.Response, error) {
 	// Apply rate limiting
