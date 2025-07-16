@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -21,23 +23,70 @@ type TaxRepoInterface interface {
 	MarkPaid(ctx context.Context, id string, paidAt time.Time) error
 }
 
-type RevenueFetcher interface {
-	GetRevenue(ctx context.Context, store, periodType, periodValue string) (float64, error)
+// TaxServiceJournalRepo defines journal repo methods needed for revenue calculation.
+type TaxServiceJournalRepo interface {
+	GetAccountBalancesBetween(ctx context.Context, shop string, from, to time.Time) ([]repository.AccountBalance, error)
 }
 
 type TaxService struct {
 	db          *sqlx.DB
 	repo        TaxRepoInterface
 	journalRepo JournalRepoInterface
-	metricSvc   RevenueFetcher
+	taxJournalRepo TaxServiceJournalRepo
 }
 
-func NewTaxService(db *sqlx.DB, repo TaxRepoInterface, jr JournalRepoInterface, metricSvc RevenueFetcher) *TaxService {
-	return &TaxService{db: db, repo: repo, journalRepo: jr, metricSvc: metricSvc}
+func NewTaxService(db *sqlx.DB, repo TaxRepoInterface, jr JournalRepoInterface, tjr TaxServiceJournalRepo) *TaxService {
+	return &TaxService{db: db, repo: repo, journalRepo: jr, taxJournalRepo: tjr}
+}
+
+// getRevenue calculates revenue from journal entries for the given period.
+func (s *TaxService) getRevenue(ctx context.Context, store, periodType, periodValue string) (float64, error) {
+	var start time.Time
+	var err error
+	
+	switch periodType {
+	case "monthly":
+		start, err = time.Parse("2006-01", periodValue)
+		if err != nil {
+			return 0, err
+		}
+		start = start.UTC()
+	case "yearly":
+		start, err = time.Parse("2006", periodValue)
+		if err != nil {
+			return 0, err
+		}
+		start = start.UTC()
+	default:
+		return 0, fmt.Errorf("unknown period type")
+	}
+
+	var end time.Time
+	if periodType == "monthly" {
+		end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	} else {
+		end = start.AddDate(1, 0, 0).Add(-time.Nanosecond)
+	}
+
+	// Get account balances from journal entries
+	balances, err := s.taxJournalRepo.GetAccountBalancesBetween(ctx, store, start, end)
+	if err != nil {
+		return 0, err
+	}
+
+	// Sum revenue accounts (4.* accounts, but negative since they are credit accounts)
+	var totalRevenue float64
+	for _, ab := range balances {
+		if strings.HasPrefix(ab.AccountCode, "4.") {
+			totalRevenue += -ab.Balance // Revenue accounts have negative balances
+		}
+	}
+
+	return totalRevenue, nil
 }
 
 func (s *TaxService) ComputeTax(ctx context.Context, store, periodType, periodValue string) (*models.TaxPayment, error) {
-	rev, err := s.metricSvc.GetRevenue(ctx, store, periodType, periodValue)
+	rev, err := s.getRevenue(ctx, store, periodType, periodValue)
 	if err != nil {
 		return nil, err
 	}

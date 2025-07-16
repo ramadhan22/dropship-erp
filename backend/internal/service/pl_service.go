@@ -2,28 +2,44 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"errors"
+	"time"
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
 type PLService struct {
-	metricRepo MetricRepoInterface
-	metricSvc  *MetricService
+	plReportSvc *ProfitLossReportService
 }
 
-func NewPLService(m MetricRepoInterface, svc *MetricService) *PLService {
-	return &PLService{metricRepo: m, metricSvc: svc}
+func NewPLService(plReportSvc *ProfitLossReportService) *PLService {
+	return &PLService{plReportSvc: plReportSvc}
 }
 
 func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*models.CachedMetric, error) {
-	cm, err := s.metricRepo.GetCachedMetric(ctx, shop, period)
-	if err != nil && errors.Is(err, sql.ErrNoRows) && s.metricSvc != nil {
-		if err := s.metricSvc.CalculateAndCacheMetrics(ctx, shop, period); err != nil {
-			return nil, err
-		}
-		cm, err = s.metricRepo.GetCachedMetric(ctx, shop, period)
+	// Parse period (e.g., "2025-01" -> year=2025, month=1)
+	date, err := time.Parse("2006-01", period)
+	if err != nil {
+		return nil, err
 	}
-	return cm, err
+	year := date.Year()
+	month := int(date.Month())
+
+	// Get P&L from journal-based service
+	pl, err := s.plReportSvc.GetProfitLoss(ctx, "Monthly", month, year, shop)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert ProfitLoss to CachedMetric format for backward compatibility
+	cm := &models.CachedMetric{
+		ShopUsername:      shop,
+		Period:            period,
+		SumRevenue:        pl.TotalPendapatanUsaha,
+		SumCOGS:           pl.TotalHargaPokokPenjualan,
+		SumFees:           pl.TotalBebanPemasaran,
+		NetProfit:         pl.LabaRugiBersih.Amount,
+		EndingCashBalance: 0, // This would require additional logic if needed
+		UpdatedAt:         time.Now(),
+	}
+	return cm, nil
 }

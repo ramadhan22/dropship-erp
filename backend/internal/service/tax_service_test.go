@@ -9,16 +9,19 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
-type fakeMetricSvc struct{ rev float64 }
-
-func (f *fakeMetricSvc) GetRevenue(ctx context.Context, store, pt, pv string) (float64, error) {
-	return f.rev, nil
+type fakeTaxJournalRepo struct {
+	balances []repository.AccountBalance
 }
 
-func (f *fakeMetricSvc) CalculateAndCacheMetrics(ctx context.Context, shop, period string) error {
-	return nil
+func (f *fakeTaxJournalRepo) GetAccountBalancesBetween(ctx context.Context, shop string, from, to time.Time) ([]repository.AccountBalance, error) {
+	if f.balances == nil {
+		// Return some revenue accounts with negative balances (since they're credit accounts)
+		f.balances = []repository.AccountBalance{
+			{AccountCode: "4.1", AccountName: "Revenue", Balance: -1000}, // Revenue should be negative
+		}
+	}
+	return f.balances, nil
 }
-func (f *fakeMetricSvc) MetricRepo() MetricRepoInterface { return nil }
 
 type fakeTaxRepo struct {
 	paid map[string]time.Time
@@ -65,7 +68,8 @@ func (f *fakeJournalRepoT) ListEntriesBySourceID(ctx context.Context, sourceID s
 func (f *fakeJournalRepoT) DeleteJournalEntry(ctx context.Context, id int64) error { return nil }
 
 func TestComputeTax(t *testing.T) {
-	svc := NewTaxService(nil, &fakeTaxRepo{}, &fakeJournalRepoT{}, &fakeMetricSvc{rev: 1000})
+	taxJournalRepo := &fakeTaxJournalRepo{}
+	svc := NewTaxService(nil, &fakeTaxRepo{}, &fakeJournalRepoT{}, taxJournalRepo)
 	tp, err := svc.ComputeTax(context.Background(), "Store", "monthly", "2025-06")
 	if err != nil {
 		t.Fatalf("err %v", err)
@@ -78,7 +82,8 @@ func TestComputeTax(t *testing.T) {
 func TestPayTax(t *testing.T) {
 	repo := &fakeTaxRepo{}
 	jr := &fakeJournalRepoT{}
-	svc := NewTaxService(nil, repo, jr, &fakeMetricSvc{})
+	taxJournalRepo := &fakeTaxJournalRepo{}
+	svc := NewTaxService(nil, repo, jr, taxJournalRepo)
 	tp := &models.TaxPayment{ID: "1", TaxAmount: 5, Store: "S"}
 	if err := svc.PayTax(context.Background(), tp); err != nil {
 		t.Fatalf("err %v", err)

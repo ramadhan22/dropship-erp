@@ -100,18 +100,15 @@ func main() {
 	// process pending dropship imports in the background
 	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo, cfg.Shopee)
-	metricSvc := service.NewMetricService(
-		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.MetricRepo,
-	)
-	taxSvc := service.NewTaxService(repo.DB, repo.TaxRepo, repo.JournalRepo, metricSvc)
+	taxSvc := service.NewTaxService(repo.DB, repo.TaxRepo, repo.JournalRepo, repo.JournalRepo)
 	expenseSvc := service.NewExpenseService(repo.DB, repository.NewExpenseRepo(repo.DB), repo.JournalRepo)
 	balanceSvc := service.NewBalanceService(repo.JournalRepo)
 	channelSvc := service.NewChannelService(repo.ChannelRepo, shClient)
 	accountSvc := service.NewAccountService(repo.AccountRepo)
 	adsSvc := service.NewAdInvoiceService(repo.DB, repo.AdInvoiceRepo, repo.JournalRepo)
 	journalSvc := service.NewJournalService(repo.DB, repo.JournalRepo)
-	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	plReportSvc := service.NewProfitLossReportService(repo.JournalRepo)
+	plSvc := service.NewPLService(plReportSvc)
 	glSvc := service.NewGLService(repo.JournalRepo)
 	walletSvc := service.NewWalletTransactionService(repo.ChannelRepo, shClient)
 	walletWdSvc := service.NewWalletWithdrawalService(walletSvc, repo.JournalRepo)
