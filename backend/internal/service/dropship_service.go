@@ -28,6 +28,7 @@ type DropshipRepoInterface interface {
 	ExistsDropshipPurchase(ctx context.Context, kodePesanan string) (bool, error)
 	ListExistingPurchases(ctx context.Context, ids []string) (map[string]bool, error)
 	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	ListDropshipPurchasesFiltered(ctx context.Context, params *models.FilterParams) (*models.QueryResult, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
@@ -503,6 +504,14 @@ func (s *DropshipService) ListDropshipPurchases(
 	limit, offset int,
 ) ([]models.DropshipPurchase, int, error) {
 	return s.repo.ListDropshipPurchases(ctx, channel, store, from, to, orderNo, sortBy, dir, limit, offset)
+}
+
+// ListDropshipPurchasesFiltered uses the new filtering framework to fetch purchases
+func (s *DropshipService) ListDropshipPurchasesFiltered(
+	ctx context.Context,
+	params *models.FilterParams,
+) (*models.QueryResult, error) {
+	return s.repo.ListDropshipPurchasesFiltered(ctx, params)
 }
 
 func (s *DropshipService) SumDropshipPurchases(
