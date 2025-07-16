@@ -22,7 +22,7 @@ func TestMigrationFilesEmbedded(t *testing.T) {
 	// Check that we have the expected seed files
 	expectedFiles := []string{
 		"0104_seed_chart_of_accounts.up.sql",
-		"0105_seed_reference_data.up.sql", 
+		"0105_seed_reference_data.up.sql",
 		"0107_seed_sample_data.up.sql",
 	}
 
@@ -76,16 +76,16 @@ func TestMigrationSystemWithMock(t *testing.T) {
 	mock.ExpectQuery("SELECT current_database()").WillReturnRows(sqlmock.NewRows([]string{"current_database"}).AddRow("test_db"))
 	mock.ExpectQuery("SELECT current_schema()").WillReturnRows(sqlmock.NewRows([]string{"current_schema"}).AddRow("public"))
 	mock.ExpectQuery("SHOW server_version_num").WillReturnRows(sqlmock.NewRows([]string{"server_version_num"}).AddRow("120000"))
-	
+
 	// Mock table existence check for schema_migrations
 	mock.ExpectQuery("SELECT").WillReturnRows(sqlmock.NewRows([]string{"table_name"}))
-	
+
 	// Mock creation of schema_migrations table
 	mock.ExpectExec("CREATE TABLE IF NOT EXISTS").WillReturnResult(sqlmock.NewResult(0, 0))
-	
+
 	// Mock version check (no migrations yet)
 	mock.ExpectQuery("SELECT version FROM").WillReturnError(sql.ErrNoRows)
-	
+
 	// Mock the actual migration executions - we'll expect several CREATE TABLE statements
 	mock.ExpectBegin()
 	mock.ExpectExec("CREATE TABLE IF NOT EXISTS").WillReturnResult(sqlmock.NewResult(0, 0))
