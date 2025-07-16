@@ -15,7 +15,7 @@ type Repository struct {
 	ShopeeRepo           *ShopeeRepo
 	ReconcileRepo        *ReconcileRepo
 	JournalRepo          *JournalRepo
-	MetricRepo           *MetricRepo
+
 	ChannelRepo          *ChannelRepo
 	AccountRepo          *AccountRepo
 	AdInvoiceRepo        *AdInvoiceRepo
@@ -45,7 +45,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	shopeeRepo := NewShopeeRepo(db)
 	reconcileRepo := NewReconcileRepo(db)
 	journalRepo := NewJournalRepo(db)
-	metricRepo := NewMetricRepo(db)
+
 	channelRepo := NewChannelRepo(db)
 	accountRepo := NewAccountRepo(db)
 	adInvoiceRepo := NewAdInvoiceRepo(db)
@@ -63,7 +63,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		ShopeeRepo:           shopeeRepo,
 		ReconcileRepo:        reconcileRepo,
 		JournalRepo:          journalRepo,
-		MetricRepo:           metricRepo,
+
 		ChannelRepo:          channelRepo,
 		AccountRepo:          accountRepo,
 		AdInvoiceRepo:        adInvoiceRepo,

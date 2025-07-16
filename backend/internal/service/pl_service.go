@@ -3,9 +3,19 @@ package service
 import (
 	"context"
 	"time"
-
-	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
+
+// PLSummary represents profit & loss summary data without database dependency
+type PLSummary struct {
+	ShopUsername      string    `json:"shop_username"`
+	Period            string    `json:"period"`
+	SumRevenue        float64   `json:"sum_revenue"`
+	SumCOGS           float64   `json:"sum_cogs"`
+	SumFees           float64   `json:"sum_fees"`
+	NetProfit         float64   `json:"net_profit"`
+	EndingCashBalance float64   `json:"ending_cash_balance"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
 
 type PLService struct {
 	plReportSvc *ProfitLossReportService
@@ -15,7 +25,7 @@ func NewPLService(plReportSvc *ProfitLossReportService) *PLService {
 	return &PLService{plReportSvc: plReportSvc}
 }
 
-func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*models.CachedMetric, error) {
+func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*PLSummary, error) {
 	// Parse period (e.g., "2025-01" -> year=2025, month=1)
 	date, err := time.Parse("2006-01", period)
 	if err != nil {
@@ -30,8 +40,8 @@ func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*models
 		return nil, err
 	}
 
-	// Convert ProfitLoss to CachedMetric format for backward compatibility
-	cm := &models.CachedMetric{
+	// Convert ProfitLoss to PLSummary format
+	summary := &PLSummary{
 		ShopUsername:      shop,
 		Period:            period,
 		SumRevenue:        pl.TotalPendapatanUsaha,
@@ -41,5 +51,5 @@ func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*models
 		EndingCashBalance: 0, // This would require additional logic if needed
 		UpdatedAt:         time.Now(),
 	}
-	return cm, nil
+	return summary, nil
 }
