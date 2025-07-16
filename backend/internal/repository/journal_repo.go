@@ -70,9 +70,24 @@ func (r *JournalRepo) InsertJournalLine(ctx context.Context, l *models.JournalLi
 
 // InsertJournalLines inserts multiple journal lines in a single batch operation.
 // This is more efficient than calling InsertJournalLine multiple times.
+// Validates that total debits equal total credits before insertion.
 func (r *JournalRepo) InsertJournalLines(ctx context.Context, lines []models.JournalLine) error {
 	if len(lines) == 0 {
 		return nil
+	}
+
+	// Validate that debits equal credits
+	var totalDebit, totalCredit float64
+	for _, line := range lines {
+		if line.IsDebit {
+			totalDebit += line.Amount
+		} else {
+			totalCredit += line.Amount
+		}
+	}
+	
+	if totalDebit != totalCredit {
+		return fmt.Errorf("debits %.2f do not equal credits %.2f", totalDebit, totalCredit)
 	}
 
 	// For single line, use the existing method
