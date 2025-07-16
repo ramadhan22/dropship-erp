@@ -8,17 +8,30 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
-	"github.com/ramadhan22/dropship-erp/backend/internal/service"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
+
+// AdsPerformanceServiceInterface defines the methods needed by the handler
+type AdsPerformanceServiceInterface interface {
+	GetAdsCampaigns(ctx context.Context, storeID *int, status string, limit, offset int) ([]models.AdsCampaignWithMetrics, error)
+	GetPerformanceSummary(ctx context.Context, storeID *int, startDate, endDate time.Time) (*models.AdsPerformanceSummary, error)
+	FetchAdsCampaigns(ctx context.Context, storeID int) error
+	FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error
+}
+
+// AdsPerformanceBatchSchedulerInterface defines methods needed by the handler
+type AdsPerformanceBatchSchedulerInterface interface {
+	CreateSyncBatch(ctx context.Context, storeID int) (int64, error)
+}
 
 // AdsPerformanceHandler handles HTTP requests for ads performance data
 type AdsPerformanceHandler struct {
-	adsService       *service.AdsPerformanceService
-	batchScheduler   *service.AdsPerformanceBatchScheduler
+	adsService       AdsPerformanceServiceInterface
+	batchScheduler   AdsPerformanceBatchSchedulerInterface
 }
 
 // NewAdsPerformanceHandler creates a new ads performance handler
-func NewAdsPerformanceHandler(adsService *service.AdsPerformanceService, batchScheduler *service.AdsPerformanceBatchScheduler) *AdsPerformanceHandler {
+func NewAdsPerformanceHandler(adsService AdsPerformanceServiceInterface, batchScheduler AdsPerformanceBatchSchedulerInterface) *AdsPerformanceHandler {
 	return &AdsPerformanceHandler{
 		adsService:     adsService,
 		batchScheduler: batchScheduler,
