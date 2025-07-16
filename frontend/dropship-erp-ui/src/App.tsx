@@ -1,8 +1,9 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Suspense, lazy } from "react";
-import { CircularProgress, Box, AppBar, Toolbar, Typography, Button, Container } from "@mui/material";
+import { CircularProgress, Box, AppBar, Toolbar, Typography, Container } from "@mui/material";
 import BreadcrumbsNav from "./components/BreadcrumbsNav";
 import { ToastProvider } from "./components/ToastProvider";
+import { NavigationDropdown, navigationSections } from "./components/NavigationDropdown";
 import { colors, spacing } from "./theme/tokens";
 
 // Immediate load for homepage and key navigation
@@ -54,13 +55,14 @@ export default function App() {
               Dropship ERP
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button color="inherit" component={Link} to="/">Home</Button>
-              <Button color="inherit" component={Link} to="/dashboard">Dashboard</Button>
-              <Button color="inherit" component={Link} to="/dropship">Import</Button>
-              <Button color="inherit" component={Link} to="/shopee">Shopee</Button>
-              <Button color="inherit" component={Link} to="/reconcile">Reconcile</Button>
-              <Button color="inherit" component={Link} to="/metrics">Metrics</Button>
-              <Button color="inherit" component={Link} to="/accounts">Accounts</Button>
+              {navigationSections.map((section) => (
+                <NavigationDropdown
+                  key={section.label}
+                  label={section.label}
+                  icon={section.icon}
+                  items={section.items}
+                />
+              ))}
             </Box>
           </Toolbar>
         </AppBar>
