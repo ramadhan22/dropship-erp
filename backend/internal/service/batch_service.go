@@ -38,6 +38,14 @@ func (s *BatchService) List(ctx context.Context) ([]models.BatchHistory, error) 
 	return s.repo.List(ctx)
 }
 
+// ListFiltered retrieves batch history records filtered by types and statuses.
+func (s *BatchService) ListFiltered(ctx context.Context, types, statuses []string) ([]models.BatchHistory, error) {
+	if len(types) == 0 && len(statuses) == 0 {
+		return s.repo.List(ctx)
+	}
+	return s.repo.ListFiltered(ctx, types, statuses)
+}
+
 func (s *BatchService) CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error {
 	if s.detailRepo == nil {
 		return nil

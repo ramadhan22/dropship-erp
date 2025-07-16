@@ -168,7 +168,9 @@ export function deleteStore(id: number) {
 }
 
 export function fetchShopeeAuthURL(storeId: number) {
-  return api.get<{ url: string }>(`/config/shopee-auth-url?store_id=${storeId}`);
+  return api.get<{ url: string }>(
+    `/config/shopee-auth-url?store_id=${storeId}`,
+  );
 }
 
 export function listJenisChannels() {
@@ -451,7 +453,12 @@ export const withdrawShopeeBalance = (store: string, amount: number) =>
 export const fetchPendingBalance = (store: string) =>
   api.get<{ pending_balance: number }>(`/pending-balance?store=${store}`);
 
-export function listOrderDetails(params: { store?: string; order?: string; page?: number; page_size?: number }) {
+export function listOrderDetails(params: {
+  store?: string;
+  order?: string;
+  page?: number;
+  page_size?: number;
+}) {
   const q = new URLSearchParams();
   if (params.store) q.append("store", params.store);
   if (params.order) q.append("order", params.order);
@@ -463,13 +470,24 @@ export function listOrderDetails(params: { store?: string; order?: string; page?
 }
 
 export function getOrderDetail(sn: string) {
-  return api.get<{ detail: ShopeeOrderDetailRow; items: ShopeeOrderItemRow[]; packages: ShopeeOrderPackageRow[] }>(
-    `/order-details/${sn}`,
-  );
+  return api.get<{
+    detail: ShopeeOrderDetailRow;
+    items: ShopeeOrderItemRow[];
+    packages: ShopeeOrderPackageRow[];
+  }>(`/order-details/${sn}`);
 }
 
-export function listBatchHistory() {
-  return api.get<BatchHistory[]>("/batches/");
+export function listBatchHistory(params?: {
+  status?: string[];
+  type?: string;
+}) {
+  const q = new URLSearchParams();
+  if (params?.status && params.status.length > 0)
+    q.append("status", params.status.join(","));
+  if (params?.type) q.append("type", params.type);
+  const qs = q.toString();
+  const url = qs ? `/batches/?${qs}` : "/batches/";
+  return api.get<BatchHistory[]>(url);
 }
 
 export function listBatchDetails(batchID: number) {
