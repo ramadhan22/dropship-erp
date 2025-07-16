@@ -901,6 +901,39 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir Kurang" + invoice)},
 		)
 	}
+	// Calculate total debits and credits to ensure the journal is balanced
+	totalDebits := 0.0
+	totalCredits := 0.0
+	for _, line := range lines {
+		if line.Amount == 0 {
+			continue
+		}
+		if line.IsDebit {
+			totalDebits += line.Amount
+		} else {
+			totalCredits += line.Amount
+		}
+	}
+
+	// Check if journal is balanced
+	if math.Abs(totalDebits-totalCredits) > 0.01 {
+		log.Printf("unbalanced escrow settlement journal for %s: debits %.2f != credits %.2f", invoice, totalDebits, totalCredits)
+		for i, line := range lines {
+			if line.Amount == 0 {
+				continue
+			}
+			debitStr := "credit"
+			if line.IsDebit {
+				debitStr = "debit"
+			}
+			log.Printf("  line %d: account %d, %s %.2f", i, line.AccountID, debitStr, line.Amount)
+		}
+		if tx != nil {
+			tx.Rollback()
+		}
+		return fmt.Errorf("unbalanced journal entries: debits %.2f != credits %.2f", totalDebits, totalCredits)
+	}
+
 	for i := range lines {
 		if lines[i].Amount == 0 {
 			continue
