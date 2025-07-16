@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -71,7 +70,6 @@ export default function AdsPerformancePage() {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncForm, setSyncForm] = useState({
     store_id: "",
-    access_token: "",
   });
   const [stores, setStores] = useState<{ store_id: number; nama_toko: string }[]>([]);
   const [msg, setMsg] = useState<{
@@ -138,12 +136,12 @@ export default function AdsPerformancePage() {
 
   const handleSyncDialogClose = () => {
     setSyncDialogOpen(false);
-    setSyncForm({ store_id: "", access_token: "" });
+    setSyncForm({ store_id: "" });
   };
 
   const handleSyncSubmit = async () => {
-    if (!syncForm.store_id || !syncForm.access_token) {
-      setMsg({ type: "error", text: "Please fill in all required fields" });
+    if (!syncForm.store_id) {
+      setMsg({ type: "error", text: "Please select a store" });
       return;
     }
 
@@ -151,7 +149,6 @@ export default function AdsPerformancePage() {
     try {
       const result = await syncHistoricalAdsPerformance({
         store_id: parseInt(syncForm.store_id),
-        access_token: syncForm.access_token,
       });
       
       setMsg({ 
@@ -356,6 +353,7 @@ export default function AdsPerformancePage() {
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
             This will sync all historical ads performance data hourly. The process runs in background and may take several minutes.
+            Shopee credentials are automatically retrieved from the selected store configuration.
           </Typography>
           
           <FormControl fullWidth margin="normal">
@@ -372,23 +370,13 @@ export default function AdsPerformancePage() {
               ))}
             </Select>
           </FormControl>
-
-          <TextField
-            fullWidth
-            margin="normal"
-            label="Access Token"
-            type="password"
-            value={syncForm.access_token}
-            onChange={(e) => setSyncForm({ ...syncForm, access_token: e.target.value })}
-            placeholder="Enter Shopee API access token"
-          />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleSyncDialogClose}>Cancel</Button>
           <Button 
             onClick={handleSyncSubmit} 
             variant="contained"
-            disabled={syncing || !syncForm.store_id || !syncForm.access_token}
+            disabled={syncing || !syncForm.store_id}
           >
             {syncing ? "Starting..." : "Start Sync"}
           </Button>

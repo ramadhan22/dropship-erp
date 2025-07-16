@@ -67,8 +67,7 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 
 	// Parse batch request from file path or other source
 	var syncRequest struct {
-		StoreID     int    `json:"store_id"`
-		AccessToken string `json:"access_token"`
+		StoreID int `json:"store_id"`
 	}
 
 	if batch.FilePath != "" {
@@ -86,7 +85,7 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 	}
 
 	// Perform the historical sync
-	err = s.svc.SyncHistoricalAdsPerformance(ctx, syncRequest.StoreID, syncRequest.AccessToken)
+	err = s.svc.SyncHistoricalAdsPerformance(ctx, syncRequest.StoreID)
 	if err != nil {
 		log.Printf("Failed to sync historical ads performance: %v", err)
 		s.batch.UpdateStatus(ctx, batch.ID, "failed", err.Error())
@@ -103,13 +102,11 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 }
 
 // CreateSyncBatch creates a new batch for historical ads performance sync
-func (s *AdsPerformanceBatchScheduler) CreateSyncBatch(ctx context.Context, storeID int, accessToken string) (int64, error) {
+func (s *AdsPerformanceBatchScheduler) CreateSyncBatch(ctx context.Context, storeID int) (int64, error) {
 	syncRequest := struct {
-		StoreID     int    `json:"store_id"`
-		AccessToken string `json:"access_token"`
+		StoreID int `json:"store_id"`
 	}{
-		StoreID:     storeID,
-		AccessToken: accessToken,
+		StoreID: storeID,
 	}
 
 	requestJSON, err := json.Marshal(syncRequest)

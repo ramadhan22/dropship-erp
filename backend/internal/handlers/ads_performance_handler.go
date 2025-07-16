@@ -120,11 +120,10 @@ func (h *AdsPerformanceHandler) GetPerformanceSummary(c *gin.Context) {
 
 // FetchAdsCampaigns triggers fetching of campaigns from Shopee API
 // POST /api/ads/campaigns/fetch
-// Body: {"store_id": 1, "access_token": "token"}
+// Body: {"store_id": 1}
 func (h *AdsPerformanceHandler) FetchAdsCampaigns(c *gin.Context) {
 	var request struct {
-		StoreID     int    `json:"store_id" binding:"required"`
-		AccessToken string `json:"access_token" binding:"required"`
+		StoreID int `json:"store_id" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -133,7 +132,7 @@ func (h *AdsPerformanceHandler) FetchAdsCampaigns(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	err := h.adsService.FetchAdsCampaigns(ctx, request.StoreID, request.AccessToken)
+	err := h.adsService.FetchAdsCampaigns(ctx, request.StoreID)
 	if err != nil {
 		logutil.Errorf("Failed to fetch campaigns from Shopee: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch campaigns"})
@@ -145,14 +144,13 @@ func (h *AdsPerformanceHandler) FetchAdsCampaigns(c *gin.Context) {
 
 // FetchAdsPerformance triggers fetching of performance data from Shopee API
 // POST /api/ads/performance/fetch
-// Body: {"store_id": 1, "campaign_id": 123, "start_date": "2024-01-01", "end_date": "2024-01-31", "access_token": "token"}
+// Body: {"store_id": 1, "campaign_id": 123, "start_date": "2024-01-01", "end_date": "2024-01-31"}
 func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
 	var request struct {
-		StoreID     int    `json:"store_id" binding:"required"`
-		CampaignID  int64  `json:"campaign_id" binding:"required"`
-		StartDate   string `json:"start_date" binding:"required"`
-		EndDate     string `json:"end_date" binding:"required"`
-		AccessToken string `json:"access_token" binding:"required"`
+		StoreID    int    `json:"store_id" binding:"required"`
+		CampaignID int64  `json:"campaign_id" binding:"required"`
+		StartDate  string `json:"start_date" binding:"required"`
+		EndDate    string `json:"end_date" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -174,7 +172,7 @@ func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	err = h.adsService.FetchAdsPerformance(ctx, request.StoreID, request.CampaignID, startDate, endDate, request.AccessToken)
+	err = h.adsService.FetchAdsPerformance(ctx, request.StoreID, request.CampaignID, startDate, endDate)
 	if err != nil {
 		logutil.Errorf("Failed to fetch performance data from Shopee: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch performance data"})
@@ -186,11 +184,10 @@ func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
 
 // SyncHistoricalAdsPerformance triggers background sync of all historical ads performance data
 // POST /api/ads/sync/historical
-// Body: {"store_id": 1, "access_token": "token"}
+// Body: {"store_id": 1}
 func (h *AdsPerformanceHandler) SyncHistoricalAdsPerformance(c *gin.Context) {
 	var request struct {
-		StoreID     int    `json:"store_id" binding:"required"`
-		AccessToken string `json:"access_token" binding:"required"`
+		StoreID int `json:"store_id" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -204,7 +201,7 @@ func (h *AdsPerformanceHandler) SyncHistoricalAdsPerformance(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	batchID, err := h.batchScheduler.CreateSyncBatch(ctx, request.StoreID, request.AccessToken)
+	batchID, err := h.batchScheduler.CreateSyncBatch(ctx, request.StoreID)
 	if err != nil {
 		logutil.Errorf("Failed to create historical sync batch: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sync batch"})
@@ -217,12 +214,23 @@ func (h *AdsPerformanceHandler) SyncHistoricalAdsPerformance(c *gin.Context) {
 	})
 }
 
+// GetStoresWithShopeeCredentials returns stores that have Shopee credentials configured
+// GET /api/ads/stores-with-credentials
+func (h *AdsPerformanceHandler) GetStoresWithShopeeCredentials(c *gin.Context) {
+	// This is a simple implementation. In a real app, you'd add this to the service layer
+	// For now, we'll use the existing /api/stores/all endpoint and filter in frontend
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Use /api/stores/all endpoint - frontend will filter stores with credentials",
+	})
+}
+
 // RegisterRoutes registers all ads performance routes
 func (h *AdsPerformanceHandler) RegisterRoutes(apiGroup *gin.RouterGroup) {
 	adsGroup := apiGroup.Group("/ads")
 	{
 		adsGroup.GET("/campaigns", h.GetAdsCampaigns)
 		adsGroup.GET("/summary", h.GetPerformanceSummary)
+		adsGroup.GET("/stores-with-credentials", h.GetStoresWithShopeeCredentials)
 		adsGroup.POST("/campaigns/fetch", h.FetchAdsCampaigns)
 		adsGroup.POST("/performance/fetch", h.FetchAdsPerformance)
 		adsGroup.POST("/sync/historical", h.SyncHistoricalAdsPerformance)

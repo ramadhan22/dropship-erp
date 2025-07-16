@@ -33,7 +33,6 @@ export const fetchAdsPerformanceSummary = async (params?: {
 
 export const fetchAdsCampaignsFromShopee = async (data: {
   store_id: number;
-  access_token: string;
 }) => {
   const response = await fetch("/api/ads/campaigns/fetch", {
     method: "POST",
@@ -49,7 +48,6 @@ export const fetchAdsPerformanceFromShopee = async (data: {
   campaign_id: number;
   start_date: string;
   end_date: string;
-  access_token: string;
 }) => {
   const response = await fetch("/api/ads/performance/fetch", {
     method: "POST",
@@ -62,7 +60,6 @@ export const fetchAdsPerformanceFromShopee = async (data: {
 
 export const syncHistoricalAdsPerformance = async (data: {
   store_id: number;
-  access_token: string;
 }) => {
   const response = await fetch("/api/ads/sync/historical", {
     method: "POST",
