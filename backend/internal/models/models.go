@@ -159,8 +159,6 @@ type ReconcileCandidate struct {
 	ShopeeOrderStatus     string  `json:"shopee_order_status"`
 }
 
-
-
 // JenisChannel represents e-commerce channel types such as Shopee or Tokopedia.
 type JenisChannel struct {
 	JenisChannelID int64  `db:"jenis_channel_id" json:"jenis_channel_id"`

@@ -640,7 +640,7 @@ func TestCreateReturnedOrderJournal(t *testing.T) {
 			HargaAsliProduk:       200000,
 		},
 	}
-	
+
 	// Create an original settlement journal entry for jakmall calculation
 	jr := &fakeJournalRepoS{nextID: 1}
 	originalEntry := &models.JournalEntry{
@@ -652,16 +652,16 @@ func TestCreateReturnedOrderJournal(t *testing.T) {
 		Store:        "MR eStore Shopee",
 	}
 	jr.entries = append(jr.entries, originalEntry)
-	
+
 	// Add original settlement lines: pending credit 200000, saldo shopee debit 150000 (75% jakmall)
-	jr.lines = append(jr.lines, 
+	jr.lines = append(jr.lines,
 		&models.JournalLine{LineID: 1, JournalID: 1, AccountID: 11010, IsDebit: false, Amount: 200000}, // Pending credit
 		&models.JournalLine{LineID: 2, JournalID: 1, AccountID: 11011, IsDebit: true, Amount: 150000},  // Saldo shopee (jakmall)
 		&models.JournalLine{LineID: 3, JournalID: 1, AccountID: 55004, IsDebit: true, Amount: 50000},   // Other expenses
 	)
-	
+
 	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
-	
+
 	// Create escrow detail for returned order
 	escrowDetail := ShopeeEscrowDetail{
 		"seller_return_refund": -113400, // Negative as per sample
@@ -669,19 +669,19 @@ func TestCreateReturnedOrderJournal(t *testing.T) {
 		"commission_fee":       4536,
 		"service_fee":          3686,
 	}
-	
+
 	settlementDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
-	
+
 	err := svc.CreateReturnedOrderJournal(context.Background(), "SO-RET-1", escrowDetail, settlementDate)
 	if err != nil {
 		t.Fatalf("CreateReturnedOrderJournal error: %v", err)
 	}
-	
+
 	// Check that a new journal entry was created
 	if len(jr.entries) != 2 {
 		t.Fatalf("expected 2 journal entries (original + return), got %d", len(jr.entries))
 	}
-	
+
 	returnEntry := jr.entries[1]
 	if returnEntry.SourceType != "shopee_return" {
 		t.Fatalf("expected return entry source type shopee_return, got %s", returnEntry.SourceType)
@@ -692,12 +692,12 @@ func TestCreateReturnedOrderJournal(t *testing.T) {
 	if returnEntry.EntryDate != settlementDate {
 		t.Fatalf("expected return entry date %v, got %v", settlementDate, returnEntry.EntryDate)
 	}
-	
+
 	// Count lines for the return entry (journalID = 2, which is the second entry created)
 	returnJournalID := returnEntry.JournalID
 	returnLines := 0
 	var pendingCreditFound, salesDebitFound, jakmallDebitFound, shippingDebitFound, commissionDebitFound, serviceDebitFound bool
-	
+
 	for _, line := range jr.lines {
 		if line.JournalID == returnJournalID { // Return entry
 			returnLines++
@@ -734,16 +734,16 @@ func TestCreateReturnedOrderJournal(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if returnLines != 6 {
 		t.Fatalf("expected 6 return journal lines, got %d", returnLines)
 	}
-	
+
 	if !pendingCreditFound {
 		t.Fatalf("pending balance reduction (credit) not found")
 	}
 	if !salesDebitFound {
-		t.Fatalf("sales reduction (debit) not found") 
+		t.Fatalf("sales reduction (debit) not found")
 	}
 	if !jakmallDebitFound {
 		t.Fatalf("jakmall adjustment (debit) not found")
@@ -766,28 +766,28 @@ func TestCreateReturnedOrderJournal_NoOriginalJournal(t *testing.T) {
 			NoPesanan: "SO-RET-NO-ORIG",
 		},
 	}
-	
+
 	jr := &fakeJournalRepoS{} // No original journal entries
 	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
-	
+
 	escrowDetail := ShopeeEscrowDetail{
 		"seller_return_refund": -50000,
 		"reverse_shipping_fee": 2000,
 	}
-	
+
 	settlementDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
-	
+
 	// Should still work but without jakmall adjustment
 	err := svc.CreateReturnedOrderJournal(context.Background(), "SO-RET-NO-ORIG", escrowDetail, settlementDate)
 	if err != nil {
 		t.Fatalf("CreateReturnedOrderJournal error: %v", err)
 	}
-	
+
 	// Should create return entry without jakmall adjustment
 	if len(jr.entries) != 1 {
 		t.Fatalf("expected 1 journal entry, got %d", len(jr.entries))
 	}
-	
+
 	// Should have 3 lines: pending credit, sales debit, shipping debit (no jakmall)
 	returnLines := 0
 	for _, line := range jr.lines {
@@ -807,17 +807,17 @@ func TestCreateReturnedOrderJournal_ZeroRefund(t *testing.T) {
 			NoPesanan: "SO-RET-ZERO",
 		},
 	}
-	
+
 	jr := &fakeJournalRepoS{}
 	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
-	
+
 	escrowDetail := ShopeeEscrowDetail{
 		"seller_return_refund": 0, // No refund
 		"reverse_shipping_fee": 1000,
 	}
-	
+
 	settlementDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
-	
+
 	err := svc.CreateReturnedOrderJournal(context.Background(), "SO-RET-ZERO", escrowDetail, settlementDate)
 	if err == nil || !strings.Contains(err.Error(), "no return refund amount") {
 		t.Fatalf("expected error for zero refund amount, got %v", err)

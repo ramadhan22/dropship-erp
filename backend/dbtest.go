@@ -20,7 +20,7 @@ func main() {
 	fmt.Println("Connected to Postgres successfully")
 
 	// Run migrations (point to the migrations folder)
-	migrationsDir := "file:///Users/rama/Documents/dropship-erp/backend/internal/migrations"
+	migrationsDir := "file://internal/migrations"
 	fmt.Println("Migration URL is:", migrationsDir)
 	if err := db.RunMigrations(cfg.Database.URL, migrationsDir); err != nil {
 		panic(fmt.Errorf("RunMigrations failed: %w", err))

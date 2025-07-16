@@ -8,13 +8,13 @@ import (
 // Repository aggregates all sub-repositories for the application.
 // It holds the shared *sqlx.DB connection and each repo instance.
 type Repository struct {
-	DB                   *sqlx.DB
-	BatchRepo            *BatchRepo
-	BatchDetailRepo      *BatchDetailRepo
-	DropshipRepo         *DropshipRepo
-	ShopeeRepo           *ShopeeRepo
-	ReconcileRepo        *ReconcileRepo
-	JournalRepo          *JournalRepo
+	DB              *sqlx.DB
+	BatchRepo       *BatchRepo
+	BatchDetailRepo *BatchDetailRepo
+	DropshipRepo    *DropshipRepo
+	ShopeeRepo      *ShopeeRepo
+	ReconcileRepo   *ReconcileRepo
+	JournalRepo     *JournalRepo
 
 	ChannelRepo          *ChannelRepo
 	AccountRepo          *AccountRepo
@@ -56,13 +56,13 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	orderDetailRepo := NewOrderDetailRepo(db)
 
 	return &Repository{
-		DB:                   db,
-		BatchRepo:            batchRepo,
-		BatchDetailRepo:      batchDetailRepo,
-		DropshipRepo:         dropshipRepo,
-		ShopeeRepo:           shopeeRepo,
-		ReconcileRepo:        reconcileRepo,
-		JournalRepo:          journalRepo,
+		DB:              db,
+		BatchRepo:       batchRepo,
+		BatchDetailRepo: batchDetailRepo,
+		DropshipRepo:    dropshipRepo,
+		ShopeeRepo:      shopeeRepo,
+		ReconcileRepo:   reconcileRepo,
+		JournalRepo:     journalRepo,
 
 		ChannelRepo:          channelRepo,
 		AccountRepo:          accountRepo,

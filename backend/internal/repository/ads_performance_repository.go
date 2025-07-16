@@ -22,7 +22,7 @@ func NewAdsPerformanceRepository(db *sqlx.DB) *AdsPerformanceRepository {
 // Create inserts a new ads performance record.
 func (r *AdsPerformanceRepository) Create(ap *models.AdsPerformance) error {
 	ap.CalculateMetrics()
-	
+
 	query := `
 		INSERT INTO ads_performance (
 			store_id, campaign_id, campaign_name, campaign_type, campaign_status,
@@ -53,7 +53,7 @@ func (r *AdsPerformanceRepository) Create(ap *models.AdsPerformance) error {
 			performance_change_percentage = EXCLUDED.performance_change_percentage,
 			updated_at = NOW()
 		RETURNING id`
-	
+
 	return r.db.Get(&ap.ID, query, ap)
 }
 
@@ -194,7 +194,7 @@ func (r *AdsPerformanceRepository) CreateSyncJob(job *models.AdsSyncJob) error {
 			:total_hours, :processed_hours, :status, :error_message
 		)
 		RETURNING id, created_at`
-	
+
 	return r.db.Get(job, query, job)
 }
 
@@ -212,7 +212,7 @@ func (r *AdsPerformanceRepository) UpdateSyncJob(job *models.AdsSyncJob) error {
 			started_at = :started_at,
 			completed_at = :completed_at
 		WHERE id = :id`
-	
+
 	_, err := r.db.NamedExec(query, job)
 	return err
 }

@@ -39,7 +39,7 @@ func ConnectPostgresWithConfig(dsn string, maxOpenConns, maxIdleConns int, connM
 	// Configure connection pool
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
-	
+
 	// Parse and set connection max lifetime if provided
 	if connMaxLifetime != "" {
 		if duration, err := time.ParseDuration(connMaxLifetime); err == nil {

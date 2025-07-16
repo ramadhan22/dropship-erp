@@ -54,8 +54,8 @@ type EntryWithLines struct {
 
 // BulkEntryWithLines bundles a journal entry with model lines for bulk operations
 type BulkEntryWithLines struct {
-	Entry models.JournalEntry   `json:"entry"`
-	Lines []models.JournalLine  `json:"lines"`
+	Entry models.JournalEntry  `json:"entry"`
+	Lines []models.JournalLine `json:"lines"`
 }
 
 // LinesBySource returns all journal entries matching the source ID along with their lines.
@@ -208,7 +208,7 @@ func (s *JournalService) validateJournalEntry(entry *models.JournalEntry, lines 
 		if line.Amount <= 0 {
 			return fmt.Errorf("line amount must be positive, got: %f", line.Amount)
 		}
-		
+
 		if line.IsDebit {
 			totalDebits += line.Amount
 		} else {

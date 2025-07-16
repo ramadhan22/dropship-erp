@@ -458,7 +458,7 @@ func TestImportFromCSV_CleanSingleQuoteInKodeInvoiceChannel(t *testing.T) {
 	if len(fake.insertedHeader) != 1 {
 		t.Fatalf("expected 1 header insert, got %d", len(fake.insertedHeader))
 	}
-	
+
 	// Verify that the leading single quote was removed from KodeInvoiceChannel
 	inserted := fake.insertedHeader[0]
 	if inserted.KodeInvoiceChannel != "INV1" {
