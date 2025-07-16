@@ -424,3 +424,12 @@ export function fetchDashboard(params: {
   if (params.year) q.append("year", String(params.year));
   return api.get<DashboardData>(`/dashboard?${q.toString()}`);
 }
+
+export function createReconcileBatch(shop: string, order: string, from: string, to: string) {
+  return api.post("/reconcile/batch", {
+    shop,
+    order,
+    from,
+    to,
+  });
+}

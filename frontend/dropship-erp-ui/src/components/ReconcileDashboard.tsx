@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import SortableTable from "./SortableTable";
-import { fetchAPI } from "../api";
+import { fetchAPI, createReconcileBatch } from "../api";
 import type { ReconcileCandidate, ReconciledTransaction } from "../types";
 
 export default function ReconcileDashboard() {
@@ -60,28 +60,22 @@ export default function ReconcileDashboard() {
     setMessage("");
 
     try {
-      const requestBody = {
-        shop,
-        from_date: fromDate,
-        to_date: toDate,
-      };
-
-      const response = await fetchAPI("/reconcile/all", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      setMessage(response.message || "Reconcile all completed successfully");
+      const response = await createReconcileBatch(shop, "", fromDate, toDate);
+      const data = response.data;
+      let message = "Reconcile batches created successfully";
+      if (data.batches_created && data.total_transactions) {
+        message = `Created ${data.batches_created} batches for ${data.total_transactions} transactions. Processing will begin shortly.`;
+      } else if (data.message) {
+        message = data.message;
+      }
+      setMessage(message);
       
       // Refresh the data
       fetchCandidates();
       fetchTransactions();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error during reconcile all:", err);
-      setMessage("Error during reconcile all operation");
+      setMessage("Error during reconcile all operation: " + (err.response?.data?.error || err.message));
     } finally {
       setReconcileLoading(false);
     }
