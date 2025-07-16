@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useCallback } from "react";
 import {
   Button,
   Table,
@@ -50,14 +50,14 @@ export default function GLPage() {
     listAllStores().then((s) => setStores(s));
   }, []);
 
-  useEffect(() => {
-    handleFetch();
-  }, [shop]);
-
-  const handleFetch = async () => {
+  const handleFetch = useCallback(async () => {
     const res = await fetchGeneralLedger(shop, from, to);
     setData(res.data);
-  };
+  }, [shop, from, to]);
+
+  useEffect(() => {
+    handleFetch();
+  }, [handleFetch]);
 
   return (
     <div>

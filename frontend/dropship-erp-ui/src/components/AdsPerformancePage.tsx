@@ -22,7 +22,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   fetchAdsCampaigns, 
   fetchAdsPerformanceSummary, 
@@ -77,13 +77,7 @@ export default function AdsPerformancePage() {
     text: string;
   } | null>(null);
 
-  // Fetch stores and initial data on component mount
-  useEffect(() => {
-    fetchStores();
-    fetchData();
-  }, []);
-
-  const fetchStores = async () => {
+  const fetchStores = useCallback(async () => {
     try {
       const response = await fetch("/api/stores/all");
       if (!response.ok) throw new Error("Failed to fetch stores");
@@ -92,30 +86,18 @@ export default function AdsPerformancePage() {
     } catch (error) {
       console.error("Error fetching stores:", error);
     }
-  };
+  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([fetchCampaignsData(), fetchSummaryData()]);
-      setMsg(null);
-    } catch (e: any) {
-      setMsg({ type: "error", text: e.response?.data?.error || e.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCampaignsData = async () => {
+  const fetchCampaignsData = useCallback(async () => {
     try {
       const data = await fetchAdsCampaigns({ limit: 100 });
       setCampaigns(data.campaigns || []);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
     }
-  };
+  }, []);
 
-  const fetchSummaryData = async () => {
+  const fetchSummaryData = useCallback(async () => {
     try {
       const endDate = new Date();
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -128,7 +110,25 @@ export default function AdsPerformancePage() {
     } catch (error) {
       console.error("Error fetching summary:", error);
     }
-  };
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([fetchCampaignsData(), fetchSummaryData()]);
+      setMsg(null);
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchCampaignsData, fetchSummaryData]);
+
+  // Fetch stores and initial data on component mount
+  useEffect(() => {
+    fetchStores();
+    fetchData();
+  }, [fetchStores, fetchData]);
 
   const handleSyncDialogOpen = () => {
     setSyncDialogOpen(true);

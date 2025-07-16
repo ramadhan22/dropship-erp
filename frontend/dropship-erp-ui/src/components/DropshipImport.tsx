@@ -17,7 +17,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import SortableTable from "./SortableTable";
 import type { Column } from "./SortableTable";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getCurrentMonthRange } from "../utils/date";
 import {
@@ -154,7 +154,7 @@ export default function DropshipImport() {
     }
   }, [channel]);
 
-  const fetchData = async (ord?: string) => {
+  const fetchData = useCallback(async (ord?: string) => {
     const res = await listDropshipPurchases({
       channel,
       store,
@@ -184,11 +184,11 @@ export default function DropshipImport() {
       to,
     });
     setAllTotal(totalRes.data.total);
-  };
+  }, [channel, store, from, to, order, sortKey, sortDir, page, pageSize]);
 
   useEffect(() => {
     fetchData();
-  }, [channel, store, from, to, page, order, sortKey, sortDir, pageSize]);
+  }, [fetchData]);
 
   useEffect(() => {
     const ord = searchParams.get("order");
@@ -196,7 +196,7 @@ export default function DropshipImport() {
       setOrder(ord);
       fetchData(ord);
     }
-  }, [searchParams]);
+  }, [searchParams, fetchData]);
 
   const handleSubmit = async () => {
     try {
