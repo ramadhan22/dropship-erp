@@ -69,6 +69,32 @@ Discrepancy* adjustment when they differ.
 Configuration is read from `backend/config.yaml` and values can be overridden
 with environment variables. On startup the application runs database migrations
 automatically.
+
+### Database Migrations
+
+The application uses embedded SQL migrations powered by `golang-migrate`. All migration files are located in `backend/internal/migrations/consolidated/` and are automatically embedded into the binary at build time.
+
+Key migration files include:
+- `0100_create_core_tables.up.sql` - Creates fundamental database tables
+- `0101_create_business_tables.up.sql` - Creates business logic tables  
+- `0102_create_shopee_tables.up.sql` - Creates Shopee integration tables
+- `0103_create_analytics_tables.up.sql` - Creates analytics and reporting tables
+- `0104_seed_chart_of_accounts.up.sql` - Seeds the chart of accounts with standard entries
+- `0105_seed_reference_data.up.sql` - Seeds asset accounts, channels, and stores
+- `0106_performance_optimizations.up.sql` - Database performance improvements
+- `0107_seed_sample_data.up.sql` - Optional sample data for development
+
+To test the migration system:
+
+```bash
+cd backend
+# Build and test migration file embedding
+go build ./cmd/test-migrations && ./test-migrations --dry-run
+
+# Test against a real database (requires PostgreSQL)
+./test-migrations --db "postgres://user:pass@localhost:5432/dbname?sslmode=disable"
+```
+
 Application logs are written to the directory specified by `logging.dir` in the
 config file. A new file named `YYYY-MM-DD.log` is created each day.
 Batch operations that fetch Shopee data in parallel respect the `max_threads`
