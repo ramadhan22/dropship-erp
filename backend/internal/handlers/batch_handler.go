@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
@@ -21,7 +22,25 @@ func (h *BatchHandler) RegisterRoutes(r gin.IRouter) {
 }
 
 func (h *BatchHandler) list(c *gin.Context) {
-	list, err := h.svc.List(context.Background())
+	statusStr := c.DefaultQuery("status", "pending,processing")
+	statuses := []string{}
+	for _, s := range strings.Split(statusStr, ",") {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			statuses = append(statuses, s)
+		}
+	}
+	typeStr := c.Query("type")
+	types := []string{}
+	if typeStr != "" {
+		for _, t := range strings.Split(typeStr, ",") {
+			t = strings.TrimSpace(t)
+			if t != "" {
+				types = append(types, t)
+			}
+		}
+	}
+	list, err := h.svc.ListFiltered(context.Background(), types, statuses)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

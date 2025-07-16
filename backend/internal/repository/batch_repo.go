@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
@@ -67,6 +68,39 @@ func (r *BatchRepo) ListByProcessAndStatus(ctx context.Context, typ, status stri
 	err := r.db.SelectContext(ctx, &list,
 		`SELECT * FROM batch_history WHERE process_type=$1 AND status=$2 ORDER BY id`,
 		typ, status)
+	if list == nil {
+		list = []models.BatchHistory{}
+	}
+	return list, err
+}
+
+// ListFiltered returns batch records filtered by process types and statuses.
+func (r *BatchRepo) ListFiltered(ctx context.Context, types, statuses []string) ([]models.BatchHistory, error) {
+	query := `SELECT * FROM batch_history`
+	args := []interface{}{}
+	conds := []string{}
+	if len(types) > 0 {
+		conds = append(conds, "process_type IN (?)")
+		args = append(args, types)
+	}
+	if len(statuses) > 0 {
+		conds = append(conds, "status IN (?)")
+		args = append(args, statuses)
+	}
+	if len(conds) > 0 {
+		query += " WHERE " + strings.Join(conds, " AND ")
+	}
+	query += " ORDER BY started_at DESC"
+	if len(args) > 0 {
+		var err error
+		query, args, err = sqlx.In(query, args...)
+		if err != nil {
+			return nil, err
+		}
+		query = r.db.Rebind(query)
+	}
+	var list []models.BatchHistory
+	err := r.db.SelectContext(ctx, &list, query, args...)
 	if list == nil {
 		list = []models.BatchHistory{}
 	}

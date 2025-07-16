@@ -594,6 +594,8 @@ export interface BatchHistory {
   done_data: number;
   status: string;
   error_message: string;
+  file_name: string;
+  file_path: string;
 }
 
 export interface BatchHistoryDetail {
