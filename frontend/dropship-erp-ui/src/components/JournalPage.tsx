@@ -46,6 +46,14 @@ export default function JournalPage() {
   const { paginated: linesPage, controls: lineControls } =
     usePagination(detailLines);
   const [detailEntry, setDetailEntry] = useState<JournalEntry | null>(null);
+  const totalDebit = detailLines.reduce(
+    (sum, l) => (l.is_debit ? sum + l.amount : sum),
+    0,
+  );
+  const totalCredit = detailLines.reduce(
+    (sum, l) => (!l.is_debit ? sum + l.amount : sum),
+    0,
+  );
   const lineColumns: Column<JournalLineDetail>[] = [
     { label: "Account", key: "account_name" },
     {
@@ -285,6 +293,18 @@ export default function JournalPage() {
             </div>
           )}
           <SortableTable columns={lineColumns} data={linesPage} />
+          <div style={{ marginTop: "0.5rem", fontWeight: "bold" }}>
+            Total Debit:{" "}
+            {totalDebit.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            })}
+            {" | Total Credit: "}
+            {totalCredit.toLocaleString("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            })}
+          </div>
           {lineControls}
         </DialogContent>
         <DialogActions>
