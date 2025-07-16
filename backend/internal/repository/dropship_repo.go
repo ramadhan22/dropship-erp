@@ -301,6 +301,70 @@ func (r *DropshipRepo) ListDropshipPurchases(
 	return list, total, nil
 }
 
+// ListDropshipPurchasesFiltered returns dropship purchases using the new filtering framework
+func (r *DropshipRepo) ListDropshipPurchasesFiltered(
+	ctx context.Context,
+	params *models.FilterParams,
+) (*models.QueryResult, error) {
+	// Define allowed fields for filtering and sorting
+	allowedFields := map[string]string{
+		"kode_pesanan":             "kode_pesanan",
+		"kode_transaksi":           "kode_transaksi",
+		"waktu_pesanan_terbuat":    "waktu_pesanan_terbuat",
+		"status_pesanan_terakhir":  "status_pesanan_terakhir",
+		"biaya_lainnya":            "biaya_lainnya",
+		"biaya_mitra_jakmall":      "biaya_mitra_jakmall",
+		"total_transaksi":          "total_transaksi",
+		"dibuat_oleh":              "dibuat_oleh",
+		"jenis_channel":            "jenis_channel",
+		"nama_toko":                "nama_toko",
+		"kode_invoice_channel":     "kode_invoice_channel",
+		"gudang_pengiriman":        "gudang_pengiriman",
+		"jenis_ekspedisi":          "jenis_ekspedisi",
+		"cashless":                 "cashless",
+		"nomor_resi":               "nomor_resi",
+		"waktu_pengiriman":         "waktu_pengiriman",
+		"provinsi":                 "provinsi",
+		"kota":                     "kota",
+		"created_at":               "waktu_pesanan_terbuat", // Alias for convenience
+	}
+
+	baseQuery := "SELECT * FROM dropship_purchases"
+	
+	// Build query with filters
+	qb := NewQueryBuilder(baseQuery).SetAllowedFields(allowedFields)
+	
+	// Get total count first
+	countQuery, countArgs, err := qb.BuildCountQuery(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build count query: %w", err)
+	}
+	
+	var total int
+	if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
+		return nil, fmt.Errorf("failed to get total count: %w", err)
+	}
+
+	// Build main query with pagination
+	query, args, err := qb.BuildQuery(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %w", err)
+	}
+
+	// Execute query
+	var list []models.DropshipPurchase
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	if list == nil {
+		list = []models.DropshipPurchase{}
+	}
+
+	// Return structured result
+	return models.NewQueryResult(list, total, params.Pagination.Page, params.Pagination.PageSize), nil
+}
+
 // SumDropshipPurchases returns the total sum of total_transaksi for all rows
 // matching the provided filters.
 func (r *DropshipRepo) SumDropshipPurchases(

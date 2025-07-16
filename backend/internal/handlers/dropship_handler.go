@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ramadhan22/dropship-erp/backend/internal/middleware"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
@@ -19,6 +20,7 @@ import (
 type DropshipServiceInterface interface {
 	ImportFromCSV(ctx context.Context, r io.Reader, channel string, batchID int64) (int, error)
 	ListDropshipPurchases(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.DropshipPurchase, int, error)
+	ListDropshipPurchasesFiltered(ctx context.Context, params *models.FilterParams) (*models.QueryResult, error)
 	SumDropshipPurchases(ctx context.Context, channel, store, from, to string) (float64, error)
 	GetDropshipPurchaseByID(ctx context.Context, kodePesanan string) (*models.DropshipPurchase, error)
 	ListDropshipPurchaseDetails(ctx context.Context, kodePesanan string) ([]models.DropshipPurchaseDetail, error)
@@ -98,6 +100,20 @@ func (h *DropshipHandler) HandleList(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+}
+
+// HandleListFiltered returns dropship purchases using the new filtering framework.
+func (h *DropshipHandler) HandleListFiltered(c *gin.Context) {
+	// The middleware.FilterMiddleware() should have been applied to parse filter params
+	filterParams := middleware.GetFilterParams(c)
+
+	result, err := h.svc.ListDropshipPurchasesFiltered(context.Background(), filterParams)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // HandleSum returns the sum of total_transaksi for all data matching filters.

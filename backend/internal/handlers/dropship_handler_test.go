@@ -48,6 +48,16 @@ func (f *fakeDropshipService) SumDropshipPurchases(ctx context.Context, channel,
 	return 0, nil
 }
 
+func (f *fakeDropshipService) ListDropshipPurchasesFiltered(ctx context.Context, params *models.FilterParams) (*models.QueryResult, error) {
+	return &models.QueryResult{
+		Data:       []models.DropshipPurchase{},
+		Total:      0,
+		Page:       1,
+		PageSize:   20,
+		TotalPages: 1,
+	}, nil
+}
+
 func (f *fakeDropshipService) TopProducts(ctx context.Context, channel, store, from, to string, limit int) ([]models.ProductSales, error) {
 	return nil, nil
 }

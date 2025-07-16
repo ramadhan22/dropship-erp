@@ -1,14 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Pagination } from "@mui/material";
+
+export interface FilterCondition {
+  field: string;
+  operator: string;
+  value: any;
+  values?: any[];
+}
+
+export interface FilterGroup {
+  logic: string; // "AND" or "OR"
+  conditions: FilterCondition[];
+  groups?: FilterGroup[];
+}
+
+export interface SortCondition {
+  field: string;
+  direction: "asc" | "desc";
+}
+
+export interface FilterParams {
+  filters?: FilterGroup;
+  sort?: SortCondition[];
+  pagination?: {
+    page: number;
+    page_size: number;
+  };
+}
 
 export interface FetchParams {
   page: number;
   pageSize: number;
+  filters?: FilterParams;
+}
+
+export interface QueryResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 export type Fetcher<T> = (
   params: FetchParams,
-) => Promise<{ data: T[]; total: number }>;
+) => Promise<QueryResult<T> | { data: T[]; total: number }>;
 
 export default function useServerPagination<T>(
   fetcher: Fetcher<T>,
@@ -20,28 +56,71 @@ export default function useServerPagination<T>(
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterParams | undefined>();
+  const [sortConditions, setSortConditions] = useState<SortCondition[]>([]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetcher({ page, pageSize });
-      setData(res.data);
-      setTotal(res.total);
-      const pages = Math.max(1, Math.ceil(res.total / pageSize));
-      if (page > pages) {
-        setPage(pages);
+      const params: FetchParams = {
+        page,
+        pageSize,
+        filters: filters ? {
+          ...filters,
+          sort: sortConditions.length > 0 ? sortConditions : filters.sort,
+          pagination: { page, page_size: pageSize }
+        } : {
+          sort: sortConditions.length > 0 ? sortConditions : undefined,
+          pagination: { page, page_size: pageSize }
+        }
+      };
+      
+      const res = await fetcher(params);
+      
+      // Handle both old and new response formats
+      if ('page' in res && 'page_size' in res) {
+        // New format with QueryResult
+        setData(res.data);
+        setTotal(res.total);
+        const pages = Math.max(1, Math.ceil(res.total / pageSize));
+        if (page > pages) {
+          setPage(pages);
+        }
+      } else {
+        // Legacy format
+        setData(res.data);
+        setTotal(res.total);
+        const pages = Math.max(1, Math.ceil(res.total / pageSize));
+        if (page > pages) {
+          setPage(pages);
+        }
       }
       setError(null);
     } catch (e: any) {
       setError(e.message);
     }
     setLoading(false);
-  };
+  }, [page, pageSize, filters, sortConditions, fetcher]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+  }, [load]);
+
+  const applyFilters = useCallback((newFilters: FilterParams | undefined) => {
+    setFilters(newFilters);
+    setPage(1); // Reset to first page when filters change
+  }, []);
+
+  const applySort = useCallback((sort: SortCondition[]) => {
+    setSortConditions(sort);
+    setPage(1); // Reset to first page when sort changes
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters(undefined);
+    setSortConditions([]);
+    setPage(1);
+  }, []);
 
   const controls = (
     <div
@@ -76,5 +155,20 @@ export default function useServerPagination<T>(
     </div>
   );
 
-  return { data, loading, error, controls, page, setPage, pageSize, setPageSize, reload: load };
+  return { 
+    data, 
+    loading, 
+    error, 
+    controls, 
+    page, 
+    setPage, 
+    pageSize, 
+    setPageSize, 
+    reload: load,
+    filters,
+    applyFilters,
+    applySort,
+    clearFilters,
+    sortConditions
+  };
 }

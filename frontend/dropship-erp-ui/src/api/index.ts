@@ -348,6 +348,29 @@ export function listDropshipPurchases(params: {
   return api.get<DropshipPurchaseList>(url);
 }
 
+// Enhanced filtering API for dropship purchases
+export function listDropshipPurchasesFiltered(params: {
+  page?: number;
+  page_size?: number;
+  filters?: string; // JSON string of FilterParams
+  sort?: string; // JSON string of SortCondition[]
+}) {
+  const q = new URLSearchParams();
+  if (params.page) q.append("page", String(params.page));
+  if (params.page_size) q.append("page_size", String(params.page_size));
+  if (params.filters) q.append("filters", params.filters);
+  if (params.sort) q.append("sort", params.sort);
+  const qs = q.toString();
+  const url = qs ? `/dropship/purchases/filtered?${qs}` : "/dropship/purchases/filtered";
+  return api.get<{
+    data: DropshipPurchase[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }>(url);
+}
+
 export function sumDropshipPurchases(params: {
   channel?: string;
   store?: string;

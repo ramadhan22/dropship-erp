@@ -92,6 +92,16 @@ func (f *fakeDropshipRepo) CancelledSummary(ctx context.Context, channel, store,
 	return repository.CancelledSummary{}, nil
 }
 
+func (f *fakeDropshipRepo) ListDropshipPurchasesFiltered(ctx context.Context, params *models.FilterParams) (*models.QueryResult, error) {
+	return &models.QueryResult{
+		Data:       []models.DropshipPurchase{},
+		Total:      0,
+		Page:       1,
+		PageSize:   20,
+		TotalPages: 1,
+	}, nil
+}
+
 type fakeJournalRepoDrop struct {
 	entries []*models.JournalEntry
 	lines   []*models.JournalLine
