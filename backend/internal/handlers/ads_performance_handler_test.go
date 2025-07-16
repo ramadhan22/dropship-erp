@@ -51,24 +51,27 @@ func (m *mockAdsPerformanceService) GetPerformanceSummary(ctx context.Context, s
 	}, nil
 }
 
-func (m *mockAdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID int, accessToken string) error {
+func (m *mockAdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID int) error {
 	return nil
 }
 
-func (m *mockAdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time, accessToken string) error {
+func (m *mockAdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error {
 	return nil
 }
 
-// Wrapper to match the interface
-type mockServiceWrapper struct {
-	*mockAdsPerformanceService
+// Mock batch scheduler for testing
+type mockBatchScheduler struct{}
+
+func (m *mockBatchScheduler) CreateSyncBatch(ctx context.Context, storeID int) (int64, error) {
+	return 123, nil
 }
 
 func TestAdsPerformanceHandler_GetAdsCampaigns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	handler := &AdsPerformanceHandler{
-		adsService: &mockServiceWrapper{&mockAdsPerformanceService{}},
+		adsService:     &mockAdsPerformanceService{},
+		batchScheduler: &mockBatchScheduler{},
 	}
 	
 	router := gin.New()
@@ -103,7 +106,8 @@ func TestAdsPerformanceHandler_GetPerformanceSummary(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	handler := &AdsPerformanceHandler{
-		adsService: &mockServiceWrapper{&mockAdsPerformanceService{}},
+		adsService:     &mockAdsPerformanceService{},
+		batchScheduler: &mockBatchScheduler{},
 	}
 	
 	router := gin.New()
@@ -137,15 +141,15 @@ func TestAdsPerformanceHandler_FetchAdsCampaigns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	handler := &AdsPerformanceHandler{
-		adsService: &mockServiceWrapper{&mockAdsPerformanceService{}},
+		adsService:     &mockAdsPerformanceService{},
+		batchScheduler: &mockBatchScheduler{},
 	}
 	
 	router := gin.New()
 	router.POST("/campaigns/fetch", handler.FetchAdsCampaigns)
 	
 	requestBody := map[string]interface{}{
-		"store_id":     1,
-		"access_token": "test_token",
+		"store_id": 1,
 	}
 	
 	body, _ := json.Marshal(requestBody)

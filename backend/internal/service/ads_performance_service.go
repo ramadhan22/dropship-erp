@@ -78,33 +78,33 @@ type ShopeeAdsPerformanceResponse struct {
 }
 
 // FetchAdsCampaigns retrieves ads campaigns from Shopee Marketing API for a specific store
-func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID int, accessToken string) error {
+func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID int) error {
 	log.Printf("Fetching ads campaigns for store %d", storeID)
 
-	// Get store details to get shop_id
+	// Get store details and validate credentials
 	store, err := s.repo.ChannelRepo.GetStoreByID(ctx, int64(storeID))
 	if err != nil {
 		return fmt.Errorf("failed to get store details: %w", err)
 	}
 
-	if store.ShopID == nil {
-		return fmt.Errorf("store %d does not have shop_id configured", storeID)
+	if store.ShopID == nil || store.AccessToken == nil {
+		return fmt.Errorf("store %d does not have shop_id or access_token configured", storeID)
 	}
 
 	// Update client with store-specific credentials
 	s.shopeeClient.ShopID = *store.ShopID
-	s.shopeeClient.AccessToken = accessToken
+	s.shopeeClient.AccessToken = *store.AccessToken
 
 	// Build API request
 	path := "/api/v2/ads/get_ads_list"
 	ts := time.Now().Unix()
-	sign := s.shopeeClient.signWithToken(path, ts, accessToken)
+	sign := s.shopeeClient.signWithToken(path, ts, *store.AccessToken)
 
 	params := url.Values{}
 	params.Set("partner_id", s.shopeeClient.PartnerID)
 	params.Set("shop_id", s.shopeeClient.ShopID)
 	params.Set("timestamp", strconv.FormatInt(ts, 10))
-	params.Set("access_token", accessToken)
+	params.Set("access_token", *store.AccessToken)
 	params.Set("sign", sign)
 	
 	apiURL := s.shopeeClient.BaseURL + path + "?" + params.Encode()
@@ -140,34 +140,34 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 }
 
 // FetchAdsPerformance retrieves ads performance data from Shopee Marketing API
-func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time, accessToken string) error {
+func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error {
 	log.Printf("Fetching ads performance for campaign %d, store %d, from %s to %s", 
 		campaignID, storeID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 
-	// Get store details
+	// Get store details and validate credentials
 	store, err := s.repo.ChannelRepo.GetStoreByID(ctx, int64(storeID))
 	if err != nil {
 		return fmt.Errorf("failed to get store details: %w", err)
 	}
 
-	if store.ShopID == nil {
-		return fmt.Errorf("store %d does not have shop_id configured", storeID)
+	if store.ShopID == nil || store.AccessToken == nil {
+		return fmt.Errorf("store %d does not have shop_id or access_token configured", storeID)
 	}
 
 	// Update client with store-specific credentials
 	s.shopeeClient.ShopID = *store.ShopID
-	s.shopeeClient.AccessToken = accessToken
+	s.shopeeClient.AccessToken = *store.AccessToken
 
 	// Build API request
 	path := "/api/v2/ads/get_ads_performance"
 	ts := time.Now().Unix()
-	sign := s.shopeeClient.signWithToken(path, ts, accessToken)
+	sign := s.shopeeClient.signWithToken(path, ts, *store.AccessToken)
 
 	params := url.Values{}
 	params.Set("partner_id", s.shopeeClient.PartnerID)
 	params.Set("shop_id", s.shopeeClient.ShopID)
 	params.Set("timestamp", strconv.FormatInt(ts, 10))
-	params.Set("access_token", accessToken)
+	params.Set("access_token", *store.AccessToken)
 	params.Set("sign", sign)
 	params.Set("ads_id", strconv.FormatInt(campaignID, 10))
 	params.Set("data_type", "hourly") // daily or hourly
@@ -495,7 +495,7 @@ func (s *AdsPerformanceService) GetPerformanceSummary(ctx context.Context, store
 }
 
 // SyncHistoricalAdsPerformance syncs all historical ads performance data in background
-func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context, storeID int, accessToken string) error {
+func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context, storeID int) error {
 	log.Printf("Starting historical ads performance sync for store %d", storeID)
 
 	// Get all campaigns for the store
@@ -536,7 +536,7 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 		for batchIndex, batch := range batches {
 			log.Printf("Processing batch %d/%d for date %s", batchIndex+1, len(batches), currentDate.Format("2006-01-02"))
 
-			batchHasData, err := s.syncBatchForDate(ctx, storeID, batch, currentDate, accessToken)
+			batchHasData, err := s.syncBatchForDate(ctx, storeID, batch, currentDate)
 			if err != nil {
 				logutil.Errorf("Failed to sync batch %d for date %s: %v", batchIndex+1, currentDate.Format("2006-01-02"), err)
 				// Continue with next batch instead of failing entire operation
@@ -564,11 +564,11 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 }
 
 // syncBatchForDate syncs a batch of campaigns for a specific date
-func (s *AdsPerformanceService) syncBatchForDate(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics, date time.Time, accessToken string) (bool, error) {
+func (s *AdsPerformanceService) syncBatchForDate(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics, date time.Time) (bool, error) {
 	anyDataFound := false
 
 	for _, campaign := range campaigns {
-		err := s.FetchAdsPerformance(ctx, storeID, campaign.CampaignID, date, date, accessToken)
+		err := s.FetchAdsPerformance(ctx, storeID, campaign.CampaignID, date, date)
 		if err != nil {
 			logutil.Errorf("Failed to fetch performance for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
 			// Continue with next campaign instead of failing entire batch
