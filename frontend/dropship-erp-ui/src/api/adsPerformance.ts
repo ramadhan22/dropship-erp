@@ -7,8 +7,7 @@ export interface AdsPerformance {
   campaign_name: string;
   campaign_type: string;
   campaign_status: string;
-  date_from: string;
-  date_to: string;
+  performance_hour: string;
   ads_viewed: number;
   total_clicks: number;
   orders_count: number;
@@ -96,5 +95,68 @@ export async function getAdsPerformanceSummary(filter: Omit<AdsPerformanceFilter
 
 export async function refreshAdsData(request: RefreshAdsDataRequest): Promise<RefreshAdsDataResponse> {
   const response = await api.post('/ads-performance/refresh', request);
+  return response.data;
+}
+
+// Sync job interfaces
+export interface AdsSyncJob {
+  id: number;
+  store_id: number;
+  start_date: string;
+  end_date?: string;
+  total_campaigns: number;
+  processed_campaigns: number;
+  total_hours: number;
+  processed_hours: number;
+  status: string;
+  error_message: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface TriggerSyncRequest {
+  store_id: number;
+  start_date?: string;
+}
+
+export interface TriggerSyncResponse {
+  message: string;
+  job_id: number;
+  store_id: number;
+  start_date: string;
+  status: string;
+}
+
+export interface SyncJobsResponse {
+  jobs: AdsSyncJob[];
+  limit: number;
+  offset: number;
+  count: number;
+}
+
+// Sync API functions
+export async function triggerSync(request: TriggerSyncRequest): Promise<TriggerSyncResponse> {
+  const response = await api.post('/ads-performance/sync', request);
+  return response.data;
+}
+
+export async function triggerFullHistorySync(storeId: number): Promise<TriggerSyncResponse> {
+  const response = await api.post('/ads-performance/sync-all', { store_id: storeId });
+  return response.data;
+}
+
+export async function getSyncJob(jobId: number): Promise<AdsSyncJob> {
+  const response = await api.get(`/ads-performance/sync/${jobId}`);
+  return response.data;
+}
+
+export async function listSyncJobs(storeId?: number, limit: number = 20, offset: number = 0): Promise<SyncJobsResponse> {
+  const params = new URLSearchParams();
+  if (storeId) params.append('store_id', storeId.toString());
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+
+  const response = await api.get(`/ads-performance/sync?${params.toString()}`);
   return response.data;
 }

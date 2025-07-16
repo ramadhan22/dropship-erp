@@ -26,6 +26,7 @@ import {
   getAdsPerformance,
   getAdsPerformanceSummary,
   refreshAdsData,
+  triggerFullHistorySync,
   type AdsPerformance,
   type AdsPerformanceSummary,
   type AdsPerformanceFilter,
@@ -63,6 +64,7 @@ export default function AdsPerformanceDashboard() {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -115,10 +117,10 @@ export default function AdsPerformanceDashboard() {
       setAds(adsData.ads);
       setSummary(summaryData);
 
-      // Prepare chart data - group by date
+      // Prepare chart data - group by date (extract date from performance_hour)
       const chartMap = new Map<string, any>();
       adsData.ads.forEach((ad) => {
-        const dateKey = ad.date_from;
+        const dateKey = ad.performance_hour.split('T')[0]; // Extract date part from ISO datetime
         if (!chartMap.has(dateKey)) {
           chartMap.set(dateKey, {
             date: dateKey,
@@ -178,6 +180,28 @@ export default function AdsPerformanceDashboard() {
     }
   };
 
+  const handleSyncData = async () => {
+    if (!filter.store_id) {
+      setError('Please select a store to sync');
+      return;
+    }
+
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await triggerFullHistorySync(filter.store_id);
+      setSuccess(`Sync job created successfully (Job ID: ${result.job_id}). This will run in the background.`);
+      // Optionally reload data after sync starts
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start sync');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Table columns
   const columns: Column<AdsPerformance>[] = [
     {
@@ -208,6 +232,11 @@ export default function AdsPerformanceDashboard() {
           }
         />
       ),
+    },
+    {
+      label: 'Performance Hour',
+      key: 'performance_hour',
+      render: (value) => new Date(value).toLocaleString(),
     },
     {
       label: 'Impressions',
@@ -337,6 +366,17 @@ export default function AdsPerformanceDashboard() {
                 {refreshing ? 'Refreshing...' : 'Refresh Data'}
               </Button>
             </Grid>
+            <Grid item xs={12} sm={6} md={2}>
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={handleSyncData}
+                disabled={syncing}
+                startIcon={syncing ? <CircularProgress size={16} /> : undefined}
+              >
+                {syncing ? 'Syncing...' : 'Sync All Data'}
+              </Button>
+            </Grid>
           </Grid>
         </Paper>
 
@@ -443,7 +483,7 @@ export default function AdsPerformanceDashboard() {
               <SortableTable
                 columns={columns}
                 data={ads}
-                defaultSort={{ key: "date_from", direction: "desc" }}
+                defaultSort={{ key: "performance_hour", direction: "desc" }}
               />
             </Paper>
           </>

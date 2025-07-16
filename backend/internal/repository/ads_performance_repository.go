@@ -26,16 +26,16 @@ func (r *AdsPerformanceRepository) Create(ap *models.AdsPerformance) error {
 	query := `
 		INSERT INTO ads_performance (
 			store_id, campaign_id, campaign_name, campaign_type, campaign_status,
-			date_from, date_to, ads_viewed, total_clicks, orders_count,
+			performance_hour, ads_viewed, total_clicks, orders_count,
 			products_sold, sales_from_ads, ad_costs, click_rate, roas,
 			daily_budget, target_roas, performance_change_percentage
 		) VALUES (
 			:store_id, :campaign_id, :campaign_name, :campaign_type, :campaign_status,
-			:date_from, :date_to, :ads_viewed, :total_clicks, :orders_count,
+			:performance_hour, :ads_viewed, :total_clicks, :orders_count,
 			:products_sold, :sales_from_ads, :ad_costs, :click_rate, :roas,
 			:daily_budget, :target_roas, :performance_change_percentage
 		)
-		ON CONFLICT (store_id, campaign_id, date_from, date_to)
+		ON CONFLICT (store_id, campaign_id, performance_hour)
 		DO UPDATE SET
 			campaign_name = EXCLUDED.campaign_name,
 			campaign_type = EXCLUDED.campaign_type,
@@ -88,13 +88,13 @@ func (r *AdsPerformanceRepository) List(filter *models.AdsPerformanceFilter, lim
 	}
 
 	if filter.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("ap.date_from >= $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("ap.performance_hour >= $%d", argIndex))
 		args = append(args, *filter.DateFrom)
 		argIndex++
 	}
 
 	if filter.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("ap.date_to <= $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("ap.performance_hour <= $%d", argIndex))
 		args = append(args, *filter.DateTo)
 		argIndex++
 	}
@@ -103,7 +103,7 @@ func (r *AdsPerformanceRepository) List(filter *models.AdsPerformanceFilter, lim
 		baseQuery += " AND " + strings.Join(conditions, " AND ")
 	}
 
-	baseQuery += fmt.Sprintf(" ORDER BY ap.date_from DESC, ap.campaign_name LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	baseQuery += fmt.Sprintf(" ORDER BY ap.performance_hour DESC, ap.campaign_name LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, offset)
 
 	var results []models.AdsPerformance
@@ -127,8 +127,8 @@ func (r *AdsPerformanceRepository) GetSummary(filter *models.AdsPerformanceFilte
 			COALESCE(SUM(ad_costs), 0) as total_ad_costs,
 			COALESCE(AVG(click_rate), 0) as average_click_rate,
 			COALESCE(AVG(roas), 0) as average_roas,
-			MIN(date_from) as date_from,
-			MAX(date_to) as date_to
+			MIN(performance_hour) as date_from,
+			MAX(performance_hour) as date_to
 		FROM ads_performance
 		WHERE 1=1`
 
@@ -145,13 +145,13 @@ func (r *AdsPerformanceRepository) GetSummary(filter *models.AdsPerformanceFilte
 	}
 
 	if filter.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("date_from >= $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("performance_hour >= $%d", argIndex))
 		args = append(args, *filter.DateFrom)
 		argIndex++
 	}
 
 	if filter.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("date_to <= $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("performance_hour <= $%d", argIndex))
 		args = append(args, *filter.DateTo)
 		argIndex++
 	}
@@ -181,4 +181,92 @@ func (r *AdsPerformanceRepository) DeleteOldRecords(olderThan time.Time) (int64,
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+// CreateSyncJob creates a new ads sync job.
+func (r *AdsPerformanceRepository) CreateSyncJob(job *models.AdsSyncJob) error {
+	query := `
+		INSERT INTO ads_sync_jobs (
+			store_id, start_date, end_date, total_campaigns, processed_campaigns,
+			total_hours, processed_hours, status, error_message
+		) VALUES (
+			:store_id, :start_date, :end_date, :total_campaigns, :processed_campaigns,
+			:total_hours, :processed_hours, :status, :error_message
+		)
+		RETURNING id, created_at`
+	
+	return r.db.Get(job, query, job)
+}
+
+// UpdateSyncJob updates an existing sync job.
+func (r *AdsPerformanceRepository) UpdateSyncJob(job *models.AdsSyncJob) error {
+	query := `
+		UPDATE ads_sync_jobs SET
+			end_date = :end_date,
+			total_campaigns = :total_campaigns,
+			processed_campaigns = :processed_campaigns,
+			total_hours = :total_hours,
+			processed_hours = :processed_hours,
+			status = :status,
+			error_message = :error_message,
+			started_at = :started_at,
+			completed_at = :completed_at
+		WHERE id = :id`
+	
+	_, err := r.db.NamedExec(query, job)
+	return err
+}
+
+// GetSyncJob retrieves a sync job by ID.
+func (r *AdsPerformanceRepository) GetSyncJob(id int64) (*models.AdsSyncJob, error) {
+	var job models.AdsSyncJob
+	query := "SELECT * FROM ads_sync_jobs WHERE id = $1"
+	err := r.db.Get(&job, query, id)
+	return &job, err
+}
+
+// ListPendingSyncJobs returns all pending sync jobs.
+func (r *AdsPerformanceRepository) ListPendingSyncJobs() ([]models.AdsSyncJob, error) {
+	var jobs []models.AdsSyncJob
+	query := "SELECT * FROM ads_sync_jobs WHERE status = 'pending' ORDER BY created_at ASC"
+	err := r.db.Select(&jobs, query)
+	return jobs, err
+}
+
+// ListSyncJobs returns sync jobs with optional filtering.
+func (r *AdsPerformanceRepository) ListSyncJobs(storeID *int, limit, offset int) ([]models.AdsSyncJob, error) {
+	var jobs []models.AdsSyncJob
+	var conditions []string
+	var args []interface{}
+	argIndex := 1
+
+	baseQuery := "SELECT * FROM ads_sync_jobs WHERE 1=1"
+
+	if storeID != nil {
+		conditions = append(conditions, fmt.Sprintf("store_id = $%d", argIndex))
+		args = append(args, *storeID)
+		argIndex++
+	}
+
+	if len(conditions) > 0 {
+		baseQuery += " AND " + strings.Join(conditions, " AND ")
+	}
+
+	baseQuery += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, limit, offset)
+
+	err := r.db.Select(&jobs, baseQuery, args...)
+	return jobs, err
+}
+
+// HasPerformanceData checks if there's any performance data for a given store and date.
+func (r *AdsPerformanceRepository) HasPerformanceData(storeID int, date time.Time) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM ads_performance 
+		WHERE store_id = $1 
+		AND DATE(performance_hour) = DATE($2)`
+	err := r.db.Get(&count, query, storeID, date)
+	return count > 0, err
 }

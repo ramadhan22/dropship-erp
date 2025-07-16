@@ -123,15 +123,21 @@ func (s *AdsPerformanceService) FetchAdsPerformanceFromShopee(ctx context.Contex
 	
 	// Convert and save ads performance data
 	for _, adsData := range adsResponse.Ads {
-		adsPerformance, err := s.convertShopeeDataToModel(storeID, adsData, dateFrom, dateTo)
-		if err != nil {
-			logutil.Errorf("Failed to convert ads data: %v", err)
-			continue
-		}
-		
-		if err := s.repo.Create(adsPerformance); err != nil {
-			logutil.Errorf("Failed to save ads performance: %v", err)
-			continue
+		// For backwards compatibility, create hourly records for each hour in the date range
+		currentHour := dateFrom
+		for currentHour.Before(dateTo.Add(time.Hour)) || currentHour.Equal(dateTo) {
+			adsPerformance, err := s.convertShopeeDataToModel(storeID, adsData, currentHour)
+			if err != nil {
+				logutil.Errorf("Failed to convert ads data: %v", err)
+				currentHour = currentHour.Add(time.Hour)
+				continue
+			}
+			
+			if err := s.repo.Create(adsPerformance); err != nil {
+				logutil.Errorf("Failed to save ads performance: %v", err)
+			}
+			
+			currentHour = currentHour.Add(time.Hour)
 		}
 	}
 	
@@ -140,15 +146,14 @@ func (s *AdsPerformanceService) FetchAdsPerformanceFromShopee(ctx context.Contex
 }
 
 // convertShopeeDataToModel converts Shopee API data to our model
-func (s *AdsPerformanceService) convertShopeeDataToModel(storeID int, data ShopeeAdsPerformanceData, dateFrom, dateTo time.Time) (*models.AdsPerformance, error) {
+func (s *AdsPerformanceService) convertShopeeDataToModel(storeID int, data ShopeeAdsPerformanceData, performanceHour time.Time) (*models.AdsPerformance, error) {
 	ap := &models.AdsPerformance{
-		StoreID:        storeID,
-		CampaignID:     data.CampaignID,
-		CampaignName:   data.CampaignName,
-		CampaignType:   data.CampaignType,
-		CampaignStatus: data.Status,
-		DateFrom:       dateFrom,
-		DateTo:         dateTo,
+		StoreID:         storeID,
+		CampaignID:      data.CampaignID,
+		CampaignName:    data.CampaignName,
+		CampaignType:    data.CampaignType,
+		CampaignStatus:  data.Status,
+		PerformanceHour: performanceHour,
 		
 		// Map Shopee metrics to our model
 		AdsViewed:      data.Impression,
