@@ -46,15 +46,15 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 	if base == "" {
 		base = "https://partner.test-stable.shopeemobile.com"
 	}
-	
+
 	// Create rate limiter for 1000 requests per hour (Shopee API limit)
 	rateLimiter := NewRateLimiter(1000, time.Hour/1000)
-	
+
 	retryConfig := RetryConfig{
 		MaxAttempts: 3,
 		BaseDelay:   time.Second,
 	}
-	
+
 	return &ShopeeClient{
 		BaseURL:      base,
 		PartnerID:    cfg.PartnerID,
@@ -115,27 +115,27 @@ func (c *ShopeeClient) makeGetRequest(ctx context.Context, path string, params m
 	for key, value := range params {
 		q.Set(key, fmt.Sprintf("%v", value))
 	}
-	
+
 	fullURL := c.BaseURL + path + "?" + q.Encode()
 	log.Printf("ShopeeClient request: GET %s", fullURL)
-	
+
 	// Use rate limiter
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit wait failed: %w", err)
 	}
-	
+
 	// Make request with retry
 	resp, err := c.makeRequestWithRetry(ctx, "GET", fullURL, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	
+
 	log.Printf("ShopeeClient response: %s", string(body))
 	return body, nil
 }
@@ -149,41 +149,41 @@ func (c *ShopeeClient) makeRequestWithRetry(ctx context.Context, method, url str
 
 	var resp *http.Response
 	var err error
-	
+
 	for attempt := 1; attempt <= c.retryConfig.MaxAttempts; attempt++ {
 		// Create request
 		req, reqErr := http.NewRequestWithContext(ctx, method, url, body)
 		if reqErr != nil {
 			return nil, fmt.Errorf("failed to create request: %w", reqErr)
 		}
-		
+
 		// Set headers
 		for key, value := range headers {
 			req.Header.Set(key, value)
 		}
-		
+
 		// Log request
 		log.Printf("ShopeeClient request (attempt %d/%d): %s %s", attempt, c.retryConfig.MaxAttempts, method, url)
-		
+
 		// Execute request
 		resp, err = c.httpClient.Do(req)
 		if err == nil && resp.StatusCode < 500 {
 			// Success or client error (4xx) - don't retry client errors
 			return resp, nil
 		}
-		
+
 		// Close response body if present before retry
 		if resp != nil {
 			resp.Body.Close()
 		}
-		
+
 		// Don't sleep after the last attempt
 		if attempt < c.retryConfig.MaxAttempts {
 			// Exponential backoff: baseDelay * 2^(attempt-1)
 			delay := c.retryConfig.BaseDelay * time.Duration(1<<(attempt-1))
-			log.Printf("Request failed (attempt %d/%d), retrying in %v. Error: %v", 
+			log.Printf("Request failed (attempt %d/%d), retrying in %v. Error: %v",
 				attempt, c.retryConfig.MaxAttempts, delay, err)
-			
+
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -192,11 +192,11 @@ func (c *ShopeeClient) makeRequestWithRetry(ctx context.Context, method, url str
 			}
 		}
 	}
-	
+
 	return resp, fmt.Errorf("request failed after %d attempts: %w", c.retryConfig.MaxAttempts, err)
 }
 
-// GetRateLimiterStats returns current rate limiter statistics  
+// GetRateLimiterStats returns current rate limiter statistics
 func (c *ShopeeClient) GetRateLimiterStats() (availableTokens int, maxTokens int) {
 	return c.rateLimiter.GetStats()
 }

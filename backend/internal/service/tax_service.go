@@ -29,9 +29,9 @@ type TaxServiceJournalRepo interface {
 }
 
 type TaxService struct {
-	db          *sqlx.DB
-	repo        TaxRepoInterface
-	journalRepo JournalRepoInterface
+	db             *sqlx.DB
+	repo           TaxRepoInterface
+	journalRepo    JournalRepoInterface
 	taxJournalRepo TaxServiceJournalRepo
 }
 
@@ -43,7 +43,7 @@ func NewTaxService(db *sqlx.DB, repo TaxRepoInterface, jr JournalRepoInterface, 
 func (s *TaxService) getRevenue(ctx context.Context, store, periodType, periodValue string) (float64, error) {
 	var start time.Time
 	var err error
-	
+
 	switch periodType {
 	case "monthly":
 		start, err = time.Parse("2006-01", periodValue)

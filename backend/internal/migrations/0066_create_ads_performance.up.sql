@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS ads_performance (
     id SERIAL PRIMARY KEY,
-    store_id INT REFERENCES stores(id),
+    store_id INT REFERENCES stores(store_id),
     campaign_id VARCHAR(64) NOT NULL,
     campaign_name VARCHAR(256),
     campaign_type VARCHAR(64),

@@ -29,13 +29,13 @@ func (s *AdsPerformanceSyncScheduler) Start(ctx context.Context) {
 	if s == nil || s.syncSvc == nil {
 		return
 	}
-	
+
 	log.Printf("Starting ads performance sync scheduler with interval %v", s.interval)
-	
+
 	go func() {
 		ticker := time.NewTicker(s.interval)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -54,19 +54,19 @@ func (s *AdsPerformanceSyncScheduler) run(ctx context.Context) {
 		log.Printf("ads sync scheduler list pending: %v", err)
 		return
 	}
-	
+
 	if len(jobs) == 0 {
 		return // No pending jobs
 	}
-	
+
 	log.Printf("Found %d pending ads sync jobs", len(jobs))
-	
+
 	for _, job := range jobs {
 		// Process each job in a separate goroutine to avoid blocking
 		go func(jobID int64) {
 			s.syncSvc.ProcessSyncJob(ctx, jobID)
 		}(job.ID)
-		
+
 		// Add a small delay between starting jobs to avoid overwhelming the API
 		time.Sleep(10 * time.Second)
 	}

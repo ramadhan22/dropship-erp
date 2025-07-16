@@ -120,7 +120,7 @@ func main() {
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
 	adsPerformanceSvc := service.NewAdsPerformanceService(repo.DB, shClient)
 	adsPerformanceSyncSvc := service.NewAdsPerformanceSyncService(repo.DB, shClient, batchSvc)
-	
+
 	// Start ads performance sync scheduler
 	service.NewAdsPerformanceSyncScheduler(adsPerformanceSyncSvc, 2*time.Minute).Start(context.Background())
 	// 4) Setup performance monitoring
@@ -205,17 +205,17 @@ func main() {
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		handlers.NewReconcileHandler(reconcileSvc).RegisterRoutes(apiGroup)
-		
+
 		// Ads Performance Dashboard
 		adsPerformanceHandler := handlers.NewAdsPerformanceHandler(adsPerformanceSvc)
 		apiGroup.GET("/ads-performance", adsPerformanceHandler.GetAdsPerformance)
 		apiGroup.GET("/ads-performance/summary", adsPerformanceHandler.GetAdsPerformanceSummary)
 		apiGroup.POST("/ads-performance/refresh", adsPerformanceHandler.RefreshAdsData)
-		
+
 		// Ads Performance Sync
 		adsPerformanceSyncHandler := handlers.NewAdsPerformanceSyncHandler(adsPerformanceSyncSvc)
 		adsPerformanceSyncHandler.RegisterRoutes(apiGroup)
-		
+
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
 

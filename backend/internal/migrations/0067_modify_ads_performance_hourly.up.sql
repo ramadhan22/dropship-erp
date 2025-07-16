@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS ads_performance;
 
 CREATE TABLE IF NOT EXISTS ads_performance (
     id SERIAL PRIMARY KEY,
-    store_id INT REFERENCES stores(id),
+    store_id INT REFERENCES stores(store_id),
     campaign_id VARCHAR(64) NOT NULL,
     campaign_name VARCHAR(256),
     campaign_type VARCHAR(64),
@@ -48,7 +48,7 @@ CREATE INDEX idx_ads_performance_hour ON ads_performance(performance_hour);
 -- Create ads sync batch history for tracking background sync jobs
 CREATE TABLE IF NOT EXISTS ads_sync_jobs (
     id SERIAL PRIMARY KEY,
-    store_id INT REFERENCES stores(id),
+    store_id INT REFERENCES stores(store_id),
     start_date DATE NOT NULL,
     end_date DATE,
     total_campaigns INT DEFAULT 0,
