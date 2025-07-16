@@ -210,7 +210,7 @@ func (s *ReconcileService) bulkGetDropshipPurchasesByInvoices(ctx context.Contex
 	}); ok {
 		return bulkRepo.GetDropshipPurchasesByInvoices(ctx, invoices)
 	}
-	
+
 	// Fallback to individual calls if bulk method not available
 	purchases := make([]*models.DropshipPurchase, 0, len(invoices))
 	for _, inv := range invoices {
@@ -341,7 +341,7 @@ func (s *ReconcileService) BulkReconcile(ctx context.Context, pairs [][2]string,
 	return nil
 }
 
-// CheckAndMarkComplete verifies a purchase has been properly settled and updates 
+// CheckAndMarkComplete verifies a purchase has been properly settled and updates
 // its status accordingly. This method checks if an order is complete by looking
 // for escrow settlement journals or existing completion status.
 func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan string) error {
@@ -362,20 +362,20 @@ func (s *ReconcileService) CheckAndMarkComplete(ctx context.Context, kodePesanan
 	if err != nil || dp == nil {
 		return fmt.Errorf("fetch DropshipPurchase %s: %w", kodePesanan, err)
 	}
-	
+
 	// If already marked as complete, no need to check further
 	if dp.StatusPesananTerakhir == "Pesanan selesai" {
 		log.Printf("CheckAndMarkComplete: %s already marked as complete", kodePesanan)
 		return nil
 	}
-	
+
 	// Check if escrow settlement journal exists (primary indicator of completion)
 	isSettled := s.hasEscrowSettlement(ctx, dp.KodeInvoiceChannel)
-	
+
 	if !isSettled {
 		return fmt.Errorf("order not yet settled - no escrow settlement journal found")
 	}
-	
+
 	if err := dropRepo.UpdatePurchaseStatus(ctx, kodePesanan, "Pesanan selesai"); err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -671,7 +671,7 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 		}
 		return nil
 	}
-	
+
 	// Handle returned orders - both full and partial returns
 	if status == "returned" || status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "return") {
 		// Check if return journal already exists to avoid duplicates
@@ -679,17 +679,17 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 			log.Printf("Return journal already exists for %s, skipping", invoice)
 			return nil
 		}
-		
+
 		// Get escrow detail to determine return amounts
 		escDetail, err := s.GetShopeeEscrowDetail(ctx, invoice)
 		if err != nil {
 			return fmt.Errorf("get escrow detail for return %s: %w", invoice, err)
 		}
-		
+
 		// Determine if this is a partial return and extract return amount
 		isPartialReturn := status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "partial")
 		returnAmount := 0.0
-		
+
 		// For partial returns, extract the actual return amount from escrow detail
 		if isPartialReturn {
 			m := map[string]any(*escDetail)
@@ -718,13 +718,13 @@ func (s *ReconcileService) UpdateShopeeStatus(ctx context.Context, invoice strin
 				}
 			}
 		}
-		
+
 		if err := s.createReturnedOrderJournal(ctx, invoice, statusStr, updateTime, escDetail, isPartialReturn, returnAmount); err != nil {
 			return err
 		}
 		return nil
 	}
-	
+
 	if status != "cancelled" {
 		return nil
 	}
@@ -891,16 +891,14 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 			{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: escrowAmt, Memo: ptrString("Saldo Shopee " + invoice)},
 		}
 	}
-	if diff > 0 {
-		lines = append(lines,
-			models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
-			models.JournalLine{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: diff, Memo: ptrString("Selisih Ongkir " + invoice)},
-		)
-	} else if diff < 0 {
+	if diff < 0 {
 		aamt := -diff
 		lines = append(lines,
-			models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
-			models.JournalLine{JournalID: jid, AccountID: saldoShopeeAccountID(dp.NamaToko), IsDebit: false, Amount: aamt, Memo: ptrString("Selisih Ongkir " + invoice)},
+			models.JournalLine{JournalID: jid, AccountID: 4001, IsDebit: false, Amount: aamt, Memo: ptrString("Selisih Ongkir Lebih" + invoice)},
+		)
+	} else if diff > 0 {
+		lines = append(lines,
+			models.JournalLine{JournalID: jid, AccountID: 52010, IsDebit: true, Amount: diff, Memo: ptrString("Selisih Ongkir Kurang" + invoice)},
 		)
 	}
 	for i := range lines {
@@ -985,7 +983,7 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 
 	m := map[string]any(*escDetail)
 	income, _ := m["order_income"].(map[string]any)
-	
+
 	// Extract amounts from escrow detail
 	orderPrice := 0.0
 	if v := asFloat64(income, "order_original_price"); v != nil {
@@ -1051,8 +1049,8 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 	actualReturnAmount := orderPrice * returnProportion
 
 	je := &models.JournalEntry{
-		EntryDate:    updateTime,
-		Description:  ptrString(fmt.Sprintf("Shopee return %s%s", invoice, func() string {
+		EntryDate: updateTime,
+		Description: ptrString(fmt.Sprintf("Shopee return %s%s", invoice, func() string {
 			if isPartialReturn {
 				return fmt.Sprintf(" (partial %.2f)", actualReturnAmount)
 			}
@@ -1076,7 +1074,7 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 	lines = []models.JournalLine{
 		// Reverse the pending account credit (now debit)
 		{JournalID: jid, AccountID: pendingAccountID(dp.NamaToko), IsDebit: true, Amount: actualReturnAmount, Memo: ptrString("Reverse pending " + invoice)},
-		
+
 		// Reverse the expense account debits (now credits)
 		{JournalID: jid, AccountID: 52006, IsDebit: false, Amount: returnCommission, Memo: ptrString("Reverse commission " + invoice)},
 		{JournalID: jid, AccountID: 52004, IsDebit: false, Amount: returnService, Memo: ptrString("Reverse service fee " + invoice)},
@@ -1084,7 +1082,7 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 		{JournalID: jid, AccountID: 55004, IsDebit: false, Amount: returnDiscount, Memo: ptrString("Reverse discount " + invoice)},
 		{JournalID: jid, AccountID: 55006, IsDebit: false, Amount: returnShipDisc, Memo: ptrString("Reverse shipping discount " + invoice)},
 		{JournalID: jid, AccountID: 55002, IsDebit: false, Amount: returnAffiliate, Memo: ptrString("Reverse affiliate " + invoice)},
-		
+
 		// Record refund to customer using refund account
 		{JournalID: jid, AccountID: 52009, IsDebit: true, Amount: actualReturnAmount, Memo: ptrString("Refund " + invoice)},
 	}
@@ -1132,7 +1130,6 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 // ProcessReturnedOrder handles manual return processing from the reconcile dashboard.
 // This method allows updating escrow status for returned orders with proper journal entries.
 
-
 // HasReturnJournal checks if a return journal entry already exists for the given invoice
 func (s *ReconcileService) HasReturnJournal(ctx context.Context, invoice string) bool {
 	if journalRepo, ok := s.journalRepo.(interface {
@@ -1152,7 +1149,7 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 	if len(invoices) == 0 {
 		return nil
 	}
-	
+
 	start := time.Now()
 	// Optimize: Bulk fetch all DropshipPurchases instead of individual calls
 	log.Printf("UpdateShopeeStatuses: fetching %d purchases in bulk", len(invoices))
@@ -1163,7 +1160,7 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 	}
 	fetchDuration := time.Since(start)
 	log.Printf("UpdateShopeeStatuses: bulk fetch completed in %v for %d purchases", fetchDuration, len(purchases))
-	
+
 	batches := make(map[string][]*models.DropshipPurchase)
 	for _, dp := range purchases {
 		batches[dp.NamaToko] = append(batches[dp.NamaToko], dp)
@@ -1268,7 +1265,7 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			timeMap[sn] = updateTime
 			continue
 		}
-		
+
 		// Handle returned orders
 		if status == "returned" || status == "partial_return" || strings.Contains(strings.ToLower(statusStr), "return") {
 			returned = append(returned, sn)
@@ -1276,7 +1273,7 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			statusMap[sn] = statusStr
 			continue
 		}
-		
+
 		if status == "cancelled" {
 			if err := s.CancelPurchaseAt(ctx, dp.KodePesanan, updateTime, "Cancelled Shopee"); err != nil {
 				log.Printf("cancel purchase %s: %v", dp.KodePesanan, err)
@@ -1330,7 +1327,7 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 			wg.Wait()
 		}
 	}
-	
+
 	// Process returned orders if any
 	if len(returned) > 0 {
 		log.Printf("processing %d returned orders", len(returned))
@@ -1371,12 +1368,12 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 						log.Printf("found DropshipPurchase invoice %s for return", dp.KodeInvoiceChannel)
 						inv = dp.KodeInvoiceChannel
 					}
-					
+
 					// Determine if partial return and extract return amount
 					statusStr := statusMap[sn]
 					isPartialReturn := strings.Contains(strings.ToLower(statusStr), "partial") || strings.Contains(strings.ToLower(statusStr), "partial_return")
 					returnAmount := 0.0
-					
+
 					if isPartialReturn {
 						m := map[string]any(esc)
 						if income, ok := m["order_income"].(map[string]any); ok {
@@ -1387,7 +1384,7 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 							}
 						}
 					}
-					
+
 					log.Printf("creating returned order journal for %s (partial: %t, amount: %.2f)", inv, isPartialReturn, returnAmount)
 					if err := s.createReturnedOrderJournal(ctx, inv, statusStr, timeMap[sn], &esc, isPartialReturn, returnAmount); err != nil {
 						log.Printf("returned order journal %s: %v", sn, err)
@@ -1406,7 +1403,7 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 	if s.batchSvc == nil {
 		return nil, fmt.Errorf("batch service not configured")
 	}
-	
+
 	log.Printf("CreateReconcileBatches: fetching candidates for shop=%s, order=%s, from=%s, to=%s", shop, order, from, to)
 	pageSize := 1000
 	batchSize := 50 // Process in batches of 50 orders
@@ -1423,14 +1420,14 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 		}
 		offset += pageSize
 	}
-	
+
 	log.Printf("CreateReconcileBatches: found %d total candidates", len(all))
-	
+
 	batches := make(map[string][]models.ReconcileCandidate)
 	for _, c := range all {
 		batches[c.NamaToko] = append(batches[c.NamaToko], c)
 	}
-	
+
 	batchCount := 0
 	for store, list := range batches {
 		log.Printf("CreateReconcileBatches: processing %d candidates for store %s", len(list), store)
@@ -1446,7 +1443,7 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 				return nil, err
 			}
 			batchCount++
-			
+
 			for _, cand := range subset {
 				d := &models.BatchHistoryDetail{BatchID: batchID, Reference: cand.KodeInvoiceChannel, Store: store, Status: "pending"}
 				if err := s.batchSvc.CreateDetail(ctx, d); err != nil {
@@ -1455,12 +1452,12 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 			}
 		}
 	}
-	
+
 	result := &models.ReconcileBatchInfo{
 		BatchCount:        batchCount,
 		TotalTransactions: len(all),
 	}
-	
+
 	log.Printf("CreateReconcileBatches: created %d batches for %d total transactions", result.BatchCount, result.TotalTransactions)
 	return result, nil
 }
@@ -1471,10 +1468,10 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	if s.batchSvc == nil {
 		return
 	}
-	
+
 	start := time.Now()
 	log.Printf("ProcessReconcileBatch %d: starting batch processing", id)
-	
+
 	details, err := s.batchSvc.ListDetails(ctx, id)
 	if err != nil {
 		log.Printf("list batch details %d: %v", id, err)
@@ -1482,12 +1479,12 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 		return
 	}
 	s.batchSvc.UpdateStatus(ctx, id, "processing", "")
-	
+
 	invoices := make([]string, len(details))
 	for i, d := range details {
 		invoices[i] = d.Reference
 	}
-	
+
 	// Update Shopee statuses in bulk first
 	log.Printf("ProcessReconcileBatch %d: updating %d statuses", id, len(invoices))
 	statusStart := time.Now()
@@ -1496,7 +1493,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	}
 	statusDuration := time.Since(statusStart)
 	log.Printf("ProcessReconcileBatch %d: status update completed in %v", id, statusDuration)
-	
+
 	// Bulk fetch purchases to reduce database calls
 	log.Printf("ProcessReconcileBatch %d: bulk fetching purchases", id)
 	fetchStart := time.Now()
@@ -1508,13 +1505,13 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	}
 	fetchDuration := time.Since(fetchStart)
 	log.Printf("ProcessReconcileBatch %d: bulk fetch completed in %v for %d purchases", id, fetchDuration, len(purchases))
-	
+
 	// Create lookup map for faster access
 	purchaseMap := make(map[string]*models.DropshipPurchase)
 	for _, dp := range purchases {
 		purchaseMap[dp.KodeInvoiceChannel] = dp
 	}
-	
+
 	// Process each detail with optimized lookups
 	done := 0
 	processStart := time.Now()
@@ -1525,7 +1522,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", msg)
 			continue
 		}
-		
+
 		if err := s.CheckAndMarkComplete(ctx, dp.KodePesanan); err != nil {
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", err.Error())
 			continue
@@ -1536,8 +1533,8 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	}
 	processDuration := time.Since(processStart)
 	totalDuration := time.Since(start)
-	
+
 	s.batchSvc.UpdateStatus(ctx, id, "completed", "")
-	log.Printf("ProcessReconcileBatch %d completed in %v: %d/%d successful (status: %v, fetch: %v, process: %v)", 
+	log.Printf("ProcessReconcileBatch %d completed in %v: %d/%d successful (status: %v, fetch: %v, process: %v)",
 		id, totalDuration, done, len(details), statusDuration, fetchDuration, processDuration)
 }
