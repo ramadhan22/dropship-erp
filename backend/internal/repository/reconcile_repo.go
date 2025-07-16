@@ -64,7 +64,7 @@ func (r *ReconcileRepo) ListUnmatched(ctx context.Context, shop string) ([]model
 // ListCandidates returns dropship purchases that either have no matching row in
 // shopee_settled or have a matching row but the purchase status is not
 // "pesanan selesai". Optional shop filter matches nama_toko.
-func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error) {
+func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, status, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error) {
 	base := `SELECT dp.kode_pesanan, dp.kode_invoice_channel, dp.nama_toko, dp.status_pesanan_terakhir,
                ss.no_pesanan
                FROM dropship_purchases dp
@@ -72,8 +72,9 @@ func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, from, t
                LEFT JOIN shopee_settled ss ON dp.kode_invoice_channel = ss.no_pesanan
                WHERE ($1 = '' OR dp.nama_toko = $1)
                  AND ($2 = '' OR dp.kode_invoice_channel ILIKE '%' || $2 || '%')
-                 AND ($3 = '' OR DATE(dp.waktu_pesanan_terbuat) >= $3::date)
-                 AND ($4 = '' OR DATE(dp.waktu_pesanan_terbuat) <= $4::date)
+                 AND ($3 = '' OR dp.status_pesanan_terakhir ILIKE '%' || $3 || '%')
+                 AND ($4 = '' OR DATE(dp.waktu_pesanan_terbuat) >= $4::date)
+                 AND ($5 = '' OR DATE(dp.waktu_pesanan_terbuat) <= $5::date)
                  AND NOT EXISTS (
                        SELECT 1 FROM journal_entries je2
                        WHERE je2.source_id = dp.kode_invoice_channel
@@ -82,13 +83,13 @@ func (r *ReconcileRepo) ListCandidates(ctx context.Context, shop, order, from, t
 
 	countQuery := "SELECT COUNT(*) FROM (" + base + ") AS sub"
 	var total int
-	if err := r.db.GetContext(ctx, &total, countQuery, shop, order, from, to); err != nil {
+	if err := r.db.GetContext(ctx, &total, countQuery, shop, order, status, from, to); err != nil {
 		return nil, 0, err
 	}
 
-	base += " ORDER BY dp.waktu_pesanan_terbuat DESC LIMIT $5 OFFSET $6"
+	base += " ORDER BY dp.waktu_pesanan_terbuat DESC LIMIT $6 OFFSET $7"
 	var list []models.ReconcileCandidate
-	err := r.db.SelectContext(ctx, &list, base, shop, order, from, to, limit, offset)
+	err := r.db.SelectContext(ctx, &list, base, shop, order, status, from, to, limit, offset)
 	if list == nil {
 		list = []models.ReconcileCandidate{}
 	}

@@ -14,6 +14,7 @@ export function listUnmatched(shop: string) {
 export function listCandidates(
   shop: string,
   order: string,
+  status: string,
   from: string,
   to: string,
   page: number,
@@ -23,6 +24,7 @@ export function listCandidates(
   const q = new URLSearchParams();
   if (shop) q.append("shop", shop);
   if (order) q.append("order", order);
+  if (status) q.append("status", status);
   if (from) q.append("from", from);
   if (to) q.append("to", to);
   q.append("page", String(page));
@@ -77,8 +79,9 @@ export function updateShopeeStatuses(
 export function createReconcileBatch(
   shop: string,
   order: string,
+  status: string,
   from: string,
   to: string,
 ) {
-  return api.post("/reconcile/batch", { shop, order, from, to });
+  return api.post("/reconcile/batch", { shop, order, status, from, to });
 }

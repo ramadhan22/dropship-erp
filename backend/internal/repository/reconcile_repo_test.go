@@ -109,7 +109,7 @@ func TestListCandidates(t *testing.T) {
 	}
 	_, _ = jrepo.CreateJournalEntry(ctx, escrow)
 
-	list, total, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "", 10, 0)
+	list, total, err := recRepo.ListCandidates(ctx, "ShopA", "", "", "", "", 10, 0)
 	if err != nil {
 		t.Fatalf("ListCandidates error: %v", err)
 	}
@@ -117,12 +117,20 @@ func TestListCandidates(t *testing.T) {
 		t.Errorf("expected 1 candidate, got %d total %d", len(list), total)
 	}
 
-	list2, total2, err := recRepo.ListCandidates(ctx, "", kode1, "", "", 10, 0)
+	list2, total2, err := recRepo.ListCandidates(ctx, "", kode1, "", "", "", 10, 0)
 	if err != nil {
 		t.Fatalf("ListCandidates by order error: %v", err)
 	}
 	if len(list2) != 1 || total2 != 1 {
 		t.Errorf("expected 1 candidate, got %d total %d", len(list2), total2)
+	}
+
+	list3, total3, err := recRepo.ListCandidates(ctx, "", "", "diproses", "", "", 10, 0)
+	if err != nil {
+		t.Fatalf("ListCandidates by status error: %v", err)
+	}
+	if len(list3) == 0 || total3 == 0 {
+		t.Errorf("expected candidates by status, got %d total %d", len(list3), total3)
 	}
 
 	// cleanup

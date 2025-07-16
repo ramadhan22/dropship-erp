@@ -283,11 +283,11 @@ func (s *ReconcileService) ListUnmatched(ctx context.Context, shop string) ([]mo
 }
 
 // ListCandidates proxies to the repo to fetch transactions that need attention.
-func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error) {
+func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, status, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error) {
 	if repo, ok := s.recRepo.(interface {
-		ListCandidates(context.Context, string, string, string, string, int, int) ([]models.ReconcileCandidate, int, error)
+		ListCandidates(context.Context, string, string, string, string, string, int, int) ([]models.ReconcileCandidate, int, error)
 	}); ok {
-		list, total, err := repo.ListCandidates(ctx, shop, order, from, to, limit, offset)
+		list, total, err := repo.ListCandidates(ctx, shop, order, status, from, to, limit, offset)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -1444,18 +1444,18 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 // CreateReconcileBatches groups reconciliation candidates by store and records
 // them as batch_history rows with associated details. Each batch contains at
 // most 50 invoices. Returns information about the created batches.
-func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, from, to string) (*models.ReconcileBatchInfo, error) {
+func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error) {
 	if s.batchSvc == nil {
 		return nil, fmt.Errorf("batch service not configured")
 	}
 
-	log.Printf("CreateReconcileBatches: fetching candidates for shop=%s, order=%s, from=%s, to=%s", shop, order, from, to)
+	log.Printf("CreateReconcileBatches: fetching candidates for shop=%s, order=%s, status=%s, from=%s, to=%s", shop, order, status, from, to)
 	pageSize := 1000
 	batchSize := 50 // Process in batches of 50 orders
 	offset := 0
 	all := []models.ReconcileCandidate{}
 	for {
-		list, total, err := s.ListCandidates(ctx, shop, order, from, to, pageSize, offset)
+		list, total, err := s.ListCandidates(ctx, shop, order, status, from, to, pageSize, offset)
 		if err != nil {
 			return nil, err
 		}

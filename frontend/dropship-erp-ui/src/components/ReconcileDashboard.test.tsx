@@ -65,6 +65,21 @@ test("filter by invoice", async () => {
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
 });
 
+test("filter by status", async () => {
+  render(
+    <MemoryRouter>
+      <ReconcileDashboard />
+    </MemoryRouter>,
+  );
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  jest.clearAllMocks();
+  fireEvent.change(screen.getByLabelText(/Status/i), {
+    target: { value: "diproses" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+});
+
 test("click reconcile button", async () => {
   (api.listCandidates as jest.Mock).mockResolvedValueOnce({
     data: {
