@@ -16,7 +16,6 @@ import {
   fetchMonthlyPurchaseTotals,
   fetchTopProducts,
   fetchCancelledSummary,
-  getShopeeSettleDetail,
   fetchDashboard,
 } from "../api";
 import type {
@@ -25,7 +24,6 @@ import type {
   ProductSales,
   ShopeeAdjustment,
   JournalLineDetail,
-  ShopeeSettled,
   CancelledSummary,
   DashboardData,
   DashboardMetrics,
@@ -68,7 +66,6 @@ export default function SalesSummaryPage() {
   const [adjustments, setAdjustments] = useState<ShopeeAdjustment[]>([]);
   const [lines, setLines] = useState<JournalLineDetail[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detail, setDetail] = useState<{ data: ShopeeSettled; dropship_total: number } | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -195,16 +192,12 @@ export default function SalesSummaryPage() {
   const openDetail = async (a: ShopeeAdjustment) => {
     const id = `${a.no_pesanan}-${a.tanggal_penyesuaian.replace(/-/g, "")}`;
     try {
-      const [linesRes, detailRes] = await Promise.all([
-        getJournalLinesBySource(id),
-        getShopeeSettleDetail(a.no_pesanan),
-      ]);
+      const linesRes = await getJournalLinesBySource(id);
       if (linesRes.data.length > 0) {
         setLines(linesRes.data[0].lines);
       } else {
         setLines([]);
       }
-      setDetail(detailRes.data);
       setDetailOpen(true);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -553,39 +546,10 @@ export default function SalesSummaryPage() {
         open={detailOpen}
         onClose={() => {
           setDetailOpen(false);
-          setDetail(null);
         }}
       >
-        <DialogTitle>Order Detail & Journal</DialogTitle>
+        <DialogTitle>Journal Lines</DialogTitle>
         <DialogContent>
-          {detail && (
-            <div style={{ marginBottom: "1rem" }}>
-              <div>
-                <strong>Order:</strong> {detail.data.no_pesanan}
-              </div>
-              <div>
-                <strong>Harga Asli:</strong>{" "}
-                {detail.data.harga_asli_produk.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </div>
-              <div>
-                <strong>Diskon Produk:</strong>{" "}
-                {detail.data.total_diskon_produk.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </div>
-              <div>
-                <strong>Dropship Total:</strong>{" "}
-                {detail.dropship_total.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
-              </div>
-            </div>
-          )}
           <h4>Journal Lines</h4>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -624,7 +588,6 @@ export default function SalesSummaryPage() {
           <Button
             onClick={() => {
               setDetailOpen(false);
-              setDetail(null);
             }}
           >
             Close

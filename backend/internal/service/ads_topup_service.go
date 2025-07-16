@@ -123,5 +123,3 @@ func (s *AdsTopupService) CreateAllJournal(ctx context.Context, store string) er
 	}
 	return nil
 }
-
-func stringPtr(s string) *string { return &s }

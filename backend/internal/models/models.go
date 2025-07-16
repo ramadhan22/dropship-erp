@@ -159,18 +159,7 @@ type ReconcileCandidate struct {
 	ShopeeOrderStatus     string  `json:"shopee_order_status"`
 }
 
-// CachedMetric represents the D5 table: cached_metrics
-type CachedMetric struct {
-	ID                int64     `db:"id" json:"id"`
-	ShopUsername      string    `db:"shop_username" json:"shop_username"`
-	Period            string    `db:"period" json:"period"` // e.g., "2025-05"
-	SumRevenue        float64   `db:"sum_revenue" json:"sum_revenue"`
-	SumCOGS           float64   `db:"sum_cogs" json:"sum_cogs"`
-	SumFees           float64   `db:"sum_fees" json:"sum_fees"`
-	NetProfit         float64   `db:"net_profit" json:"net_profit"`
-	EndingCashBalance float64   `db:"ending_cash_balance" json:"ending_cash_balance"`
-	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
-}
+
 
 // JenisChannel represents e-commerce channel types such as Shopee or Tokopedia.
 type JenisChannel struct {

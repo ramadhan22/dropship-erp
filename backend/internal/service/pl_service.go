@@ -2,28 +2,54 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"errors"
-
-	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"time"
 )
 
+// PLSummary represents profit & loss summary data without database dependency
+type PLSummary struct {
+	ShopUsername      string    `json:"shop_username"`
+	Period            string    `json:"period"`
+	SumRevenue        float64   `json:"sum_revenue"`
+	SumCOGS           float64   `json:"sum_cogs"`
+	SumFees           float64   `json:"sum_fees"`
+	NetProfit         float64   `json:"net_profit"`
+	EndingCashBalance float64   `json:"ending_cash_balance"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 type PLService struct {
-	metricRepo MetricRepoInterface
-	metricSvc  *MetricService
+	plReportSvc *ProfitLossReportService
 }
 
-func NewPLService(m MetricRepoInterface, svc *MetricService) *PLService {
-	return &PLService{metricRepo: m, metricSvc: svc}
+func NewPLService(plReportSvc *ProfitLossReportService) *PLService {
+	return &PLService{plReportSvc: plReportSvc}
 }
 
-func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*models.CachedMetric, error) {
-	cm, err := s.metricRepo.GetCachedMetric(ctx, shop, period)
-	if err != nil && errors.Is(err, sql.ErrNoRows) && s.metricSvc != nil {
-		if err := s.metricSvc.CalculateAndCacheMetrics(ctx, shop, period); err != nil {
-			return nil, err
-		}
-		cm, err = s.metricRepo.GetCachedMetric(ctx, shop, period)
+func (s *PLService) ComputePL(ctx context.Context, shop, period string) (*PLSummary, error) {
+	// Parse period (e.g., "2025-01" -> year=2025, month=1)
+	date, err := time.Parse("2006-01", period)
+	if err != nil {
+		return nil, err
 	}
-	return cm, err
+	year := date.Year()
+	month := int(date.Month())
+
+	// Get P&L from journal-based service
+	pl, err := s.plReportSvc.GetProfitLoss(ctx, "Monthly", month, year, shop)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert ProfitLoss to PLSummary format
+	summary := &PLSummary{
+		ShopUsername:      shop,
+		Period:            period,
+		SumRevenue:        pl.TotalPendapatanUsaha,
+		SumCOGS:           pl.TotalHargaPokokPenjualan,
+		SumFees:           pl.TotalBebanPemasaran,
+		NetProfit:         pl.LabaRugiBersih.Amount,
+		EndingCashBalance: 0, // This would require additional logic if needed
+		UpdatedAt:         time.Now(),
+	}
+	return summary, nil
 }

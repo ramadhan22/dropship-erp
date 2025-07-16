@@ -20,10 +20,6 @@ ALTER TABLE reconciled_transactions
     ALTER COLUMN shopee_id TYPE VARCHAR(100),
     ALTER COLUMN status TYPE VARCHAR(100);
 
-ALTER TABLE cached_metrics
-    ALTER COLUMN shop_username TYPE VARCHAR(100),
-    ALTER COLUMN period TYPE VARCHAR(100);
-
 ALTER TABLE shopee_settled
     ALTER COLUMN no_pesanan TYPE VARCHAR(100),
     ALTER COLUMN no_pengajuan TYPE VARCHAR(100),

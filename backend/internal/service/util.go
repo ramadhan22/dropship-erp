@@ -17,3 +17,9 @@ func sanitizeID(s string) string {
 	}
 	return b.String()
 }
+
+// ptrString helper
+func ptrString(s string) *string { return &s }
+
+// stringPtr helper (alias for ptrString)
+func stringPtr(s string) *string { return &s }
