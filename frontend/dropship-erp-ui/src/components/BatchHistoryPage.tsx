@@ -15,7 +15,8 @@ export default function BatchHistoryPage() {
   const [data, setData] = useState<BatchHistory[]>([]);
   const [details, setDetails] = useState<BatchHistoryDetail[]>([]);
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState<string[]>(["pending", "processing"]);
+  const DEFAULT_STATUSES = ["pending", "processing", "completed", "failed"];
+  const [status, setStatus] = useState<string[]>(DEFAULT_STATUSES.slice(0, 2));
   const [typ, setTyp] = useState("");
 
   useEffect(() => {
