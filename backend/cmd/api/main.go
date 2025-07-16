@@ -133,6 +133,8 @@ func main() {
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
 	adsPerformanceSvc := service.NewAdsPerformanceService(repo.DB, cfg.Shopee, repo)
+	adsPerformanceBatchScheduler := service.NewAdsPerformanceBatchScheduler(batchSvc, adsPerformanceSvc, time.Minute)
+	adsPerformanceBatchScheduler.Start(context.Background())
 	// 4) Setup performance monitoring
 	if cfg.Performance.EnableMetrics {
 		// Set slow query threshold
@@ -223,7 +225,7 @@ func main() {
 		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
-		handlers.NewAdsPerformanceHandler(adsPerformanceSvc).RegisterRoutes(apiGroup)
+		handlers.NewAdsPerformanceHandler(adsPerformanceSvc, adsPerformanceBatchScheduler).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)

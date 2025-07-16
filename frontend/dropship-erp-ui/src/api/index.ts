@@ -21,10 +21,12 @@ import type {
   ShopeeOrderItemRow,
   ShopeeOrderPackageRow,
   BatchHistory,
+  BatchHistoryDetail,
 } from "../types";
 
 export interface ImportResponse {
   inserted: number;
+  queued: number;
 }
 
 // Base URL for API calls. Default to a relative "/api" path so the frontend and

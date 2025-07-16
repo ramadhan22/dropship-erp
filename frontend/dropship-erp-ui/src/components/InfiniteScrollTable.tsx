@@ -145,7 +145,7 @@ export default function InfiniteScrollTable<T extends Record<string, any>>({
         data={allItems}
         height={height}
         itemHeight={itemHeight}
-        loading={status === 'pending'}
+        loading={status !== 'success'}
         emptyMessage={emptyMessage}
       />
 

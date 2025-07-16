@@ -13,13 +13,15 @@ import (
 
 // AdsPerformanceHandler handles HTTP requests for ads performance data
 type AdsPerformanceHandler struct {
-	adsService *service.AdsPerformanceService
+	adsService       *service.AdsPerformanceService
+	batchScheduler   *service.AdsPerformanceBatchScheduler
 }
 
 // NewAdsPerformanceHandler creates a new ads performance handler
-func NewAdsPerformanceHandler(adsService *service.AdsPerformanceService) *AdsPerformanceHandler {
+func NewAdsPerformanceHandler(adsService *service.AdsPerformanceService, batchScheduler *service.AdsPerformanceBatchScheduler) *AdsPerformanceHandler {
 	return &AdsPerformanceHandler{
-		adsService: adsService,
+		adsService:     adsService,
+		batchScheduler: batchScheduler,
 	}
 }
 
@@ -182,6 +184,39 @@ func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Performance data fetched successfully"})
 }
 
+// SyncHistoricalAdsPerformance triggers background sync of all historical ads performance data
+// POST /api/ads/sync/historical
+// Body: {"store_id": 1, "access_token": "token"}
+func (h *AdsPerformanceHandler) SyncHistoricalAdsPerformance(c *gin.Context) {
+	var request struct {
+		StoreID     int    `json:"store_id" binding:"required"`
+		AccessToken string `json:"access_token" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if h.batchScheduler == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Batch scheduler not available"})
+		return
+	}
+
+	ctx := context.Background()
+	batchID, err := h.batchScheduler.CreateSyncBatch(ctx, request.StoreID, request.AccessToken)
+	if err != nil {
+		logutil.Errorf("Failed to create historical sync batch: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sync batch"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Historical sync batch created successfully",
+		"batch_id": batchID,
+	})
+}
+
 // RegisterRoutes registers all ads performance routes
 func (h *AdsPerformanceHandler) RegisterRoutes(apiGroup *gin.RouterGroup) {
 	adsGroup := apiGroup.Group("/ads")
@@ -190,5 +225,6 @@ func (h *AdsPerformanceHandler) RegisterRoutes(apiGroup *gin.RouterGroup) {
 		adsGroup.GET("/summary", h.GetPerformanceSummary)
 		adsGroup.POST("/campaigns/fetch", h.FetchAdsCampaigns)
 		adsGroup.POST("/performance/fetch", h.FetchAdsPerformance)
+		adsGroup.POST("/sync/historical", h.SyncHistoricalAdsPerformance)
 	}
 }

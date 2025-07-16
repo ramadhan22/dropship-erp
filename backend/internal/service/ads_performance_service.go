@@ -59,6 +59,7 @@ type ShopeeAdsPerformanceResponse struct {
 			CampaignID    int64 `json:"ads_id"`
 			Data          []struct {
 				Date               string  `json:"date"`
+				Hour               *int    `json:"hour,omitempty"` // Present for hourly data
 				Impression         int64   `json:"impression"`
 				Click              int64   `json:"click"`
 				Ctr                float64 `json:"ctr"`
@@ -169,7 +170,7 @@ func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID
 	params.Set("access_token", accessToken)
 	params.Set("sign", sign)
 	params.Set("ads_id", strconv.FormatInt(campaignID, 10))
-	params.Set("data_type", "daily") // daily or hourly
+	params.Set("data_type", "hourly") // daily or hourly
 	params.Set("start_date", startDate.Format("2006-01-02"))
 	params.Set("end_date", endDate.Format("2006-01-02"))
 
@@ -287,6 +288,7 @@ func (s *AdsPerformanceService) upsertPerformanceMetrics(ctx context.Context, st
 	// Type assertion for the performance data structure
 	type performanceData struct {
 		Date               string  `json:"date"`
+		Hour               *int    `json:"hour,omitempty"`
 		Impression         int64   `json:"impression"`
 		Click              int64   `json:"click"`
 		Ctr                float64 `json:"ctr"`
@@ -318,12 +320,12 @@ func (s *AdsPerformanceService) upsertPerformanceMetrics(ctx context.Context, st
 
 	query := `
 		INSERT INTO ads_performance_metrics (
-			campaign_id, store_id, date_recorded, ads_viewed, ads_impressions,
+			campaign_id, store_id, date_recorded, hour_recorded, ads_viewed, ads_impressions,
 			total_clicks, click_percentage, orders_count, products_sold,
 			sales_from_ads_cents, ad_costs_cents, roas, avg_cpc_cents,
 			conversion_rate
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
 		)
 		ON CONFLICT (campaign_id, date_recorded, hour_recorded) DO UPDATE SET
 			ads_viewed = EXCLUDED.ads_viewed,
@@ -343,6 +345,7 @@ func (s *AdsPerformanceService) upsertPerformanceMetrics(ctx context.Context, st
 		campaignID,
 		storeID,
 		dateRecorded,
+		p.Hour,            // hour_recorded (can be nil for daily aggregates)
 		p.Impression,      // ads_viewed
 		p.Impression,      // ads_impressions (same as viewed)
 		p.Click,           // total_clicks
@@ -489,4 +492,120 @@ func (s *AdsPerformanceService) GetPerformanceSummary(ctx context.Context, store
 	summary.StoreFilter = storeID
 
 	return &summary, nil
+}
+
+// SyncHistoricalAdsPerformance syncs all historical ads performance data in background
+func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context, storeID int, accessToken string) error {
+	log.Printf("Starting historical ads performance sync for store %d", storeID)
+
+	// Get all campaigns for the store
+	campaigns, err := s.GetAdsCampaigns(ctx, &storeID, "", 0, 0)
+	if err != nil {
+		return fmt.Errorf("failed to get campaigns for store %d: %w", storeID, err)
+	}
+
+	if len(campaigns) == 0 {
+		return fmt.Errorf("no campaigns found for store %d", storeID)
+	}
+
+	log.Printf("Found %d campaigns for store %d", len(campaigns), storeID)
+
+	// Split campaigns into batches of 100
+	const batchSize = 100
+	batches := make([][]models.AdsCampaignWithMetrics, 0)
+	
+	for i := 0; i < len(campaigns); i += batchSize {
+		end := i + batchSize
+		if end > len(campaigns) {
+			end = len(campaigns)
+		}
+		batches = append(batches, campaigns[i:end])
+	}
+
+	log.Printf("Split campaigns into %d batches", len(batches))
+
+	// Process each batch going back in time
+	currentDate := time.Now().Truncate(24 * time.Hour)
+	consecutiveEmptyDays := 0
+	maxConsecutiveEmptyDays := 2
+
+	for consecutiveEmptyDays < maxConsecutiveEmptyDays {
+		dayHasData := false
+
+		// Process each batch for the current date
+		for batchIndex, batch := range batches {
+			log.Printf("Processing batch %d/%d for date %s", batchIndex+1, len(batches), currentDate.Format("2006-01-02"))
+
+			batchHasData, err := s.syncBatchForDate(ctx, storeID, batch, currentDate, accessToken)
+			if err != nil {
+				logutil.Errorf("Failed to sync batch %d for date %s: %v", batchIndex+1, currentDate.Format("2006-01-02"), err)
+				// Continue with next batch instead of failing entire operation
+				continue
+			}
+
+			if batchHasData {
+				dayHasData = true
+			}
+		}
+
+		if dayHasData {
+			consecutiveEmptyDays = 0
+		} else {
+			consecutiveEmptyDays++
+			log.Printf("No data found for date %s, consecutive empty days: %d", currentDate.Format("2006-01-02"), consecutiveEmptyDays)
+		}
+
+		// Move to previous day
+		currentDate = currentDate.AddDate(0, 0, -1)
+	}
+
+	log.Printf("Historical sync completed for store %d. Stopped after %d consecutive empty days", storeID, consecutiveEmptyDays)
+	return nil
+}
+
+// syncBatchForDate syncs a batch of campaigns for a specific date
+func (s *AdsPerformanceService) syncBatchForDate(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics, date time.Time, accessToken string) (bool, error) {
+	anyDataFound := false
+
+	for _, campaign := range campaigns {
+		err := s.FetchAdsPerformance(ctx, storeID, campaign.CampaignID, date, date, accessToken)
+		if err != nil {
+			logutil.Errorf("Failed to fetch performance for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
+			// Continue with next campaign instead of failing entire batch
+			continue
+		}
+
+		// Check if we actually got data for this campaign and date
+		hasData, err := s.hasPerformanceDataForDate(ctx, campaign.CampaignID, date)
+		if err != nil {
+			logutil.Errorf("Failed to check if performance data exists for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
+			continue
+		}
+
+		if hasData {
+			anyDataFound = true
+		}
+
+		// Add small delay to respect API rate limits
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return anyDataFound, nil
+}
+
+// hasPerformanceDataForDate checks if performance data exists for a campaign on a specific date
+func (s *AdsPerformanceService) hasPerformanceDataForDate(ctx context.Context, campaignID int64, date time.Time) (bool, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM ads_performance_metrics 
+		WHERE campaign_id = $1 AND date_recorded = $2
+	`
+	
+	var count int
+	err := s.db.QueryRowContext(ctx, query, campaignID, date).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	
+	return count > 0, nil
 }

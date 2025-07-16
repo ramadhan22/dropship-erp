@@ -13,8 +13,22 @@ import {
   TableRow,
   Paper,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { 
+  fetchAdsCampaigns, 
+  fetchAdsPerformanceSummary, 
+  syncHistoricalAdsPerformance 
+} from "../api/adsPerformance";
 
 // Types for ads performance data
 interface AdsCampaign {
@@ -53,20 +67,39 @@ export default function AdsPerformancePage() {
   const [campaigns, setCampaigns] = useState<AdsCampaign[]>([]);
   const [summary, setSummary] = useState<AdsPerformanceSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncForm, setSyncForm] = useState({
+    store_id: "",
+    access_token: "",
+  });
+  const [stores, setStores] = useState<{ store_id: number; nama_toko: string }[]>([]);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  // Fetch stores on component mount
+  // Fetch stores and initial data on component mount
   useEffect(() => {
+    fetchStores();
     fetchData();
   }, []);
+
+  const fetchStores = async () => {
+    try {
+      const response = await fetch("/api/stores/all");
+      if (!response.ok) throw new Error("Failed to fetch stores");
+      const data = await response.json();
+      setStores(data || []);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchCampaigns(), fetchSummary()]);
+      await Promise.all([fetchCampaignsData(), fetchSummaryData()]);
       setMsg(null);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
@@ -75,32 +108,64 @@ export default function AdsPerformancePage() {
     }
   };
 
-  const fetchCampaigns = async () => {
+  const fetchCampaignsData = async () => {
     try {
-      const response = await fetch("/api/ads/campaigns?limit=100");
-      if (!response.ok) throw new Error("Failed to fetch campaigns");
-      const data = await response.json();
+      const data = await fetchAdsCampaigns({ limit: 100 });
       setCampaigns(data.campaigns || []);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
     }
   };
 
-  const fetchSummary = async () => {
+  const fetchSummaryData = async () => {
     try {
       const endDate = new Date();
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
-      const params = new URLSearchParams();
-      params.set("start_date", startDate.toISOString().split("T")[0]);
-      params.set("end_date", endDate.toISOString().split("T")[0]);
-
-      const response = await fetch(`/api/ads/summary?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch summary");
-      const data = await response.json();
+      const data = await fetchAdsPerformanceSummary({
+        start_date: startDate.toISOString().split("T")[0],
+        end_date: endDate.toISOString().split("T")[0],
+      });
       setSummary(data);
     } catch (error) {
       console.error("Error fetching summary:", error);
+    }
+  };
+
+  const handleSyncDialogOpen = () => {
+    setSyncDialogOpen(true);
+  };
+
+  const handleSyncDialogClose = () => {
+    setSyncDialogOpen(false);
+    setSyncForm({ store_id: "", access_token: "" });
+  };
+
+  const handleSyncSubmit = async () => {
+    if (!syncForm.store_id || !syncForm.access_token) {
+      setMsg({ type: "error", text: "Please fill in all required fields" });
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      const result = await syncHistoricalAdsPerformance({
+        store_id: parseInt(syncForm.store_id),
+        access_token: syncForm.access_token,
+      });
+      
+      setMsg({ 
+        type: "success", 
+        text: `Historical sync started successfully. Batch ID: ${result.batch_id}` 
+      });
+      handleSyncDialogClose();
+    } catch (error: any) {
+      setMsg({ 
+        type: "error", 
+        text: error.message || "Failed to start historical sync" 
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -142,6 +207,14 @@ export default function AdsPerformancePage() {
           sx={{ mr: 2 }}
         >
           {loading ? "Loading..." : "Refresh Data"}
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={handleSyncDialogOpen}
+          disabled={syncing}
+          sx={{ mr: 2 }}
+        >
+          {syncing ? "Syncing..." : "Sync Historical Data"}
         </Button>
       </Box>
 
@@ -276,6 +349,51 @@ export default function AdsPerformancePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Historical Sync Dialog */}
+      <Dialog open={syncDialogOpen} onClose={handleSyncDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Sync Historical Ads Performance</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            This will sync all historical ads performance data hourly. The process runs in background and may take several minutes.
+          </Typography>
+          
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Store</InputLabel>
+            <Select
+              value={syncForm.store_id}
+              onChange={(e) => setSyncForm({ ...syncForm, store_id: e.target.value as string })}
+              label="Store"
+            >
+              {stores.map((store) => (
+                <MenuItem key={store.store_id} value={store.store_id.toString()}>
+                  {store.nama_toko}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Access Token"
+            type="password"
+            value={syncForm.access_token}
+            onChange={(e) => setSyncForm({ ...syncForm, access_token: e.target.value })}
+            placeholder="Enter Shopee API access token"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSyncDialogClose}>Cancel</Button>
+          <Button 
+            onClick={handleSyncSubmit} 
+            variant="contained"
+            disabled={syncing || !syncForm.store_id || !syncForm.access_token}
+          >
+            {syncing ? "Starting..." : "Start Sync"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
