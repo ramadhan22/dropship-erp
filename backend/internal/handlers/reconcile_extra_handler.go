@@ -12,7 +12,7 @@ import (
 
 type ReconcileExtraService interface {
 	ListUnmatched(ctx context.Context, shop string) ([]models.ReconciledTransaction, error)
-	ListCandidates(ctx context.Context, shop, order, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error)
+	ListCandidates(ctx context.Context, shop, order, status, from, to string, limit, offset int) ([]models.ReconcileCandidate, int, error)
 	BulkReconcile(ctx context.Context, pairs [][2]string, shop string) error
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
@@ -22,7 +22,7 @@ type ReconcileExtraService interface {
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
-	CreateReconcileBatches(ctx context.Context, shop, order, from, to string) (*models.ReconcileBatchInfo, error)
+	CreateReconcileBatches(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error)
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -59,6 +59,7 @@ func (h *ReconcileExtraHandler) list(c *gin.Context) {
 func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
 	shop := c.Query("shop")
 	order := c.Query("order")
+	status := c.Query("status")
 	from := c.Query("from")
 	to := c.Query("to")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -70,7 +71,7 @@ func (h *ReconcileExtraHandler) candidates(c *gin.Context) {
 		size = 20
 	}
 	offset := (page - 1) * size
-	list, total, err := h.svc.ListCandidates(context.Background(), shop, order, from, to, size, offset)
+	list, total, err := h.svc.ListCandidates(context.Background(), shop, order, status, from, to, size, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -199,27 +200,28 @@ func (h *ReconcileExtraHandler) updateStatuses(c *gin.Context) {
 
 func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
 	var req struct {
-		Shop  string `json:"shop"`
-		Order string `json:"order"`
-		From  string `json:"from"`
-		To    string `json:"to"`
+		Shop   string `json:"shop"`
+		Order  string `json:"order"`
+		Status string `json:"status"`
+		From   string `json:"from"`
+		To     string `json:"to"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Call the service which will return batch information
-	batchInfo, err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.From, req.To)
+	batchInfo, err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.Status, req.From, req.To)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Reconcile batches created successfully",
-		"batches_created": batchInfo.BatchCount,
+		"message":            "Reconcile batches created successfully",
+		"batches_created":    batchInfo.BatchCount,
 		"total_transactions": batchInfo.TotalTransactions,
-		"status": "processing will begin shortly",
+		"status":             "processing will begin shortly",
 	})
 }

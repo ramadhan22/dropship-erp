@@ -119,12 +119,13 @@ function renderValue(key: string, value: any): JSX.Element {
 export default function ReconcileDashboard() {
   const [shop, setShop] = useState("");
   const [order, setOrder] = useState("");
+  const [status, setStatus] = useState("");
   const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [stores, setStores] = useState<Store[]>([]);
   const { data, controls, reload } = useServerPagination((params) =>
-    listCandidates(shop, order, from, to, params.page, params.pageSize).then(
+    listCandidates(shop, order, status, from, to, params.page, params.pageSize).then(
       (r) => r.data,
     ),
   );
@@ -149,7 +150,7 @@ export default function ReconcileDashboard() {
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shop, order, from, to]);
+  }, [shop, order, status, from, to]);
 
   const handleReconcile = async (kode: string) => {
     try {
@@ -195,7 +196,7 @@ export default function ReconcileDashboard() {
 
   const handleReconcileAll = async () => {
     try {
-      const response = await createReconcileBatch(shop, order, from, to);
+      const response = await createReconcileBatch(shop, order, status, from, to);
       const data = response.data;
       let message = "Reconcile batches created successfully";
       if (data.batches_created && data.total_transactions) {
@@ -282,6 +283,13 @@ export default function ReconcileDashboard() {
         placeholder="Kode Invoice"
         value={order}
         onChange={(e) => setOrder(e.target.value)}
+        style={{ height: "2rem", marginRight: "0.5rem" }}
+      />
+      <input
+        aria-label="Status"
+        placeholder="Status"
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
         style={{ height: "2rem", marginRight: "0.5rem" }}
       />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
