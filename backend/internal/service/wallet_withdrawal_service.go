@@ -35,7 +35,7 @@ func (s *WalletWithdrawalService) List(ctx context.Context, store string, p Wall
 	if err != nil {
 		return nil, false, err
 	}
-	
+
 	// Adjust withdrawal amounts by SPM_DISBURSE_ADD transactions on the same day
 	for i := range txs {
 		disburseAddAmount, err := s.findSpmDisburseAddAmount(ctx, store, txs[i].CreateTime)
@@ -43,10 +43,10 @@ func (s *WalletWithdrawalService) List(ctx context.Context, store string, p Wall
 			// Log the error but don't fail the entire request
 			log.Printf("Warning: failed to check SPM_DISBURSE_ADD for transaction %d: %v", txs[i].TransactionID, err)
 		} else if disburseAddAmount > 0 {
-			txs[i].Amount = txs[i].Amount - disburseAddAmount
+			txs[i].Amount = txs[i].Amount + disburseAddAmount
 		}
 	}
-	
+
 	if s.journalRepo != nil {
 		for i := range txs {
 			sid := fmt.Sprintf("%d", txs[i].TransactionID)
@@ -123,21 +123,8 @@ func (s *WalletWithdrawalService) CreateJournal(ctx context.Context, store strin
 		return nil
 	}
 
-	// Check for SPM_DISBURSE_ADD transactions on the same day
-	disburseAddAmount, err := s.findSpmDisburseAddAmount(ctx, store, t.CreateTime)
-	if err != nil {
-		return fmt.Errorf("failed to check SPM_DISBURSE_ADD transactions: %w", err)
-	}
-
-	// Adjust withdrawal amount by deducting SPM_DISBURSE_ADD amount
-	adjustedAmount := t.Amount - disburseAddAmount
-	amt := -adjustedAmount
-
 	// Create description that reflects whether amount was adjusted
 	description := "Withdraw Shopee"
-	if disburseAddAmount > 0 {
-		description = fmt.Sprintf("Withdraw Shopee (adjusted by SPM_DISBURSE_ADD: %.2f)", disburseAddAmount)
-	}
 
 	je := &models.JournalEntry{
 		EntryDate:    time.Unix(t.CreateTime, 0),
@@ -153,8 +140,8 @@ func (s *WalletWithdrawalService) CreateJournal(ctx context.Context, store strin
 		return err
 	}
 	lines := []models.JournalLine{
-		{JournalID: jid, AccountID: 11014, IsDebit: true, Amount: amt},
-		{JournalID: jid, AccountID: saldoShopeeAccountID(store), IsDebit: false, Amount: amt},
+		{JournalID: jid, AccountID: 11014, IsDebit: true, Amount: -t.Amount},
+		{JournalID: jid, AccountID: saldoShopeeAccountID(store), IsDebit: false, Amount: -t.Amount},
 	}
 	for i := range lines {
 		if err := s.journalRepo.InsertJournalLine(ctx, &lines[i]); err != nil {
