@@ -1131,50 +1131,7 @@ func (s *ReconcileService) createReturnedOrderJournal(ctx context.Context, invoi
 
 // ProcessReturnedOrder handles manual return processing from the reconcile dashboard.
 // This method allows updating escrow status for returned orders with proper journal entries.
-func (s *ReconcileService) ProcessReturnedOrder(ctx context.Context, invoice string, isPartialReturn bool, returnAmount float64) error {
-	log.Printf("ProcessReturnedOrder: %s (partial: %t, amount: %.2f)", invoice, isPartialReturn, returnAmount)
-	
-	// Get current order detail to validate status
-	detail, err := s.GetShopeeOrderDetail(ctx, invoice)
-	if err != nil {
-		return fmt.Errorf("get order detail for return %s: %w", invoice, err)
-	}
-	
-	statusVal, ok := (*detail)["order_status"]
-	if !ok {
-		statusVal = (*detail)["status"]
-	}
-	statusStr, _ := statusVal.(string)
-	
-	// Extract update time
-	var updateTime time.Time
-	if ts, ok := (*detail)["update_time"]; ok {
-		switch v := ts.(type) {
-		case float64:
-			updateTime = time.Unix(int64(v), 0)
-		case int64:
-			updateTime = time.Unix(v, 0)
-		case int:
-			updateTime = time.Unix(int64(v), 0)
-		case string:
-			if t, err := strconv.ParseInt(v, 10, 64); err == nil {
-				updateTime = time.Unix(t, 0)
-			}
-		}
-	}
-	if updateTime.IsZero() {
-		updateTime = time.Now()
-	}
-	
-	// Get escrow detail for return processing
-	escDetail, err := s.GetShopeeEscrowDetail(ctx, invoice)
-	if err != nil {
-		return fmt.Errorf("get escrow detail for return %s: %w", invoice, err)
-	}
-	
-	// Create returned order journal entry
-	return s.createReturnedOrderJournal(ctx, invoice, statusStr, updateTime, escDetail, isPartialReturn, returnAmount)
-}
+
 
 // HasReturnJournal checks if a return journal entry already exists for the given invoice
 func (s *ReconcileService) HasReturnJournal(ctx context.Context, invoice string) bool {

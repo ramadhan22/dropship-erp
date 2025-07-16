@@ -23,8 +23,6 @@ type ReconcileExtraService interface {
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
 	CreateReconcileBatches(ctx context.Context, shop, order, from, to string) (*models.ReconcileBatchInfo, error)
-	ProcessReturnedOrder(ctx context.Context, invoice string, isPartialReturn bool, returnAmount float64) error
-	HasReturnJournal(ctx context.Context, invoice string) bool
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -41,7 +39,6 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.POST("/batch", h.createBatch)
 	grp.POST("/check", h.check)
 	grp.POST("/cancel", h.cancel)
-	grp.POST("/return", h.processReturn)
 	grp.POST("/update_status", h.updateStatus)
 	grp.POST("/update_statuses", h.updateStatuses)
 	grp.GET("/status", h.status)
@@ -224,47 +221,5 @@ func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
 		"batches_created": batchInfo.BatchCount,
 		"total_transactions": batchInfo.TotalTransactions,
 		"status": "processing will begin shortly",
-	})
-}
-
-func (h *ReconcileExtraHandler) processReturn(c *gin.Context) {
-	var req struct {
-		Invoice         string  `json:"invoice" binding:"required"`
-		IsPartialReturn bool    `json:"is_partial_return"`
-		ReturnAmount    float64 `json:"return_amount"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate partial return parameters first
-	if req.IsPartialReturn && req.ReturnAmount <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Return amount must be greater than 0 for partial returns"})
-		return
-	}
-
-	// Check if return journal already exists
-	if h.svc.HasReturnJournal(context.Background(), req.Invoice) {
-		c.JSON(http.StatusConflict, gin.H{"error": "Return journal already exists for this invoice"})
-		return
-	}
-
-	err := h.svc.ProcessReturnedOrder(context.Background(), req.Invoice, req.IsPartialReturn, req.ReturnAmount)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	returnType := "full"
-	if req.IsPartialReturn {
-		returnType = "partial"
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":     "Return processed successfully",
-		"invoice":     req.Invoice,
-		"return_type": returnType,
-		"amount":      req.ReturnAmount,
 	})
 }
