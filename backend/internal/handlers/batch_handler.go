@@ -22,7 +22,7 @@ func (h *BatchHandler) RegisterRoutes(r gin.IRouter) {
 }
 
 func (h *BatchHandler) list(c *gin.Context) {
-	statusStr := c.DefaultQuery("status", DefaultStatusValues)
+	statusStr := c.DefaultQuery("status", "pending,processing,completed,failed")
 	statuses := []string{}
 	for _, s := range strings.Split(statusStr, ",") {
 		s = strings.TrimSpace(s)
