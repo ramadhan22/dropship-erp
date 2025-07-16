@@ -49,6 +49,23 @@ export const api = axios.create({
   baseURL: BASE_URL,
 });
 
+// Simple fetch API wrapper for compatibility
+export async function fetchAPI(url: string, options?: { method?: string; body?: any; headers?: Record<string, string> }) {
+  const method = options?.method || 'GET';
+  const config: any = {
+    method: method.toLowerCase(),
+    url,
+    headers: options?.headers,
+  };
+  
+  if (options?.body) {
+    config.data = options.body;
+  }
+  
+  const response = await api(config);
+  return response;
+}
+
 // Global loading indicator hooks into axios requests
 api.interceptors.request.use((config) => {
   if (!config.headers?.["X-Skip-Loading"]) {
