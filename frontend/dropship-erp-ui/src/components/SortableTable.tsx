@@ -6,7 +6,7 @@ import {
   TableBody,
   TableSortLabel,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 export interface Column<T> {
   label: string;
@@ -33,24 +33,26 @@ export default function SortableTable<T extends Record<string, any>>({
     defaultSort?.direction ?? "asc",
   );
 
-  const sorted = onSortChange
-    ? data
-    : (() => {
-        const s = [...data];
-        if (sortKey) {
-          s.sort((a, b) => {
-            const aVal = a[sortKey];
-            const bVal = b[sortKey];
-            if (aVal === bVal) return 0;
-            if (aVal == null) return -1;
-            if (bVal == null) return 1;
-            return (aVal > bVal ? 1 : -1) * (direction === "asc" ? 1 : -1);
-          });
-        }
-        return s;
-      })();
+  const sorted = useMemo(() => {
+    if (onSortChange) {
+      return data;
+    }
+    
+    const s = [...data];
+    if (sortKey) {
+      s.sort((a, b) => {
+        const aVal = a[sortKey];
+        const bVal = b[sortKey];
+        if (aVal === bVal) return 0;
+        if (aVal == null) return -1;
+        if (bVal == null) return 1;
+        return (aVal > bVal ? 1 : -1) * (direction === "asc" ? 1 : -1);
+      });
+    }
+    return s;
+  }, [data, sortKey, direction, onSortChange]);
 
-  const handleSort = (key: keyof T) => {
+  const handleSort = useCallback((key: keyof T) => {
     let dir: "asc" | "desc" = "asc";
     if (sortKey === key) {
       dir = direction === "asc" ? "desc" : "asc";
@@ -63,7 +65,7 @@ export default function SortableTable<T extends Record<string, any>>({
     if (onSortChange) {
       onSortChange(key, dir);
     }
-  };
+  }, [sortKey, direction, onSortChange]);
 
   return (
     <Table size="small">

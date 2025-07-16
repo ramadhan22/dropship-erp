@@ -549,10 +549,18 @@ func (s *DropshipService) fetchAndStoreDetail(ctx context.Context, header *model
 	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
 		return 0, err
 	}
-	det, err := s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, header.KodeInvoiceChannel)
+	
+	// Use external API timeout for Shopee API calls
+	apiCtx, cancel := WithExternalAPITimeout(ctx)
+	defer cancel()
+	
+	det, err := s.client.FetchShopeeOrderDetail(apiCtx, *st.AccessToken, *st.ShopID, header.KodeInvoiceChannel)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
 		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
-			det, err = s.client.FetchShopeeOrderDetail(ctx, *st.AccessToken, *st.ShopID, header.KodeInvoiceChannel)
+			// Retry with fresh timeout context
+			apiCtx2, cancel2 := WithExternalAPITimeout(ctx)
+			defer cancel2()
+			det, err = s.client.FetchShopeeOrderDetail(apiCtx2, *st.AccessToken, *st.ShopID, header.KodeInvoiceChannel)
 		}
 	}
 	if err != nil {
@@ -599,10 +607,17 @@ func (s *DropshipService) fetchAndStoreDetailBatch(ctx context.Context, headers 
 		hdrMap[h.KodeInvoiceChannel] = h
 	}
 
-	details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+	// Use external API timeout for bulk Shopee API calls
+	apiCtx, cancel := WithExternalAPITimeout(ctx)
+	defer cancel()
+	
+	details, err := s.client.FetchShopeeOrderDetails(apiCtx, *st.AccessToken, *st.ShopID, sns)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
 		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
-			details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, sns)
+			// Retry with fresh timeout context
+			apiCtx2, cancel2 := WithExternalAPITimeout(ctx)
+			defer cancel2()
+			details, err = s.client.FetchShopeeOrderDetails(apiCtx2, *st.AccessToken, *st.ShopID, sns)
 		}
 	}
 	if err != nil {
