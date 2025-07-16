@@ -34,6 +34,7 @@ the actual and estimated shipping fee and automatically records a *Shipping Fee
 Discrepancy* adjustment when they differ.
 - Reconcile purchases with marketplace orders which creates journal entries and
   lines.
+- **Robust Error Handling**: Reconciliation processes now include comprehensive error handling that allows operations to continue even when individual transactions fail. Failed transactions are logged with detailed error information and can be retried later. This prevents entire batches from stopping due to single transaction errors.
 - Check Shopee order details from the Reconcile dashboard using the store's saved access token.
 - Browse stored Shopee order details on the **Order Details** page with a modal showing items and packages.
 - Order detail lookups now save key fields in `shopee_order_details`,
@@ -59,6 +60,17 @@ Discrepancy* adjustment when they differ.
 - Manage channels, accounts and expenses. Expenses can be edited with a selectable date and the previous journal is reversed automatically.
 - Sales Summary dashboard now shows cancelled order count and total Biaya Mitra posted for those cancellations.
 - Store detail pages automatically save Shopee `code` and `shop_id` values when provided in the callback URL.
+
+### New Reconciliation API Endpoints
+
+The following API endpoints support the enhanced error handling and reporting capabilities:
+
+- **POST** `/api/reconcile/bulk` - Process multiple reconciliation pairs with error handling. Returns a detailed report of successful and failed transactions.
+- **GET** `/api/reconcile/report?shop=<shop>&days=<days>` - Generate a comprehensive reconciliation report for the specified shop and time period.
+- **POST** `/api/reconcile/retry` - Retry failed reconciliation transactions. Accepts `shop` and `max_retries` parameters.
+- **GET** `/api/reconcile/summary?shop=<shop>&days=<days>` - Get a quick summary of failed reconciliations including failure categories.
+
+These endpoints provide detailed error categorization, failure rate tracking, and automatic retry capabilities to improve operational resilience.
   The page is accessible via `/stores/:id` either directly or via the detail button on the Channel page.
 - Pay UMKM final tax (0.5% of revenue) per store and period on the **Tax Payment** page. Journal entries are created automatically when paying.
 - A dedicated `PPh Final UMKM` account (`5.4.1`) tracks these tax expenses.
