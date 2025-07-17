@@ -79,10 +79,14 @@ export default function AdsPerformancePage() {
 
   const fetchStores = useCallback(async () => {
     try {
+      console.log("Fetching stores from /api/stores/all...");
       const response = await fetch("/api/stores/all");
+      console.log("Stores API response status:", response.status);
       if (!response.ok) throw new Error("Failed to fetch stores");
       const data = await response.json();
+      console.log("Stores API response data:", data);
       setStores(data || []);
+      console.log("Stores state set to:", data || []);
     } catch (error) {
       console.error("Error fetching stores:", error);
     }
@@ -131,6 +135,7 @@ export default function AdsPerformancePage() {
   }, [fetchStores, fetchData]);
 
   const handleSyncDialogOpen = () => {
+    console.log("Opening sync dialog, current stores:", stores);
     setSyncDialogOpen(true);
   };
 
@@ -363,11 +368,15 @@ export default function AdsPerformancePage() {
               onChange={(e) => setSyncForm({ ...syncForm, store_id: e.target.value as string })}
               label="Store"
             >
-              {stores.map((store) => (
-                <MenuItem key={store.store_id} value={store.store_id.toString()}>
-                  {store.nama_toko}
-                </MenuItem>
-              ))}
+              {console.log("Rendering store options, stores array:", stores) || 
+               stores.map((store) => {
+                console.log("Creating MenuItem for store:", store);
+                return (
+                  <MenuItem key={store.store_id} value={store.store_id.toString()}>
+                    {store.nama_toko}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
         </DialogContent>
