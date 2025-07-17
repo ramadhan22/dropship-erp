@@ -125,6 +125,7 @@ export const navigationSections = [
       { label: 'Adjustments', path: '/shopee/adjustments', icon: <ManagementIcon fontSize="small" /> },
       { label: 'Affiliate Sales', path: '/shopee/affiliate', icon: <BusinessIcon fontSize="small" /> },
       { label: 'Order Details', path: '/order-details', icon: <DashboardIcon fontSize="small" /> },
+      { label: 'Order Returns', path: '/order-returns', icon: <PaymentIcon fontSize="small" /> },
     ]
   },
   {

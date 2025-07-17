@@ -33,6 +33,7 @@ const WithdrawalPage = lazy(() => import("./components/WithdrawalPage"));
 const ShopeeAdjustmentPage = lazy(() => import("./components/ShopeeAdjustmentPage"));
 const TaxPaymentPage = lazy(() => import("./components/TaxPaymentPage"));
 const ShopeeOrderDetailPage = lazy(() => import("./components/ShopeeOrderDetailPage"));
+const ShopeeOrderReturnPage = lazy(() => import("./components/ShopeeOrderReturnPage"));
 const WalletTransactionPage = lazy(() => import("./components/WalletTransactionPage"));
 const AdsTopupPage = lazy(() => import("./components/AdsTopupPage"));
 const BatchHistoryPage = lazy(() => import("./components/BatchHistoryPage"));
@@ -97,6 +98,7 @@ export default function App() {
               <Route path="/pending-balance" element={<PendingBalancePage />} />
               <Route path="/tax-payment" element={<TaxPaymentPage />} />
               <Route path="/order-details" element={<ShopeeOrderDetailPage />} />
+              <Route path="/order-returns" element={<ShopeeOrderReturnPage />} />
               <Route path="/withdrawals" element={<WithdrawalPage />} />
               <Route path="/ads-topups" element={<AdsTopupPage />} />
               <Route path="/ads-performance" element={<AdsPerformancePage />} />

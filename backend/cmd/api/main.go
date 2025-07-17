@@ -99,7 +99,7 @@ func main() {
 	)
 	// process pending dropship imports in the background
 	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
-	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo, cfg.Shopee)
+	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo, repo.ChannelRepo, cfg.Shopee)
 	reconSvc := service.NewReconcileService(
 		repo.DB,
 		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo, repo.ReconcileRepo,
@@ -181,6 +181,7 @@ func main() {
 		apiGroup.GET("/shopee/settled", shHandler.HandleListSettled)
 		apiGroup.GET("/shopee/settled/:order_sn", shHandler.HandleGetSettleDetail)
 		apiGroup.GET("/shopee/settled/summary", shHandler.HandleSumSettled)
+		apiGroup.GET("/shopee/returns", shHandler.HandleGetReturnList)
 		apiGroup.GET("/sales", shHandler.HandleListSalesProfit)
 		apiGroup.POST("/reconcile", handlers.NewReconcileHandler(reconSvc).HandleMatchAndJournal)
 		apiGroup.POST("/metrics", handlers.NewMetricHandler(metricSvc).HandleCalculateMetrics)

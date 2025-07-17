@@ -29,7 +29,7 @@ export default function Dashboard() {
       });
       setData(res.data);
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error("dashboard fetch", err);
     } finally {
       setLoading(false);

@@ -238,7 +238,7 @@ func TestImportSettledOrdersXLSX(t *testing.T) {
 	}
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
-	svc := NewShopeeService(nil, repo, nil, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, nil, nil, nil, config.ShopeeAPIConfig{})
 	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -260,7 +260,7 @@ func TestImportSettledOrdersXLSX_HeaderMismatch(t *testing.T) {
 	}
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
-	svc := NewShopeeService(nil, repo, nil, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, nil, nil, nil, config.ShopeeAPIConfig{})
 	_, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err == nil {
 		t.Fatalf("expected error due to header mismatch")
@@ -296,7 +296,7 @@ func TestImportSettledOrdersXLSX_SkipDuplicates(t *testing.T) {
 	}
 
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO-1": true}}
-	svc := NewShopeeService(nil, repo, nil, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, nil, nil, nil, config.ShopeeAPIConfig{})
 	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -338,7 +338,7 @@ func TestImportSettledOrdersXLSX_UpdateDropshipStatus(t *testing.T) {
 	drop := &fakeDropRepoA{byTrans: map[string]*models.DropshipPurchase{
 		"TRX-1": {KodePesanan: "DP1", StatusPesananTerakhir: "Diproses"},
 	}}
-	svc := NewShopeeService(nil, repo, drop, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, drop, nil, nil, nil, config.ShopeeAPIConfig{})
 	inserted, _, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -355,7 +355,7 @@ func TestImportAffiliateCSV(t *testing.T) {
 	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,ID Model,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
 		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
-	svc := NewShopeeService(nil, repo, nil, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, nil, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -370,7 +370,7 @@ func TestImportAffiliateCSV_JournalEntry(t *testing.T) {
 		"SO1,Selesai,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,5,,,"
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -397,7 +397,7 @@ func TestImportAffiliateCSV_SkipDuplicate(t *testing.T) {
 		existingAffiliate: map[string]bool{"SO1|P1|1": true},
 	}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -418,7 +418,7 @@ func TestImportAffiliateCSV_SkipMissingOrder(t *testing.T) {
 		"SO1": {NamaToko: "TOKO"},
 	}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, drop, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, drop, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -435,7 +435,7 @@ func TestImportAffiliateCSV_FilterStatus(t *testing.T) {
 	csvData := "Kode Pesanan,Status Pesanan,Status Terverifikasi,Waktu Pesanan,Waktu Pesanan Selesai,Waktu Pesanan Terverifikasi,Kode Produk,Nama Produk,IDModel,L1 Kategori Global,L2 Kategori Global,L3 Kategori Global,Kode Promo,Harga(Rp),Jumlah,Nama Affiliate,Username Affiliate,MCN Terhubung,ID Komisi Pesanan,Partner Promo,Jenis Promo,Nilai Pembelian(Rp),Jumlah Pengembalian(Rp),Tipe Pesanan,Estimasi Komisi per Produk(Rp),Estimasi Komisi Affiliate per Produk(Rp),Persentase Komisi Affiliate per Produk,Estimasi Komisi MCN per Produk(Rp),Persentase Komisi MCN per Produk,Estimasi Komisi per Pesanan(Rp),Estimasi Komisi Affiliate per Pesanan(Rp),Estimasi Komisi MCN per Pesanan(Rp),Catatan Produk,Platform,Tingkat Komisi,Pengeluaran(Rp),Status Pemotongan,Metode Pemotongan,Waktu Pemotongan\n" +
 		"SO1,Sedang Dikirim,Sah,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,0,,,"
 	repo := &fakeShopeeRepo{}
-	svc := NewShopeeService(nil, repo, nil, nil, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, nil, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -450,7 +450,7 @@ func TestImportAffiliateCSV_NonSahNoJournal(t *testing.T) {
 		"SO1,Selesai,Tidak,2025-06-01 10:00:00,,,P1,Produk,ID1,Cat1,Cat2,Cat3,,1000,1,Aff,affuser,,1,,Promo,1000,0,Langsung,10,10,10%,0,0%,10,10,0,,IG,10%,5,,,"
 	repo := &fakeShopeeRepo{existingSettled: map[string]bool{"SO1": true}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, err := svc.ImportAffiliateCSV(context.Background(), strings.NewReader(csvData))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -479,7 +479,7 @@ func TestConfirmSettleCreatesFeeLines(t *testing.T) {
 		affExpense: 1,
 	}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, nil, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, nil, jr, nil, nil, config.ShopeeAPIConfig{})
 
 	if err := svc.ConfirmSettle(context.Background(), "SO1"); err != nil {
 		t.Fatalf("confirm error: %v", err)
@@ -513,7 +513,7 @@ func TestConfirmSettleMismatchCreatesAdjustment(t *testing.T) {
 		"SO2": {TotalTransaksi: 100},
 	}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, drop, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, drop, jr, nil, nil, config.ShopeeAPIConfig{})
 
 	if err := svc.ConfirmSettle(context.Background(), "SO2"); err != nil {
 		t.Fatalf("confirm error: %v", err)
@@ -565,7 +565,7 @@ func TestImportSettledOrdersXLSX_AutoSettle(t *testing.T) {
 		"SO-3": {TotalTransaksi: 1},
 	}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, drop, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, drop, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, mis, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)
@@ -621,7 +621,7 @@ func TestImportSettledOrdersXLSX_AutoAdjustMismatch(t *testing.T) {
 		"SO-4": {TotalTransaksi: 100},
 	}}
 	jr := &fakeJournalRepoS{}
-	svc := NewShopeeService(nil, repo, drop, jr, nil, config.ShopeeAPIConfig{})
+	svc := NewShopeeService(nil, repo, drop, jr, nil, nil, config.ShopeeAPIConfig{})
 	inserted, mis, err := svc.ImportSettledOrdersXLSX(context.Background(), bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatalf("import error: %v", err)

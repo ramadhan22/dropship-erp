@@ -22,6 +22,7 @@ type ShopeeServiceInterface interface {
 	ListSalesProfit(ctx context.Context, channel, store, from, to, orderNo, sortBy, dir string, limit, offset int) ([]models.SalesProfit, int, error)
 	ConfirmSettle(ctx context.Context, orderSN string) error
 	GetSettleDetail(ctx context.Context, orderSN string) (*models.ShopeeSettled, float64, error)
+	GetReturnList(ctx context.Context, storeFilter, pageNo, pageSize, createTimeFrom, createTimeTo, updateTimeFrom, updateTimeTo, status, negotiationStatus, sellerProofStatus, sellerCompensationStatus string) ([]models.ShopeeOrderReturn, bool, error)
 }
 
 type ShopeeHandler struct {
@@ -224,4 +225,31 @@ func (h *ShopeeHandler) HandleListSalesProfit(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": list, "total": total})
+}
+
+func (h *ShopeeHandler) HandleGetReturnList(c *gin.Context) {
+	storeFilter := c.Query("store")
+	pageNo := c.Query("page_no")
+	pageSize := c.Query("page_size")
+	createTimeFrom := c.Query("create_time_from")
+	createTimeTo := c.Query("create_time_to")
+	updateTimeFrom := c.Query("update_time_from")
+	updateTimeTo := c.Query("update_time_to")
+	status := c.Query("status")
+	negotiationStatus := c.Query("negotiation_status")
+	sellerProofStatus := c.Query("seller_proof_status")
+	sellerCompensationStatus := c.Query("seller_compensation_status")
+
+	ctx := c.Request.Context()
+	returns, hasMore, err := h.svc.GetReturnList(ctx, storeFilter, pageNo, pageSize, createTimeFrom, createTimeTo, updateTimeFrom, updateTimeTo, status, negotiationStatus, sellerProofStatus, sellerCompensationStatus)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":     returns,
+		"has_more": hasMore,
+		"total":    len(returns),
+	})
 }

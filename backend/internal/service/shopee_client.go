@@ -18,6 +18,7 @@ import (
 
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
+	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 	shopeego "github.com/teacat/shopeego"
 )
 
@@ -833,4 +834,59 @@ func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken
 		return nil, fmt.Errorf("shopee error: %s", out.Error)
 	}
 	return &WalletTransactionList{Transactions: out.Response.TransactionList, more: out.Response.More}, nil
+}
+
+// GetReturnList fetches returns from Shopee's get_return_list API
+func (c *ShopeeClient) GetReturnList(ctx context.Context, accessToken, shopID string, params map[string]string) (*models.ShopeeReturnResponse, error) {
+	path := "/api/v2/returns/get_return_list"
+	ts := time.Now().Unix()
+	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
+
+	q := url.Values{}
+	q.Set("partner_id", c.PartnerID)
+	q.Set("timestamp", strconv.FormatInt(ts, 10))
+	q.Set("sign", sign)
+	q.Set("shop_id", shopID)
+	q.Set("access_token", accessToken)
+
+	// Add filter parameters
+	for key, value := range params {
+		if value != "" {
+			q.Set(key, value)
+		}
+	}
+
+	urlStr := c.BaseURL + path + "?" + q.Encode()
+	log.Printf("ShopeeClient request: GET %s", urlStr)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		logutil.Errorf("GetReturnList request error: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logutil.Errorf("GetReturnList unexpected status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+
+	var result models.ShopeeReturnResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	if result.Error != "" {
+		logutil.Errorf("GetReturnList API error: %s", result.Error)
+		return nil, fmt.Errorf("shopee error: %s", result.Error)
+	}
+
+	log.Printf("GetReturnList response: found %d returns", len(result.Response.Return))
+	return &result, nil
 }

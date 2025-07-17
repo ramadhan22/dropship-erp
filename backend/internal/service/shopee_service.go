@@ -155,12 +155,13 @@ type ShopeeService struct {
 	dropshipRepo ShopeeDropshipRepo
 	journalRepo  ShopeeJournalRepo
 	adjRepo      *repository.ShopeeAdjustmentRepo
+	channelRepo  *repository.ChannelRepo
 	cfg          config.ShopeeAPIConfig
 }
 
 // NewShopeeService constructs a ShopeeService.
-func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo, ar *repository.ShopeeAdjustmentRepo, cfg config.ShopeeAPIConfig) *ShopeeService {
-	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr, adjRepo: ar, cfg: cfg}
+func NewShopeeService(db *sqlx.DB, r ShopeeRepoInterface, dr ShopeeDropshipRepo, jr ShopeeJournalRepo, ar *repository.ShopeeAdjustmentRepo, cr *repository.ChannelRepo, cfg config.ShopeeAPIConfig) *ShopeeService {
+	return &ShopeeService{db: db, repo: r, dropshipRepo: dr, journalRepo: jr, adjRepo: ar, channelRepo: cr, cfg: cfg}
 }
 
 // ImportSettledOrdersXLSX reads an XLSX file and inserts rows into shopee_settled.
@@ -1264,4 +1265,90 @@ func (s *ShopeeService) createAdjustmentJournal(ctx context.Context, jr ShopeeJo
 		}
 	}
 	return nil
+}
+
+// GetReturnList fetches returns from Shopee API for all stores or a specific store
+func (s *ShopeeService) GetReturnList(ctx context.Context, storeFilter, pageNo, pageSize, createTimeFrom, createTimeTo, updateTimeFrom, updateTimeTo, status, negotiationStatus, sellerProofStatus, sellerCompensationStatus string) ([]models.ShopeeOrderReturn, bool, error) {
+	var allReturns []models.ShopeeOrderReturn
+	var hasMore bool
+
+	// Get all stores with access tokens
+	stores, err := s.channelRepo.GetStoresWithTokens(ctx)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get stores: %w", err)
+	}
+
+	// Filter stores if needed
+	var targetStores []models.Store
+	if storeFilter == "" || storeFilter == "all" {
+		targetStores = stores
+	} else {
+		for _, store := range stores {
+			if store.NamaToko == storeFilter {
+				targetStores = []models.Store{store}
+				break
+			}
+		}
+	}
+
+	client := NewShopeeClient(s.cfg)
+
+	for _, store := range targetStores {
+		if store.AccessToken == nil || store.ShopID == nil {
+			log.Printf("Skipping store %s: missing access token or shop ID", store.NamaToko)
+			continue
+		}
+
+		// Build filter parameters
+		params := make(map[string]string)
+		if pageNo != "" {
+			params["page_no"] = pageNo
+		}
+		if pageSize != "" {
+			params["page_size"] = pageSize
+		}
+		if createTimeFrom != "" {
+			params["create_time_from"] = createTimeFrom
+		}
+		if createTimeTo != "" {
+			params["create_time_to"] = createTimeTo
+		}
+		if updateTimeFrom != "" {
+			params["update_time_from"] = updateTimeFrom
+		}
+		if updateTimeTo != "" {
+			params["update_time_to"] = updateTimeTo
+		}
+		if status != "" {
+			params["status"] = status
+		}
+		if negotiationStatus != "" {
+			params["negotiation_status"] = negotiationStatus
+		}
+		if sellerProofStatus != "" {
+			params["seller_proof_status"] = sellerProofStatus
+		}
+		if sellerCompensationStatus != "" {
+			params["seller_compensation_status"] = sellerCompensationStatus
+		}
+
+		response, err := client.GetReturnList(ctx, *store.AccessToken, *store.ShopID, params)
+		if err != nil {
+			log.Printf("Failed to get returns for store %s: %v", store.NamaToko, err)
+			continue
+		}
+
+		// Add store name to each return for identification
+		for i := range response.Response.Return {
+			// We could add a store field, but since the model doesn't have it,
+			// we'll leave the returns as-is for now
+			allReturns = append(allReturns, response.Response.Return[i])
+		}
+
+		if response.Response.More {
+			hasMore = true
+		}
+	}
+
+	return allReturns, hasMore, nil
 }

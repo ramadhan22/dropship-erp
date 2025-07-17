@@ -122,3 +122,16 @@ func (r *ChannelRepo) DeleteStore(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM stores WHERE store_id=$1`, id)
 	return err
 }
+
+// GetStoresWithTokens returns all stores that have access tokens
+func (r *ChannelRepo) GetStoresWithTokens(ctx context.Context) ([]models.Store, error) {
+	var list []models.Store
+	query := `SELECT * FROM stores WHERE access_token IS NOT NULL AND shop_id IS NOT NULL ORDER BY store_id`
+	if err := r.db.SelectContext(ctx, &list, query); err != nil {
+		return nil, err
+	}
+	if list == nil {
+		list = []models.Store{}
+	}
+	return list, nil
+}

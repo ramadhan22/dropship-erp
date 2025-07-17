@@ -440,3 +440,73 @@ type ReconciliationConfig struct {
 	RetryFailedTransactions bool     `json:"retry_failed_transactions"` // Whether to automatically retry failed transactions
 	GenerateDetailedReport  bool     `json:"generate_detailed_report"`  // Whether to include failed transaction details in report
 }
+
+// ShopeeOrderReturn represents a return from Shopee's get_return_list API
+type ShopeeOrderReturn struct {
+	RequestID                string                    `json:"request_id"`
+	ReturnSN                 string                    `json:"return_sn"`
+	OrderSN                  string                    `json:"order_sn"`
+	Status                   string                    `json:"status"`
+	NegotiationStatus        string                    `json:"negotiation_status"`
+	SellerProofStatus        string                    `json:"seller_proof_status"`
+	SellerCompensationStatus string                    `json:"seller_compensation_status"`
+	RefundAmount             float64                   `json:"refund_amount"`
+	Currency                 string                    `json:"currency"`
+	CreateTime               int64                     `json:"create_time"`
+	UpdateTime               int64                     `json:"update_time"`
+	User                     ShopeeReturnUser          `json:"user"`
+	Item                     []ShopeeReturnItem        `json:"item"`
+	Reason                   string                    `json:"reason"`
+	DueDate                  int64                     `json:"due_date"`
+	ImageInfo                []ShopeeReturnImageInfo   `json:"image_info"`
+	VideoInfo                []ShopeeReturnVideoInfo   `json:"video_info"`
+	SellerProof              []ShopeeReturnSellerProof `json:"seller_proof"`
+}
+
+// ShopeeReturnUser represents user information in a return
+type ShopeeReturnUser struct {
+	UserID   int64  `json:"userid"`
+	Username string `json:"username"`
+}
+
+// ShopeeReturnItem represents an item in a return
+type ShopeeReturnItem struct {
+	ItemID     int64   `json:"itemid"`
+	ItemName   string  `json:"item_name"`
+	ItemSku    string  `json:"item_sku"`
+	ModelID    int64   `json:"modelid"`
+	ModelName  string  `json:"model_name"`
+	ModelSku   string  `json:"model_sku"`
+	Amount     int     `json:"amount"`
+	ItemPrice  float64 `json:"item_price"`
+	IsMainItem bool    `json:"is_main_item"`
+}
+
+// ShopeeReturnImageInfo represents image information in a return
+type ShopeeReturnImageInfo struct {
+	ImageID  string `json:"image_id"`
+	ImageURL string `json:"image_url"`
+}
+
+// ShopeeReturnVideoInfo represents video information in a return
+type ShopeeReturnVideoInfo struct {
+	VideoID  string `json:"video_id"`
+	VideoURL string `json:"video_url"`
+}
+
+// ShopeeReturnSellerProof represents seller proof in a return
+type ShopeeReturnSellerProof struct {
+	ImageID  string `json:"image_id"`
+	ImageURL string `json:"image_url"`
+}
+
+// ShopeeReturnResponse represents the API response from get_return_list
+type ShopeeReturnResponse struct {
+	RequestID string `json:"request_id"`
+	Error     string `json:"error"`
+	Message   string `json:"message"`
+	Response  struct {
+		More   bool                `json:"more"`
+		Return []ShopeeOrderReturn `json:"return"`
+	} `json:"response"`
+}

@@ -628,3 +628,62 @@ export interface DashboardMetrics {
   outstanding_amount?: DashboardMetric;
   [key: string]: DashboardMetric | undefined;
 }
+
+export interface ShopeeOrderReturn {
+  request_id: string;
+  return_sn: string;
+  order_sn: string;
+  status: string;
+  negotiation_status: string;
+  seller_proof_status: string;
+  seller_compensation_status: string;
+  refund_amount: number;
+  currency: string;
+  create_time: number;
+  update_time: number;
+  user: ShopeeReturnUser;
+  item: ShopeeReturnItem[];
+  reason: string;
+  due_date: number;
+  image_info: ShopeeReturnImageInfo[];
+  video_info: ShopeeReturnVideoInfo[];
+  seller_proof: ShopeeReturnSellerProof[];
+}
+
+export interface ShopeeReturnUser {
+  userid: number;
+  username: string;
+}
+
+export interface ShopeeReturnItem {
+  itemid: number;
+  item_name: string;
+  item_sku: string;
+  modelid: number;
+  model_name: string;
+  model_sku: string;
+  amount: number;
+  item_price: number;
+  is_main_item: boolean;
+}
+
+export interface ShopeeReturnImageInfo {
+  image_id: string;
+  image_url: string;
+}
+
+export interface ShopeeReturnVideoInfo {
+  video_id: string;
+  video_url: string;
+}
+
+export interface ShopeeReturnSellerProof {
+  image_id: string;
+  image_url: string;
+}
+
+export interface ShopeeReturnResponse {
+  data: ShopeeOrderReturn[];
+  has_more: boolean;
+  total: number;
+}
