@@ -50,7 +50,7 @@ type ShopeeAdsCampaignsResponse struct {
 }
 
 type ShopeeAdsPerformanceResponse struct {
-	Response []struct {
+	Response struct {
 		ShopID       int64  `json:"shop_id"`
 		Region       string `json:"region"`
 		CampaignList []struct {
@@ -301,53 +301,51 @@ func (s *AdsPerformanceService) fetchAdsPerformanceForDate(ctx context.Context, 
 	// Store performance data in database
 	totalDataPoints := 0
 	successCount := 0
-	for _, responseItem := range performanceResp.Response {
-		for _, campaign := range responseItem.CampaignList {
-			totalDataPoints += len(campaign.MetricsList)
-			for _, metrics := range campaign.MetricsList {
-				// Convert date from DD-MM-YYYY to YYYY-MM-DD format
-				convertedDate, err := convertDateFormat(metrics.Date)
-				if err != nil {
-					logutil.Errorf("Failed to convert date format for campaign %d, date %s: %v", campaign.CampaignID, metrics.Date, err)
-					continue
-				}
-
-				// Convert the new metrics format to the old format expected by upsertPerformanceMetrics
-				data := struct {
-					Date            string  `json:"date"`
-					Hour            *int    `json:"hour,omitempty"`
-					Impression      int64   `json:"impression"`
-					Click           int64   `json:"click"`
-					Ctr             float64 `json:"ctr"`
-					Cpc             int64   `json:"cpc"`   // in cents
-					Spend           int64   `json:"spend"` // in cents
-					GmvOrder        int64   `json:"gmv_order"`
-					GmvSales        int64   `json:"gmv_sales"` // in cents
-					ConversionRate  float64 `json:"conversion_rate"`
-					OrderConversion int64   `json:"order_conversion"`
-					Roas            float64 `json:"roas"`
-				}{
-					Date:            convertedDate,
-					Hour:            &metrics.Hour,
-					Impression:      metrics.Impression,
-					Click:           metrics.Clicks,
-					Ctr:             metrics.Ctr,
-					Cpc:             int64(metrics.Cpc * 100),     // Convert to cents
-					Spend:           int64(metrics.Expense * 100), // Convert to cents
-					GmvOrder:        metrics.DirectOrder,
-					GmvSales:        int64(metrics.DirectGmv * 100), // Convert to cents
-					ConversionRate:  metrics.DirectCr,
-					OrderConversion: metrics.DirectOrder,
-					Roas:            metrics.DirectRoi,
-				}
-
-				if err = s.upsertPerformanceMetrics(ctx, storeID, campaign.CampaignID, &data); err != nil {
-					logutil.Errorf("Failed to upsert performance data for campaign %d, date %s, store %d: %v",
-						campaign.CampaignID, metrics.Date, storeID, err)
-					continue
-				}
-				successCount++
+	for _, campaign := range performanceResp.Response.CampaignList {
+		totalDataPoints += len(campaign.MetricsList)
+		for _, metrics := range campaign.MetricsList {
+			// Convert date from DD-MM-YYYY to YYYY-MM-DD format
+			convertedDate, err := convertDateFormat(metrics.Date)
+			if err != nil {
+				logutil.Errorf("Failed to convert date format for campaign %d, date %s: %v", campaign.CampaignID, metrics.Date, err)
+				continue
 			}
+
+			// Convert the new metrics format to the old format expected by upsertPerformanceMetrics
+			data := struct {
+				Date            string  `json:"date"`
+				Hour            *int    `json:"hour,omitempty"`
+				Impression      int64   `json:"impression"`
+				Click           int64   `json:"click"`
+				Ctr             float64 `json:"ctr"`
+				Cpc             int64   `json:"cpc"`   // in cents
+				Spend           int64   `json:"spend"` // in cents
+				GmvOrder        int64   `json:"gmv_order"`
+				GmvSales        int64   `json:"gmv_sales"` // in cents
+				ConversionRate  float64 `json:"conversion_rate"`
+				OrderConversion int64   `json:"order_conversion"`
+				Roas            float64 `json:"roas"`
+			}{
+				Date:            convertedDate,
+				Hour:            &metrics.Hour,
+				Impression:      metrics.Impression,
+				Click:           metrics.Clicks,
+				Ctr:             metrics.Ctr,
+				Cpc:             int64(metrics.Cpc * 100),     // Convert to cents
+				Spend:           int64(metrics.Expense * 100), // Convert to cents
+				GmvOrder:        metrics.DirectOrder,
+				GmvSales:        int64(metrics.DirectGmv * 100), // Convert to cents
+				ConversionRate:  metrics.DirectCr,
+				OrderConversion: metrics.DirectOrder,
+				Roas:            metrics.DirectRoi,
+			}
+
+			if err = s.upsertPerformanceMetrics(ctx, storeID, campaign.CampaignID, &data); err != nil {
+				logutil.Errorf("Failed to upsert performance data for campaign %d, date %s, store %d: %v",
+					campaign.CampaignID, metrics.Date, storeID, err)
+				continue
+			}
+			successCount++
 		}
 	}
 
