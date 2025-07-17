@@ -72,23 +72,32 @@ export default function AdsPerformancePage() {
     store_id: "",
   });
   const [stores, setStores] = useState<{ store_id: number; nama_toko: string }[]>([]);
+  const [storesLoading, setStoresLoading] = useState(false);
+  const [storesError, setStoresError] = useState<string | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
   const fetchStores = useCallback(async () => {
+    setStoresLoading(true);
+    setStoresError(null);
     try {
-      console.log("Fetching stores from /api/stores/all...");
       const response = await fetch("/api/stores/all");
-      console.log("Stores API response status:", response.status);
-      if (!response.ok) throw new Error("Failed to fetch stores");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch stores: ${response.status} ${response.statusText}`);
+      }
       const data = await response.json();
-      console.log("Stores API response data:", data);
       setStores(data || []);
-      console.log("Stores state set to:", data || []);
+      
+      if (!data || data.length === 0) {
+        setStoresError("No stores found. Please create stores first.");
+      }
     } catch (error) {
       console.error("Error fetching stores:", error);
+      setStoresError(error instanceof Error ? error.message : "Failed to fetch stores");
+    } finally {
+      setStoresLoading(false);
     }
   }, []);
 
@@ -135,7 +144,6 @@ export default function AdsPerformancePage() {
   }, [fetchStores, fetchData]);
 
   const handleSyncDialogOpen = () => {
-    console.log("Opening sync dialog, current stores:", stores);
     setSyncDialogOpen(true);
   };
 
@@ -145,6 +153,11 @@ export default function AdsPerformancePage() {
   };
 
   const handleSyncSubmit = async () => {
+    if (stores.length === 0) {
+      setMsg({ type: "error", text: "No stores available. Please create stores first." });
+      return;
+    }
+    
     if (!syncForm.store_id) {
       setMsg({ type: "error", text: "Please select a store" });
       return;
@@ -361,23 +374,41 @@ export default function AdsPerformancePage() {
             Shopee credentials are automatically retrieved from the selected store configuration.
           </Typography>
           
-          <FormControl fullWidth margin="normal">
+          <FormControl fullWidth margin="normal" error={!!storesError}>
             <InputLabel>Store</InputLabel>
             <Select
               value={syncForm.store_id}
               onChange={(e) => setSyncForm({ ...syncForm, store_id: e.target.value as string })}
               label="Store"
+              disabled={storesLoading || stores.length === 0}
             >
-              {console.log("Rendering store options, stores array:", stores) || 
-               stores.map((store) => {
-                console.log("Creating MenuItem for store:", store);
-                return (
+              {storesLoading ? (
+                <MenuItem disabled>Loading stores...</MenuItem>
+              ) : storesError ? (
+                <MenuItem disabled>{storesError}</MenuItem>
+              ) : stores.length === 0 ? (
+                <MenuItem disabled>No stores available</MenuItem>
+              ) : (
+                stores.map((store) => (
                   <MenuItem key={store.store_id} value={store.store_id.toString()}>
                     {store.nama_toko}
                   </MenuItem>
-                );
-              })}
+                ))
+              )}
             </Select>
+            {storesError && (
+              <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                {storesError}
+                <Button 
+                  size="small" 
+                  onClick={fetchStores} 
+                  sx={{ ml: 1 }}
+                  disabled={storesLoading}
+                >
+                  Retry
+                </Button>
+              </Typography>
+            )}
           </FormControl>
         </DialogContent>
         <DialogActions>
@@ -385,7 +416,7 @@ export default function AdsPerformancePage() {
           <Button 
             onClick={handleSyncSubmit} 
             variant="contained"
-            disabled={syncing || !syncForm.store_id}
+            disabled={syncing || !syncForm.store_id || stores.length === 0 || storesLoading}
           >
             {syncing ? "Starting..." : "Start Sync"}
           </Button>
