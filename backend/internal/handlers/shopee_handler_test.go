@@ -65,6 +65,13 @@ func (f *fakeShopeeService) GetSettleDetail(ctx context.Context, orderSN string)
 	return &models.ShopeeSettled{NoPesanan: orderSN}, 0, nil
 }
 
+func (f *fakeShopeeService) GetReturnList(ctx context.Context, storeFilter, pageNo, pageSize, createTimeFrom, createTimeTo, updateTimeFrom, updateTimeTo, status, negotiationStatus, sellerProofStatus, sellerCompensationStatus string) ([]models.ShopeeOrderReturn, bool, error) {
+	if f.err {
+		return nil, false, errors.New("fail get returns")
+	}
+	return []models.ShopeeOrderReturn{}, false, nil
+}
+
 func TestShopeeHandleImport_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &fakeShopeeService{}
