@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   FormControl,
-  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -29,8 +28,8 @@ export default function ShippingDiscrepancyPage() {
   const [list, setList] = useState<ShippingDiscrepancy[]>([]);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
-  const [from, setFrom] = useState(firstOfMonth);
-  const [to, setTo] = useState(lastOfMonth);
+  const [from, setFrom] = useState<Date | null>(new Date(firstOfMonth));
+  const [to, setTo] = useState<Date | null>(new Date(lastOfMonth));
   const [storeName, setStoreName] = useState("");
   const [discrepancyType, setDiscrepancyType] = useState("");
   const [stats, setStats] = useState<Record<string, number>>({});
@@ -53,9 +52,11 @@ export default function ShippingDiscrepancyPage() {
 
   const fetchStats = async () => {
     try {
+      const fromStr = from ? from.toISOString().split("T")[0] : firstOfMonth;
+      const toStr = to ? to.toISOString().split("T")[0] : lastOfMonth;
       const res = await getShippingDiscrepancyStats({
-        start_date: from?.toISOString().split("T")[0],
-        end_date: to?.toISOString().split("T")[0],
+        start_date: fromStr,
+        end_date: toStr,
       });
       setStats(res.data.stats);
     } catch (e: any) {
@@ -73,22 +74,22 @@ export default function ShippingDiscrepancyPage() {
 
   const columns: Column<ShippingDiscrepancy>[] = [
     {
-      id: "invoice_number",
+      key: "invoice_number",
       label: "Invoice Number",
       align: "left",
-      render: (row) => row.invoice_number,
+      render: (_, row) => row.invoice_number,
     },
     {
-      id: "order_id",
+      key: "order_id",
       label: "Order ID",
       align: "left",
-      render: (row) => row.order_id || "-",
+      render: (_, row) => row.order_id || "-",
     },
     {
-      id: "discrepancy_type",
+      key: "discrepancy_type",
       label: "Type",
       align: "left",
-      render: (row) => (
+      render: (_, row) => (
         <span
           style={{
             color: row.discrepancy_type === "selisih_ongkir" ? "#1976d2" : "#ed6c02",
@@ -99,10 +100,10 @@ export default function ShippingDiscrepancyPage() {
       ),
     },
     {
-      id: "discrepancy_amount",
+      key: "discrepancy_amount",
       label: "Amount",
       align: "right",
-      render: (row) => (
+      render: (_, row) => (
         <span
           style={{
             color: row.discrepancy_amount >= 0 ? "#2e7d32" : "#d32f2f",
@@ -113,37 +114,37 @@ export default function ShippingDiscrepancyPage() {
       ),
     },
     {
-      id: "actual_shipping_fee",
+      key: "actual_shipping_fee",
       label: "Actual Shipping",
       align: "right",
-      render: (row) =>
+      render: (_, row) =>
         row.actual_shipping_fee ? `Rp ${row.actual_shipping_fee.toLocaleString("id-ID")}` : "-",
     },
     {
-      id: "buyer_paid_shipping_fee",
+      key: "buyer_paid_shipping_fee",
       label: "Buyer Paid",
       align: "right",
-      render: (row) =>
+      render: (_, row) =>
         row.buyer_paid_shipping_fee ? `Rp ${row.buyer_paid_shipping_fee.toLocaleString("id-ID")}` : "-",
     },
     {
-      id: "store_name",
+      key: "store_name",
       label: "Store",
       align: "left",
-      render: (row) => row.store_name || "-",
+      render: (_, row) => row.store_name || "-",
     },
     {
-      id: "order_date",
+      key: "order_date",
       label: "Order Date",
       align: "left",
-      render: (row) =>
+      render: (_, row) =>
         row.order_date ? new Date(row.order_date).toLocaleDateString("id-ID") : "-",
     },
     {
-      id: "created_at",
+      key: "created_at",
       label: "Recorded At",
       align: "left",
-      render: (row) => new Date(row.created_at).toLocaleDateString("id-ID"),
+      render: (_, row) => new Date(row.created_at).toLocaleDateString("id-ID"),
     },
   ];
 
@@ -163,90 +164,76 @@ export default function ShippingDiscrepancyPage() {
       )}
 
       {/* Stats Cards */}
-      <Grid container spacing={2} style={{ marginBottom: 20 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="primary">
-                Selisih Ongkir
-              </Typography>
-              <Typography variant="h4">
-                {totalSelisihOngkir}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Transactions with shipping cost differences
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" color="secondary">
-                Reverse Shipping Fee
-              </Typography>
-              <Typography variant="h4">
-                {totalReverseShipping}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Orders with reverse shipping fees
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <div style={{ marginBottom: 20, display: "flex", gap: "16px", flexWrap: "wrap" }}>
+        <Card style={{ flex: 1, minWidth: "200px" }}>
+          <CardContent>
+            <Typography variant="h6" color="primary">
+              Selisih Ongkir
+            </Typography>
+            <Typography variant="h4">
+              {totalSelisihOngkir}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Transactions with shipping cost differences
+            </Typography>
+          </CardContent>
+        </Card>
+        <Card style={{ flex: 1, minWidth: "200px" }}>
+          <CardContent>
+            <Typography variant="h6" color="secondary">
+              Reverse Shipping Fee
+            </Typography>
+            <Typography variant="h4">
+              {totalReverseShipping}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              Orders with reverse shipping fees
+            </Typography>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters */}
-      <div style={{ marginBottom: 20 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              label="Store Name"
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              variant="outlined"
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Discrepancy Type</InputLabel>
-              <Select
-                value={discrepancyType}
-                onChange={(e) => setDiscrepancyType(e.target.value)}
-                label="Discrepancy Type"
-              >
-                <MenuItem value="">All Types</MenuItem>
-                <MenuItem value="selisih_ongkir">Selisih Ongkir</MenuItem>
-                <MenuItem value="reverse_shipping_fee">Reverse Shipping Fee</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Stats From"
-                value={from}
-                onChange={setFrom}
-                slotProps={{
-                  textField: { fullWidth: true, variant: "outlined" },
-                }}
-              />
-            </LocalizationProvider>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Stats To"
-                value={to}
-                onChange={setTo}
-                slotProps={{
-                  textField: { fullWidth: true, variant: "outlined" },
-                }}
-              />
-            </LocalizationProvider>
-          </Grid>
-        </Grid>
+      <div style={{ marginBottom: 20, display: "flex", gap: "16px", flexWrap: "wrap" }}>
+        <TextField
+          label="Store Name"
+          value={storeName}
+          onChange={(e) => setStoreName(e.target.value)}
+          variant="outlined"
+          style={{ minWidth: "200px" }}
+        />
+        <FormControl variant="outlined" style={{ minWidth: "200px" }}>
+          <InputLabel>Discrepancy Type</InputLabel>
+          <Select
+            value={discrepancyType}
+            onChange={(e) => setDiscrepancyType(e.target.value)}
+            label="Discrepancy Type"
+          >
+            <MenuItem value="">All Types</MenuItem>
+            <MenuItem value="selisih_ongkir">Selisih Ongkir</MenuItem>
+            <MenuItem value="reverse_shipping_fee">Reverse Shipping Fee</MenuItem>
+          </Select>
+        </FormControl>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Stats From"
+            value={from}
+            onChange={setFrom}
+            slotProps={{
+              textField: { variant: "outlined", style: { minWidth: "200px" } },
+            }}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="Stats To"
+            value={to}
+            onChange={setTo}
+            slotProps={{
+              textField: { variant: "outlined", style: { minWidth: "200px" } },
+            }}
+          />
+        </LocalizationProvider>
       </div>
 
       <div style={{ marginBottom: 20 }}>
@@ -259,12 +246,13 @@ export default function ShippingDiscrepancyPage() {
       </div>
 
       {list.length > 0 ? (
-        <SortableTable
-          data={paginated}
-          columns={columns}
-          pagination={controls}
-          emptyMessage="No shipping discrepancies found."
-        />
+        <>
+          <SortableTable
+            data={paginated}
+            columns={columns}
+          />
+          {controls}
+        </>
       ) : (
         <Alert severity="info">No shipping discrepancies found for the current filters.</Alert>
       )}
