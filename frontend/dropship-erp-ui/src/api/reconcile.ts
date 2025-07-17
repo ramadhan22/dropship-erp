@@ -48,7 +48,11 @@ export function reconcileCheck(
 }
 
 export function fetchShopeeDetail(invoice: string) {
-  return api.get<ShopeeOrderDetail>(`/reconcile/status?invoice=${invoice}`);
+  return api.get<ShopeeOrderDetail | { status: string; batch_id: number; message: string }>(`/reconcile/status?invoice=${invoice}`);
+}
+
+export function checkJobStatus(batchId: number) {
+  return api.get<{ batch_id: number; status: string }>(`/reconcile/job-status/${batchId}`);
 }
 
 export function fetchEscrowDetail(invoice: string) {

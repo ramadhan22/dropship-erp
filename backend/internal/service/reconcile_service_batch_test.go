@@ -105,6 +105,9 @@ func (f *fakeBatchSvc) ListDetails(ctx context.Context, id int64) ([]models.Batc
 func (f *fakeBatchSvc) UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error {
 	return nil
 }
+func (f *fakeBatchSvc) ListPendingByType(ctx context.Context, typ string) ([]models.BatchHistory, error) {
+	return []models.BatchHistory{}, nil
+}
 
 func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	dp1 := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}

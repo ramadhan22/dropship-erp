@@ -25,6 +25,7 @@ import {
   createReconcileBatch,
   fetchEscrowDetail,
   fetchShopeeDetail,
+  checkJobStatus,
 } from "../api/reconcile";
 import { listAllStores } from "../api";
 import type {
@@ -160,6 +161,7 @@ export default function ReconcileDashboard() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInvoice, setDetailInvoice] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [pendingJobs, setPendingJobs] = useState<Map<string, number>>(new Map());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -207,15 +209,88 @@ export default function ReconcileDashboard() {
     try {
       const apiCall = status.toLowerCase() === "completed" ? fetchEscrowDetail : fetchShopeeDetail;
       const res = await apiCall(inv);
-      setDetail(res.data);
-      setDetailInvoice(inv);
-      setDetailOpen(true);
+      
+      // Check if response indicates background processing
+      if (res.data && typeof res.data === 'object' && 'status' in res.data && res.data.status === 'processing') {
+        const batchData = res.data as { status: string; batch_id: number; message: string };
+        setPendingJobs(prev => new Map(prev.set(inv, batchData.batch_id)));
+        setMsg({ type: "info", text: batchData.message });
+        
+        // Start polling for job completion
+        pollForJobCompletion(inv, batchData.batch_id);
+      } else {
+        // We have immediate data
+        setDetail(res.data as ShopeeOrderDetail | ShopeeEscrowDetail);
+        setDetailInvoice(inv);
+        setDetailOpen(true);
+      }
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
     } finally {
       setActionLoading(null);
     }
   }, [actionLoading]);
+
+  const pollForJobCompletion = useCallback(async (invoice: string, batchId: number) => {
+    const maxAttempts = 60; // Poll for up to 1 minute
+    let attempts = 0;
+    
+    const poll = async () => {
+      if (attempts >= maxAttempts) {
+        setPendingJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(invoice);
+          return newMap;
+        });
+        setMsg({ type: "error", text: "Job timed out. Please try again later." });
+        return;
+      }
+      
+      try {
+        const statusRes = await checkJobStatus(batchId);
+        const jobStatus = statusRes.data.status;
+        
+        if (jobStatus === 'completed') {
+          // Job completed, fetch the data again
+          setPendingJobs(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(invoice);
+            return newMap;
+          });
+          
+          // Fetch the completed data
+          const apiCall = fetchShopeeDetail; // Use the correct API call
+          const res = await apiCall(invoice);
+          setDetail(res.data as ShopeeOrderDetail);
+          setDetailInvoice(invoice);
+          setDetailOpen(true);
+          setMsg({ type: "success", text: "Order detail loaded successfully!" });
+        } else if (jobStatus === 'failed') {
+          setPendingJobs(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(invoice);
+            return newMap;
+          });
+          setMsg({ type: "error", text: "Failed to fetch order detail. Please try again." });
+        } else {
+          // Still processing, continue polling
+          attempts++;
+          setTimeout(poll, 1000); // Poll every second
+        }
+      } catch (error) {
+        // Error checking status, stop polling
+        setPendingJobs(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(invoice);
+          return newMap;
+        });
+        setMsg({ type: "error", text: "Error checking job status." });
+      }
+    };
+    
+    // Start polling after a short delay
+    setTimeout(poll, 1000);
+  }, []);
 
   const handleUpdateStatus = useCallback(async () => {
     if (actionLoading) return;
@@ -331,21 +406,33 @@ export default function ReconcileDashboard() {
     },
     {
       label: "Check Status",
-      render: (_, row) => (
-        <Button
-          size="small"
-          onClick={() => handleCheckStatus(row.kode_invoice_channel, row.shopee_order_status)}
-          disabled={actionLoading === row.kode_invoice_channel}
-        >
-          {actionLoading === row.kode_invoice_channel ? (
-            <CircularProgress size={16} />
-          ) : (
-            'Check Status'
-          )}
-        </Button>
-      ),
+      render: (_, row) => {
+        const isPending = pendingJobs.has(row.kode_invoice_channel);
+        const isLoading = actionLoading === row.kode_invoice_channel;
+        
+        return (
+          <Button
+            size="small"
+            onClick={() => handleCheckStatus(row.kode_invoice_channel, row.shopee_order_status)}
+            disabled={isLoading || isPending}
+            variant={isPending ? "outlined" : "text"}
+            color={isPending ? "warning" : "primary"}
+          >
+            {isLoading ? (
+              <CircularProgress size={16} />
+            ) : isPending ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Processing...
+              </>
+            ) : (
+              'Check Status'
+            )}
+          </Button>
+        );
+      },
     },
-  ], [navigate, handleReconcile, handleCancel, handleCheckStatus, actionLoading]);
+  ], [navigate, handleReconcile, handleCancel, handleCheckStatus, actionLoading, pendingJobs]);
 
   // Pagination controls
   const totalPages = Math.max(1, Math.ceil((data?.total || 0) / pageSize));
