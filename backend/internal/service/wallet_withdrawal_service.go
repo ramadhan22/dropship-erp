@@ -173,6 +173,16 @@ func (s *WalletWithdrawalService) CreateAllJournal(ctx context.Context, store st
 				TransactionType: "WITHDRAWAL_CREATED",
 			}
 			txs, more, err := s.walletSvc.ListWalletTransactions(ctx, store, params)
+			// Adjust withdrawal amounts by SPM_DISBURSE_ADD transactions on the same day
+			for i := range txs {
+				disburseAddAmount, err := s.findSpmDisburseAddAmount(ctx, store, txs[i].CreateTime)
+				if err != nil {
+					// Log the error but don't fail the entire request
+					log.Printf("Warning: failed to check SPM_DISBURSE_ADD for transaction %d: %v", txs[i].TransactionID, err)
+				} else if disburseAddAmount > 0 {
+					txs[i].Amount = txs[i].Amount + disburseAddAmount
+				}
+			}
 			if err != nil {
 				return err
 			}
