@@ -1,3 +1,5 @@
+import { api } from "./index";
+
 // API functions for ads performance
 export const fetchAdsCampaigns = async (params?: { 
   store_id?: number; 
@@ -11,9 +13,8 @@ export const fetchAdsCampaigns = async (params?: {
   if (params?.limit) searchParams.set("limit", params.limit.toString());
   if (params?.offset) searchParams.set("offset", params.offset.toString());
 
-  const response = await fetch(`/api/ads/campaigns?${searchParams}`);
-  if (!response.ok) throw new Error("Failed to fetch campaigns");
-  return response.json();
+  const response = await api.get(`/ads/campaigns?${searchParams}`);
+  return response.data;
 };
 
 export const fetchAdsPerformanceSummary = async (params?: {
@@ -26,21 +27,15 @@ export const fetchAdsPerformanceSummary = async (params?: {
   if (params?.start_date) searchParams.set("start_date", params.start_date);
   if (params?.end_date) searchParams.set("end_date", params.end_date);
 
-  const response = await fetch(`/api/ads/summary?${searchParams}`);
-  if (!response.ok) throw new Error("Failed to fetch summary");
-  return response.json();
+  const response = await api.get(`/ads/summary?${searchParams}`);
+  return response.data;
 };
 
 export const fetchAdsCampaignsFromShopee = async (data: {
   store_id: number;
 }) => {
-  const response = await fetch("/api/ads/campaigns/fetch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error("Failed to fetch campaigns from Shopee");
-  return response.json();
+  const response = await api.post("/ads/campaigns/fetch", data);
+  return response.data;
 };
 
 export const fetchAdsPerformanceFromShopee = async (data: {
@@ -49,23 +44,13 @@ export const fetchAdsPerformanceFromShopee = async (data: {
   start_date: string;
   end_date: string;
 }) => {
-  const response = await fetch("/api/ads/performance/fetch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error("Failed to fetch performance data from Shopee");
-  return response.json();
+  const response = await api.post("/ads/performance/fetch", data);
+  return response.data;
 };
 
 export const syncHistoricalAdsPerformance = async (data: {
   store_id: number;
 }) => {
-  const response = await fetch("/api/ads/sync/historical", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error("Failed to start historical sync");
-  return response.json();
+  const response = await api.post("/ads/sync/historical", data);
+  return response.data;
 };
