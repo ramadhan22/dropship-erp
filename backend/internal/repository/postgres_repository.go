@@ -8,23 +8,23 @@ import (
 // Repository aggregates all sub-repositories for the application.
 // It holds the shared *sqlx.DB connection and each repo instance.
 type Repository struct {
-	DB                      *sqlx.DB
-	BatchRepo               *BatchRepo
-	BatchDetailRepo         *BatchDetailRepo
-	DropshipRepo            *DropshipRepo
-	ShopeeRepo              *ShopeeRepo
-	ReconcileRepo           *ReconcileRepo
+	DB                       *sqlx.DB
+	BatchRepo                *BatchRepo
+	BatchDetailRepo          *BatchDetailRepo
+	DropshipRepo             *DropshipRepo
+	ShopeeRepo               *ShopeeRepo
+	ReconcileRepo            *ReconcileRepo
 	FailedReconciliationRepo *FailedReconciliationRepo
-	JournalRepo             *JournalRepo
-	MetricRepo              *MetricRepo
-	ChannelRepo             *ChannelRepo
-	AccountRepo             *AccountRepo
-	AdInvoiceRepo           *AdInvoiceRepo
-	AssetAccountRepo        *AssetAccountRepo
-	WithdrawalRepo          *WithdrawalRepo
-	TaxRepo                 *TaxRepo
-	ShopeeAdjustmentRepo    *ShopeeAdjustmentRepo
-	OrderDetailRepo         *OrderDetailRepo
+	JournalRepo              *JournalRepo
+	MetricRepo               *MetricRepo
+	ChannelRepo              *ChannelRepo
+	AccountRepo              *AccountRepo
+	AdInvoiceRepo            *AdInvoiceRepo
+	AssetAccountRepo         *AssetAccountRepo
+	WithdrawalRepo           *WithdrawalRepo
+	TaxRepo                  *TaxRepo
+	ShopeeAdjustmentRepo     *ShopeeAdjustmentRepo
+	OrderDetailRepo          *OrderDetailRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -58,23 +58,23 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	orderDetailRepo := NewOrderDetailRepo(db)
 
 	return &Repository{
-		DB:                      db,
-		BatchRepo:               batchRepo,
-		BatchDetailRepo:         batchDetailRepo,
-		DropshipRepo:            dropshipRepo,
-		ShopeeRepo:              shopeeRepo,
-		ReconcileRepo:           reconcileRepo,
+		DB:                       db,
+		BatchRepo:                batchRepo,
+		BatchDetailRepo:          batchDetailRepo,
+		DropshipRepo:             dropshipRepo,
+		ShopeeRepo:               shopeeRepo,
+		ReconcileRepo:            reconcileRepo,
 		FailedReconciliationRepo: failedReconciliationRepo,
-		JournalRepo:             journalRepo,
-		MetricRepo:              metricRepo,
-		ChannelRepo:             channelRepo,
-		AccountRepo:             accountRepo,
-		AdInvoiceRepo:           adInvoiceRepo,
-		AssetAccountRepo:        assetAccountRepo,
-		WithdrawalRepo:          withdrawalRepo,
-		TaxRepo:                 taxRepo,
-		ShopeeAdjustmentRepo:    adjustmentRepo,
-		OrderDetailRepo:         orderDetailRepo,
+		JournalRepo:              journalRepo,
+		MetricRepo:               metricRepo,
+		ChannelRepo:              channelRepo,
+		AccountRepo:              accountRepo,
+		AdInvoiceRepo:            adInvoiceRepo,
+		AssetAccountRepo:         assetAccountRepo,
+		WithdrawalRepo:           withdrawalRepo,
+		TaxRepo:                  taxRepo,
+		ShopeeAdjustmentRepo:     adjustmentRepo,
+		OrderDetailRepo:          orderDetailRepo,
 	}, nil
 }
 

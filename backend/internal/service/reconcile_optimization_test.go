@@ -9,9 +9,9 @@ import (
 
 // MockDropshipRepoOptimized is a mock that tracks whether bulk methods are called
 type MockDropshipRepoOptimized struct {
-	purchases    map[string]*models.DropshipPurchase
-	bulkCalled   bool
-	singleCalls  int
+	purchases   map[string]*models.DropshipPurchase
+	bulkCalled  bool
+	singleCalls int
 }
 
 func (m *MockDropshipRepoOptimized) GetDropshipPurchaseByInvoice(ctx context.Context, kodeInvoice string) (*models.DropshipPurchase, error) {
@@ -66,7 +66,7 @@ func TestBulkOptimization(t *testing.T) {
 	}
 
 	invoices := []string{"INV001", "INV002", "INV003"}
-	
+
 	// Test the bulk fetch method
 	purchases, err := svc.bulkGetDropshipPurchasesByInvoices(context.Background(), invoices)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestBulkOptimization(t *testing.T) {
 	}
 }
 
-// Test fallback when bulk method not available  
+// Test fallback when bulk method not available
 func TestFallbackToSingleCalls(t *testing.T) {
 	// Use a mock that doesn't implement the bulk method
 	mockRepo := &BasicMockDropshipRepo{
@@ -102,7 +102,7 @@ func TestFallbackToSingleCalls(t *testing.T) {
 	}
 
 	invoices := []string{"INV001"}
-	
+
 	// Should fallback to individual calls
 	purchases, err := svc.bulkGetDropshipPurchasesByInvoices(context.Background(), invoices)
 	if err != nil {

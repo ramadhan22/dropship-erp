@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
 )
 
@@ -46,22 +47,26 @@ func (s *AdsPerformanceBatchScheduler) Start(ctx context.Context) {
 func (s *AdsPerformanceBatchScheduler) run(ctx context.Context) {
 	list, err := s.batch.ListPendingByType(ctx, "ads_performance_sync")
 	if err != nil {
-		log.Printf("ads performance scheduler list pending: %v", err)
+		logutil.Errorf("ads performance scheduler failed to list pending batches: %v", err)
 		return
 	}
-	
+
+	if len(list) > 0 {
+		log.Printf("ads performance scheduler found %d pending batches to process", len(list))
+	}
+
 	for _, b := range list {
 		s.processBatch(ctx, b)
 	}
 }
 
 func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch models.BatchHistory) {
-	log.Printf("Processing ads performance sync batch %d", batch.ID)
-	
+	log.Printf("Starting to process ads performance sync batch %d", batch.ID)
+
 	// Update batch status to processing
 	err := s.batch.UpdateStatus(ctx, batch.ID, "processing", "Starting ads performance sync")
 	if err != nil {
-		log.Printf("Failed to update batch status: %v", err)
+		logutil.Errorf("Failed to update batch status to processing for batch %d: %v", batch.ID, err)
 		return
 	}
 
@@ -74,20 +79,22 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 		// If we stored the request as JSON in FilePath, parse it
 		err := json.Unmarshal([]byte(batch.FilePath), &syncRequest)
 		if err != nil {
-			log.Printf("Failed to parse sync request: %v", err)
+			logutil.Errorf("Failed to parse sync request for batch %d: %v", batch.ID, err)
 			s.batch.UpdateStatus(ctx, batch.ID, "failed", "Failed to parse sync request")
 			return
 		}
 	} else {
-		log.Printf("No sync request data found for batch %d", batch.ID)
+		logutil.Errorf("No sync request data found for batch %d", batch.ID)
 		s.batch.UpdateStatus(ctx, batch.ID, "failed", "No sync request data found")
 		return
 	}
 
+	log.Printf("Processing ads performance sync batch %d for store %d", batch.ID, syncRequest.StoreID)
+
 	// Perform the historical sync
 	err = s.svc.SyncHistoricalAdsPerformance(ctx, syncRequest.StoreID)
 	if err != nil {
-		log.Printf("Failed to sync historical ads performance: %v", err)
+		logutil.Errorf("Failed to sync historical ads performance for batch %d, store %d: %v", batch.ID, syncRequest.StoreID, err)
 		s.batch.UpdateStatus(ctx, batch.ID, "failed", err.Error())
 		return
 	}
@@ -95,14 +102,16 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 	// Update batch status to completed
 	err = s.batch.UpdateStatus(ctx, batch.ID, "completed", "Ads performance sync completed successfully")
 	if err != nil {
-		log.Printf("Failed to update batch completion status: %v", err)
+		logutil.Errorf("Failed to update batch completion status for batch %d: %v", batch.ID, err)
 	}
 
-	log.Printf("Completed ads performance sync batch %d", batch.ID)
+	log.Printf("Successfully completed ads performance sync batch %d for store %d", batch.ID, syncRequest.StoreID)
 }
 
 // CreateSyncBatch creates a new batch for historical ads performance sync
 func (s *AdsPerformanceBatchScheduler) CreateSyncBatch(ctx context.Context, storeID int) (int64, error) {
+	log.Printf("Creating ads performance sync batch for store %d", storeID)
+
 	syncRequest := struct {
 		StoreID int `json:"store_id"`
 	}{
@@ -111,6 +120,7 @@ func (s *AdsPerformanceBatchScheduler) CreateSyncBatch(ctx context.Context, stor
 
 	requestJSON, err := json.Marshal(syncRequest)
 	if err != nil {
+		logutil.Errorf("Failed to marshal sync request for store %d: %v", storeID, err)
 		return 0, err
 	}
 
@@ -122,5 +132,12 @@ func (s *AdsPerformanceBatchScheduler) CreateSyncBatch(ctx context.Context, stor
 		FilePath:    string(requestJSON), // Store request as JSON in FilePath
 	}
 
-	return s.batch.Create(ctx, batch)
+	batchID, err := s.batch.Create(ctx, batch)
+	if err != nil {
+		logutil.Errorf("Failed to create ads performance sync batch for store %d: %v", storeID, err)
+		return 0, err
+	}
+
+	log.Printf("Successfully created ads performance sync batch %d for store %d", batchID, storeID)
+	return batchID, nil
 }

@@ -377,9 +377,9 @@ func (s *ReconcileService) BulkReconcileWithErrorHandling(ctx context.Context, p
 		TotalTransactions:      len(pairs),
 		SuccessfulTransactions: 0,
 		FailedTransactions:     0,
-		ProcessingStartTime:   startTime,
-		FailureCategories:     make(map[string]int),
-		FailedTransactionList: []models.FailedReconciliation{},
+		ProcessingStartTime:    startTime,
+		FailureCategories:      make(map[string]int),
+		FailedTransactionList:  []models.FailedReconciliation{},
 	}
 
 	for _, p := range pairs {
@@ -389,21 +389,21 @@ func (s *ReconcileService) BulkReconcileWithErrorHandling(ctx context.Context, p
 			if failErr := s.recordFailedReconciliation(ctx, p[0], &p[1], shop, err, batchID); failErr != nil {
 				log.Printf("Failed to record failure for %s: %v", p[0], failErr)
 			}
-			
+
 			// Update report
 			report.FailedTransactions++
 			errorType := s.categorizeError(err)
 			report.FailureCategories[errorType]++
-			
+
 			// Check if we should halt processing
 			if s.shouldHaltProcessing(report, errorType) {
 				log.Printf("Halting reconciliation due to critical error or failure threshold")
 				break
 			}
-			
+
 			continue
 		}
-		
+
 		report.SuccessfulTransactions++
 	}
 
@@ -422,7 +422,7 @@ func (s *ReconcileService) BulkReconcileWithErrorHandling(ctx context.Context, p
 		}
 	}
 
-	log.Printf("BulkReconcileWithErrorHandling completed: %d successful, %d failed, %.2f%% failure rate", 
+	log.Printf("BulkReconcileWithErrorHandling completed: %d successful, %d failed, %.2f%% failure rate",
 		report.SuccessfulTransactions, report.FailedTransactions, report.FailureRate)
 
 	return report, nil
@@ -450,7 +450,7 @@ func (s *ReconcileService) recordFailedReconciliation(ctx context.Context, purch
 // categorizeError classifies errors into categories for reporting and handling.
 func (s *ReconcileService) categorizeError(err error) string {
 	errStr := strings.ToLower(err.Error())
-	
+
 	if strings.Contains(errStr, "context canceled") || strings.Contains(errStr, "context deadline") {
 		return "timeout_error"
 	}
@@ -475,7 +475,7 @@ func (s *ReconcileService) categorizeError(err error) string {
 	if strings.Contains(errStr, "access_token") || strings.Contains(errStr, "authentication") {
 		return "authentication_error"
 	}
-	
+
 	return "unknown_error"
 }
 
@@ -487,12 +487,12 @@ func (s *ReconcileService) shouldHaltProcessing(report *models.ReconciliationRep
 			return true
 		}
 	}
-	
+
 	// Check failure count threshold
 	if s.config.MaxAllowedFailures > 0 && report.FailedTransactions >= s.config.MaxAllowedFailures {
 		return true
 	}
-	
+
 	// Check failure rate threshold (only if we have processed enough transactions)
 	if report.TotalTransactions >= 10 { // Only check rate after processing at least 10 transactions
 		processed := report.SuccessfulTransactions + report.FailedTransactions
@@ -503,7 +503,7 @@ func (s *ReconcileService) shouldHaltProcessing(report *models.ReconciliationRep
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -1726,13 +1726,13 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	done := 0
 	failed := 0
 	processStart := time.Now()
-	
+
 	for _, d := range details {
 		dp, exists := purchaseMap[d.Reference]
 		if !exists {
 			msg := fmt.Sprintf("purchase not found for invoice %s", d.Reference)
 			log.Printf("ProcessReconcileBatch %d: %s", id, msg)
-			
+
 			// Record the failure
 			if s.failedRepo != nil {
 				failedRec := &models.FailedReconciliation{
@@ -1747,7 +1747,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 					log.Printf("Failed to record failure for %s: %v", d.Reference, err)
 				}
 			}
-			
+
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", msg)
 			failed++
 			continue
@@ -1755,7 +1755,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 
 		if err := s.CheckAndMarkComplete(ctx, dp.KodePesanan); err != nil {
 			log.Printf("ProcessReconcileBatch %d: CheckAndMarkComplete failed for %s: %v", id, dp.KodePesanan, err)
-			
+
 			// Record the failure
 			if s.failedRepo != nil {
 				failedRec := &models.FailedReconciliation{
@@ -1770,17 +1770,17 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 					log.Printf("Failed to record failure for %s: %v", dp.KodePesanan, err)
 				}
 			}
-			
+
 			s.batchSvc.UpdateDetailStatus(ctx, d.ID, "failed", err.Error())
 			failed++
 			continue
 		}
-		
+
 		done++
 		s.batchSvc.UpdateDone(ctx, id, done)
 		s.batchSvc.UpdateDetailStatus(ctx, d.ID, "success", "")
 	}
-	
+
 	processDuration := time.Since(processStart)
 	totalDuration := time.Since(start)
 
@@ -1793,7 +1793,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 
 	status := "completed"
 	statusMsg := ""
-	
+
 	// Check if we should mark the batch as failed due to high failure rate
 	if s.config != nil && failureRate > s.config.FailureThresholdPercent && total >= 10 {
 		status = "completed_with_warnings"
@@ -1836,12 +1836,12 @@ func (s *ReconcileService) GenerateReconciliationReport(ctx context.Context, sho
 		TotalTransactions:      0, // This would need to be calculated separately based on business logic
 		SuccessfulTransactions: 0, // This would need to be calculated separately
 		FailedTransactions:     totalFailed,
-		FailureRate:           0, // Will be calculated if total is available
-		ProcessingStartTime:   since,
-		ProcessingEndTime:     time.Now(),
-		Duration:              time.Since(since).String(),
-		FailureCategories:     failureCategories,
-		FailedTransactionList: failedList,
+		FailureRate:            0, // Will be calculated if total is available
+		ProcessingStartTime:    since,
+		ProcessingEndTime:      time.Now(),
+		Duration:               time.Since(since).String(),
+		FailureCategories:      failureCategories,
+		FailedTransactionList:  failedList,
 	}
 
 	return report, nil
@@ -1866,9 +1866,9 @@ func (s *ReconcileService) RetryFailedReconciliations(ctx context.Context, shop 
 		TotalTransactions:      len(failedList),
 		SuccessfulTransactions: 0,
 		FailedTransactions:     0,
-		ProcessingStartTime:   startTime,
-		FailureCategories:     make(map[string]int),
-		FailedTransactionList: []models.FailedReconciliation{},
+		ProcessingStartTime:    startTime,
+		FailureCategories:      make(map[string]int),
+		FailedTransactionList:  []models.FailedReconciliation{},
 	}
 
 	// Retry each failed transaction
@@ -1891,7 +1891,7 @@ func (s *ReconcileService) RetryFailedReconciliations(ctx context.Context, shop 
 			report.FailedTransactions++
 			errorType := s.categorizeError(err)
 			report.FailureCategories[errorType]++
-			
+
 			// Record the new failure
 			newFailed := &models.FailedReconciliation{
 				PurchaseID: failed.PurchaseID,
@@ -1931,7 +1931,7 @@ func (s *ReconcileService) GetFailedReconciliationsSummary(ctx context.Context, 
 	}
 
 	since := time.Now().AddDate(0, 0, -days)
-	
+
 	// Get failure categories
 	categories, err := s.failedRepo.CountFailedReconciliationsByErrorType(ctx, shop, since)
 	if err != nil {
@@ -1949,7 +1949,7 @@ func (s *ReconcileService) GetFailedReconciliationsSummary(ctx context.Context, 
 		"period_days":        days,
 		"total_failed":       totalFailed,
 		"failure_categories": categories,
-		"since":             since,
+		"since":              since,
 	}
 
 	return summary, nil
