@@ -17,12 +17,15 @@ type ReconcileExtraService interface {
 	CheckAndMarkComplete(ctx context.Context, kodePesanan string) error
 	GetShopeeOrderStatus(ctx context.Context, invoice string) (string, error)
 	GetShopeeOrderDetail(ctx context.Context, invoice string) (*service.ShopeeOrderDetail, error)
+	GetShopeeOrderDetailCached(ctx context.Context, invoice string) (*service.ShopeeOrderDetail, *int64, error)
 	GetShopeeEscrowDetail(ctx context.Context, invoice string) (*service.ShopeeEscrowDetail, error)
+	GetShopeeEscrowDetailCached(ctx context.Context, invoice string) (*service.ShopeeEscrowDetail, error)
 	GetShopeeAccessToken(ctx context.Context, invoice string) (string, error)
 	CancelPurchase(ctx context.Context, kodePesanan string) error
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
 	CreateReconcileBatches(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error)
+	GetBackgroundJobStatus(ctx context.Context, batchID int64) (string, error)
 }
 
 type ReconcileExtraHandler struct{ svc ReconcileExtraService }
@@ -44,6 +47,7 @@ func (h *ReconcileExtraHandler) RegisterRoutes(r gin.IRouter) {
 	grp.GET("/status", h.status)
 	grp.GET("/escrow", h.escrow)
 	grp.GET("/token", h.token)
+	grp.GET("/job-status/:batchId", h.jobStatus)
 }
 
 func (h *ReconcileExtraHandler) list(c *gin.Context) {
@@ -132,12 +136,32 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
 		return
 	}
-	detail, err := h.svc.GetShopeeOrderDetail(context.Background(), invoice)
+	
+	// Use cached version first
+	detail, batchID, err := h.svc.GetShopeeOrderDetailCached(context.Background(), invoice)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, detail)
+	
+	// If we have cached data, return it immediately
+	if detail != nil {
+		c.JSON(http.StatusOK, detail)
+		return
+	}
+	
+	// If we queued a background job, return job info
+	if batchID != nil {
+		c.JSON(http.StatusAccepted, gin.H{
+			"status":   "processing",
+			"batch_id": *batchID,
+			"message":  "Order detail is being fetched in the background. Please check back in a moment.",
+		})
+		return
+	}
+	
+	// Should not reach here, but fallback
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected error"})
 }
 
 func (h *ReconcileExtraHandler) escrow(c *gin.Context) {
@@ -146,7 +170,7 @@ func (h *ReconcileExtraHandler) escrow(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
 		return
 	}
-	detail, err := h.svc.GetShopeeEscrowDetail(context.Background(), invoice)
+	detail, err := h.svc.GetShopeeEscrowDetailCached(context.Background(), invoice)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -223,5 +247,25 @@ func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
 		"batches_created":    batchInfo.BatchCount,
 		"total_transactions": batchInfo.TotalTransactions,
 		"status":             "processing will begin shortly",
+	})
+}
+
+func (h *ReconcileExtraHandler) jobStatus(c *gin.Context) {
+	batchIdStr := c.Param("batchId")
+	batchID, err := strconv.ParseInt(batchIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid batch ID"})
+		return
+	}
+	
+	status, err := h.svc.GetBackgroundJobStatus(context.Background(), batchID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"batch_id": batchID,
+		"status":   status,
 	})
 }

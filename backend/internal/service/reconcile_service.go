@@ -58,6 +58,7 @@ type ReconcileServiceBatchSvc interface {
 	CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error
 	ListDetails(ctx context.Context, batchID int64) ([]models.BatchHistoryDetail, error)
 	UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error
+	ListPendingByType(ctx context.Context, typ string) ([]models.BatchHistory, error)
 }
 
 type ReconcileServiceFailedRepo interface {
@@ -71,19 +72,20 @@ type ReconcileServiceFailedRepo interface {
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
-	db          *sqlx.DB
-	dropRepo    ReconcileServiceDropshipRepo
-	shopeeRepo  ReconcileServiceShopeeRepo
-	journalRepo ReconcileServiceJournalRepo
-	adjRepo     *repository.ShopeeAdjustmentRepo
-	recRepo     ReconcileServiceRecRepo
-	storeRepo   ReconcileServiceStoreRepo
-	detailRepo  ReconcileServiceDetailRepo
-	client      *ShopeeClient
-	batchSvc    ReconcileServiceBatchSvc
-	failedRepo  ReconcileServiceFailedRepo
-	maxThreads  int
-	config      *models.ReconciliationConfig
+	db               *sqlx.DB
+	dropRepo         ReconcileServiceDropshipRepo
+	shopeeRepo       ReconcileServiceShopeeRepo
+	journalRepo      ReconcileServiceJournalRepo
+	adjRepo          *repository.ShopeeAdjustmentRepo
+	recRepo          ReconcileServiceRecRepo
+	storeRepo        ReconcileServiceStoreRepo
+	detailRepo       ReconcileServiceDetailRepo
+	client           *ShopeeClient
+	batchSvc         ReconcileServiceBatchSvc
+	failedRepo       ReconcileServiceFailedRepo
+	backgroundSvc    *ShopeeDetailBackgroundService
+	maxThreads       int
+	config           *models.ReconciliationConfig
 }
 
 // NewReconcileService constructs a ReconcileService.
@@ -112,7 +114,7 @@ func NewReconcileService(
 			GenerateDetailedReport:  true,
 		}
 	}
-	return &ReconcileService{
+	rs := &ReconcileService{
 		db:          db,
 		dropRepo:    dr,
 		shopeeRepo:  sr,
@@ -127,6 +129,11 @@ func NewReconcileService(
 		maxThreads:  maxThreads,
 		config:      config,
 	}
+	
+	// Initialize background service for Shopee detail fetching
+	rs.backgroundSvc = NewShopeeDetailBackgroundService(rs, b, drp, dr, srp, c)
+	
+	return rs
 }
 
 // MatchAndJournal does the following:
@@ -728,6 +735,139 @@ func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice st
 	}
 	log.Printf("GetShopeeEscrowDetail: detail: %+v, err: %v", detail, err)
 	return detail, err
+}
+
+// GetShopeeOrderDetailCached returns cached order detail from database, or queues a background job if not available
+func (s *ReconcileService) GetShopeeOrderDetailCached(ctx context.Context, invoice string) (*ShopeeOrderDetail, *int64, error) {
+	log.Printf("GetShopeeOrderDetailCached: invoice=%s", invoice)
+	
+	// First, try to get from cache (database)
+	if s.detailRepo != nil {
+		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+		if err == nil && dp != nil {
+			orderSN := dp.KodeInvoiceChannel
+			detail, items, packages, err := s.detailRepo.GetOrderDetail(ctx, orderSN)
+			if err == nil && detail != nil {
+				// Convert back to ShopeeOrderDetail format
+				shopeeDetail := s.convertDatabaseToShopeeDetail(detail, items, packages)
+				log.Printf("GetShopeeOrderDetailCached: found cached data for %s", invoice)
+				return &shopeeDetail, nil, nil
+			}
+		}
+	}
+	
+	// Data not in cache, queue background job
+	log.Printf("GetShopeeOrderDetailCached: no cached data for %s, queueing background job", invoice)
+	if s.backgroundSvc != nil {
+		batchID, err := s.backgroundSvc.QueueOrderDetailFetch(ctx, invoice)
+		if err != nil {
+			log.Printf("GetShopeeOrderDetailCached: failed to queue background job: %v", err)
+			// Fall back to immediate fetch if queueing fails
+			detail, err := s.GetShopeeOrderDetail(ctx, invoice)
+			return detail, nil, err
+		}
+		return nil, &batchID, nil
+	}
+	
+	// No background service available, fall back to immediate fetch
+	detail, err := s.GetShopeeOrderDetail(ctx, invoice)
+	return detail, nil, err
+}
+
+// GetShopeeEscrowDetailCached returns cached escrow detail, with fallback to immediate fetch
+func (s *ReconcileService) GetShopeeEscrowDetailCached(ctx context.Context, invoice string) (*ShopeeEscrowDetail, error) {
+	log.Printf("GetShopeeEscrowDetailCached: invoice=%s", invoice)
+	
+	// For escrow details, we don't cache them as they change frequently
+	// But we can still make this non-blocking by using the background service pattern if needed
+	// For now, fall back to immediate fetch
+	return s.GetShopeeEscrowDetail(ctx, invoice)
+}
+
+// convertDatabaseToShopeeDetail converts database models back to ShopeeOrderDetail format
+func (s *ReconcileService) convertDatabaseToShopeeDetail(detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) ShopeeOrderDetail {
+	result := make(map[string]any)
+	
+	// Convert detail fields
+	result["order_sn"] = detail.OrderSN
+	if detail.OrderStatus != nil {
+		result["order_status"] = *detail.OrderStatus
+	}
+	if detail.TotalAmount != nil {
+		result["total_amount"] = *detail.TotalAmount
+	}
+	if detail.Currency != nil {
+		result["currency"] = *detail.Currency
+	}
+	if detail.CheckoutTime != nil {
+		result["checkout_time"] = detail.CheckoutTime.Unix()
+	}
+	if detail.UpdateTime != nil {
+		result["update_time"] = detail.UpdateTime.Unix()
+	}
+	
+	// Convert items
+	var itemList []map[string]any
+	for _, item := range items {
+		itemMap := make(map[string]any)
+		if item.ItemName != nil {
+			itemMap["item_name"] = *item.ItemName
+		}
+		if item.ModelSKU != nil {
+			itemMap["model_sku"] = *item.ModelSKU
+		}
+		if item.ModelQuantityPurchased != nil {
+			itemMap["model_quantity_purchased"] = *item.ModelQuantityPurchased
+		}
+		if item.ModelOriginalPrice != nil {
+			itemMap["model_original_price"] = *item.ModelOriginalPrice
+		}
+		if item.ModelDiscountedPrice != nil {
+			itemMap["model_discounted_price"] = *item.ModelDiscountedPrice
+		}
+		itemList = append(itemList, itemMap)
+	}
+	if len(itemList) > 0 {
+		result["item_list"] = itemList
+	}
+	
+	// Convert packages
+	var packageList []map[string]any
+	for _, pkg := range packages {
+		pkgMap := make(map[string]any)
+		if pkg.LogisticsStatus != nil {
+			pkgMap["logistics_status"] = *pkg.LogisticsStatus
+		}
+		if pkg.ShippingCarrier != nil {
+			pkgMap["shipping_carrier"] = *pkg.ShippingCarrier
+		}
+		packageList = append(packageList, pkgMap)
+	}
+	if len(packageList) > 0 {
+		result["package_list"] = packageList
+	}
+	
+	return ShopeeOrderDetail(result)
+}
+
+// GetBackgroundJobStatus returns the status of a background job
+func (s *ReconcileService) GetBackgroundJobStatus(ctx context.Context, batchID int64) (string, error) {
+	if s.batchSvc == nil {
+		return "", fmt.Errorf("batch service not configured")
+	}
+	
+	// Get batch details to check status
+	details, err := s.batchSvc.ListDetails(ctx, batchID)
+	if err != nil {
+		return "", fmt.Errorf("get batch details: %w", err)
+	}
+	
+	if len(details) == 0 {
+		return "not_found", nil
+	}
+	
+	// Return the status of the first detail (assuming single invoice per batch for order details)
+	return details[0].Status, nil
 }
 
 func (s *ReconcileService) ensureStoreTokenValid(ctx context.Context, st *models.Store) error {
