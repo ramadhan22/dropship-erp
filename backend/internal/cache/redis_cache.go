@@ -13,9 +13,9 @@ import (
 
 // RedisCache implements the Cache interface using Redis
 type RedisCache struct {
-	client   *redis.Client
-	config   CacheConfig
-	metrics  atomicMetrics
+	client  *redis.Client
+	config  CacheConfig
+	metrics atomicMetrics
 }
 
 // atomicMetrics holds cache metrics with atomic operations for thread safety
@@ -91,7 +91,7 @@ func (r *RedisCache) Get(ctx context.Context, key string) ([]byte, error) {
 		r.metrics.lastError.Store(err.Error())
 		return nil, fmt.Errorf("cache get error: %w", err)
 	}
-	
+
 	atomic.AddInt64(&r.metrics.hits, 1)
 	return result, nil
 }
@@ -101,14 +101,14 @@ func (r *RedisCache) Set(ctx context.Context, key string, value []byte, ttl time
 	if ttl == 0 {
 		ttl = r.config.DefaultTTL
 	}
-	
+
 	err := r.client.Set(ctx, key, value, ttl).Err()
 	if err != nil {
 		atomic.AddInt64(&r.metrics.errors, 1)
 		r.metrics.lastError.Store(err.Error())
 		return fmt.Errorf("cache set error: %w", err)
 	}
-	
+
 	atomic.AddInt64(&r.metrics.sets, 1)
 	return nil
 }
@@ -121,7 +121,7 @@ func (r *RedisCache) Delete(ctx context.Context, key string) error {
 		r.metrics.lastError.Store(err.Error())
 		return fmt.Errorf("cache delete error: %w", err)
 	}
-	
+
 	atomic.AddInt64(&r.metrics.deletes, 1)
 	return nil
 }
@@ -134,7 +134,7 @@ func (r *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 		r.metrics.lastError.Store(err.Error())
 		return false, fmt.Errorf("cache exists error: %w", err)
 	}
-	
+
 	return result > 0, nil
 }
 
@@ -159,17 +159,17 @@ func (r *RedisCache) GetMetrics() CacheMetrics {
 	hits := atomic.LoadInt64(&r.metrics.hits)
 	misses := atomic.LoadInt64(&r.metrics.misses)
 	total := hits + misses
-	
+
 	var hitRate float64
 	if total > 0 {
 		hitRate = float64(hits) / float64(total)
 	}
-	
+
 	var lastError string
 	if err := r.metrics.lastError.Load(); err != nil {
 		lastError = err.(string)
 	}
-	
+
 	return CacheMetrics{
 		Hits:      hits,
 		Misses:    misses,

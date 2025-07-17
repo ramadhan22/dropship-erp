@@ -185,9 +185,9 @@ func ParseDateRange(from, to string) (map[string]interface{}, error) {
 
 // QuickFilters provides common filter presets
 type QuickFilter struct {
-	Name    string                `json:"name"`
-	Label   string                `json:"label"`
-	Filters *models.FilterGroup   `json:"filters"`
+	Name    string                 `json:"name"`
+	Label   string                 `json:"label"`
+	Filters *models.FilterGroup    `json:"filters"`
 	Sort    []models.SortCondition `json:"sort,omitempty"`
 }
 

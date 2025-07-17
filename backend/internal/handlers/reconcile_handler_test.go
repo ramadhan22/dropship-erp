@@ -33,7 +33,7 @@ func (f *fakeReconcileService) BulkReconcileWithErrorHandling(ctx context.Contex
 		TotalTransactions:      len(pairs),
 		SuccessfulTransactions: len(pairs),
 		FailedTransactions:     0,
-		FailureRate:           0,
+		FailureRate:            0,
 	}, nil
 }
 
@@ -45,8 +45,8 @@ func (f *fakeReconcileService) GenerateReconciliationReport(ctx context.Context,
 		TotalTransactions:      10,
 		SuccessfulTransactions: 8,
 		FailedTransactions:     2,
-		FailureRate:           20.0,
-		FailureCategories:     map[string]int{"purchase_not_found": 2},
+		FailureRate:            20.0,
+		FailureCategories:      map[string]int{"purchase_not_found": 2},
 	}, nil
 }
 
@@ -58,7 +58,7 @@ func (f *fakeReconcileService) RetryFailedReconciliations(ctx context.Context, s
 		TotalTransactions:      5,
 		SuccessfulTransactions: 3,
 		FailedTransactions:     2,
-		FailureRate:           40.0,
+		FailureRate:            40.0,
 	}, nil
 }
 

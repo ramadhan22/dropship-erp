@@ -68,22 +68,22 @@ func (s *ExpenseService) CreateExpense(ctx context.Context, e *models.Expense) e
 	for i := range e.Lines {
 		l := e.Lines[i]
 		lines = append(lines, models.JournalLine{
-			JournalID: jid, 
-			AccountID: l.AccountID, 
-			IsDebit:   true, 
-			Amount:    l.Amount, 
+			JournalID: jid,
+			AccountID: l.AccountID,
+			IsDebit:   true,
+			Amount:    l.Amount,
 			Memo:      &e.Description,
 		})
 	}
 	// Add asset line
 	lines = append(lines, models.JournalLine{
-		JournalID: jid, 
-		AccountID: e.AssetAccountID, 
-		IsDebit:   false, 
-		Amount:    total, 
+		JournalID: jid,
+		AccountID: e.AssetAccountID,
+		IsDebit:   false,
+		Amount:    total,
 		Memo:      &e.Description,
 	})
-	
+
 	// Use bulk insert for all lines
 	if err := jRepo.InsertJournalLines(ctx, lines); err != nil {
 		logutil.Errorf("CreateExpense lines error: %v", err)
@@ -153,10 +153,10 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 		reverseLines := make([]models.JournalLine, 0, len(lines))
 		for _, l := range lines {
 			reverseLines = append(reverseLines, models.JournalLine{
-				JournalID: jid, 
-				AccountID: l.AccountID, 
-				IsDebit:   !l.IsDebit, 
-				Amount:    l.Amount, 
+				JournalID: jid,
+				AccountID: l.AccountID,
+				IsDebit:   !l.IsDebit,
+				Amount:    l.Amount,
 				Memo:      rev.Description,
 			})
 		}
@@ -194,22 +194,22 @@ func (s *ExpenseService) UpdateExpense(ctx context.Context, e *models.Expense) e
 	for i := range e.Lines {
 		l := e.Lines[i]
 		lines = append(lines, models.JournalLine{
-			JournalID: jid, 
-			AccountID: l.AccountID, 
-			IsDebit:   true, 
-			Amount:    l.Amount, 
+			JournalID: jid,
+			AccountID: l.AccountID,
+			IsDebit:   true,
+			Amount:    l.Amount,
 			Memo:      &e.Description,
 		})
 	}
 	// Add asset line
 	lines = append(lines, models.JournalLine{
-		JournalID: jid, 
-		AccountID: e.AssetAccountID, 
-		IsDebit:   false, 
-		Amount:    total, 
+		JournalID: jid,
+		AccountID: e.AssetAccountID,
+		IsDebit:   false,
+		Amount:    total,
 		Memo:      &e.Description,
 	})
-	
+
 	// Use bulk insert for all lines
 	if err := jRepo.InsertJournalLines(ctx, lines); err != nil {
 		logutil.Errorf("UpdateExpense lines error: %v", err)

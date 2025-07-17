@@ -7,17 +7,17 @@ import (
 
 // ContextTimeouts holds standard timeout durations for different operations
 var ContextTimeouts = struct {
-	DatabaseOperation  time.Duration
-	ExternalAPICall    time.Duration
-	FileProcessing     time.Duration
-	BatchOperation     time.Duration
-	QuickOperation     time.Duration
+	DatabaseOperation time.Duration
+	ExternalAPICall   time.Duration
+	FileProcessing    time.Duration
+	BatchOperation    time.Duration
+	QuickOperation    time.Duration
 }{
-	DatabaseOperation:  30 * time.Second,
-	ExternalAPICall:    60 * time.Second,
-	FileProcessing:     5 * time.Minute,
-	BatchOperation:     10 * time.Minute,
-	QuickOperation:     10 * time.Second,
+	DatabaseOperation: 30 * time.Second,
+	ExternalAPICall:   60 * time.Second,
+	FileProcessing:    5 * time.Minute,
+	BatchOperation:    10 * time.Minute,
+	QuickOperation:    10 * time.Second,
 }
 
 // WithTimeout creates a context with a timeout for different operation types

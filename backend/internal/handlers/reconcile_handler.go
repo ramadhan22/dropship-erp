@@ -48,7 +48,7 @@ func (h *ReconcileHandler) HandleMatchAndJournal(c *gin.Context) {
 // HandleBulkReconcileWithErrorHandling processes multiple reconciliation pairs with error handling
 func (h *ReconcileHandler) HandleBulkReconcileWithErrorHandling(c *gin.Context) {
 	var req struct {
-		Shop  string     `json:"shop" binding:"required"`
+		Shop  string      `json:"shop" binding:"required"`
 		Pairs [][2]string `json:"pairs" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {

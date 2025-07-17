@@ -76,7 +76,7 @@ func (r *FailedReconciliationRepo) CountFailedReconciliationsByErrorType(
               FROM failed_reconciliations 
               WHERE shop = $1 AND failed_at >= $2 
               GROUP BY error_type`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, shop, since)
 	if err != nil {
 		return nil, err

@@ -38,7 +38,7 @@ func (rl *RateLimiter) Allow(ctx context.Context) bool {
 	now := time.Now()
 	elapsed := now.Sub(rl.lastRefill)
 	tokensToAdd := int(elapsed / rl.refillRate)
-	
+
 	if tokensToAdd > 0 {
 		rl.tokens += tokensToAdd
 		if rl.tokens > rl.maxTokens {
@@ -52,7 +52,7 @@ func (rl *RateLimiter) Allow(ctx context.Context) bool {
 		rl.tokens--
 		return true
 	}
-	
+
 	return false
 }
 
@@ -62,7 +62,7 @@ func (rl *RateLimiter) Wait(ctx context.Context) error {
 		if rl.Allow(ctx) {
 			return nil
 		}
-		
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

@@ -81,7 +81,7 @@ func (qb *QueryBuilder) BuildCountQuery(params *models.FilterParams) (string, []
 	qb.argIndex = 0
 
 	var query strings.Builder
-	
+
 	// Extract the base table/joins part from the base query
 	baseQuery := qb.baseQuery
 	if strings.Contains(strings.ToUpper(baseQuery), "SELECT") {
