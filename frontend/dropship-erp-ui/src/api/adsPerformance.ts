@@ -38,6 +38,14 @@ export const fetchAdsCampaignsFromShopee = async (data: {
   return response.data;
 };
 
+export const fetchAdsCampaignSettingsFromShopee = async (data: {
+  store_id: number;
+  campaign_ids: number[];
+}) => {
+  const response = await api.post("/ads/campaigns/settings/fetch", data);
+  return response.data;
+};
+
 export const fetchAdsPerformanceFromShopee = async (data: {
   store_id: number;
   campaign_id: number;
