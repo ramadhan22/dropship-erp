@@ -148,11 +148,11 @@ func TestAdjustWithdrawalAmounts(t *testing.T) {
 	baseTime := time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name                string
-		withdrawalAmount    float64
-		withdrawalTime      int64
-		allTransactions     []WalletTransaction
-		expectedAdjusted    float64
+		name             string
+		withdrawalAmount float64
+		withdrawalTime   int64
+		allTransactions  []WalletTransaction
+		expectedAdjusted float64
 	}{
 		{
 			name:             "Withdrawal with SPM_DISBURSE_ADD same day",

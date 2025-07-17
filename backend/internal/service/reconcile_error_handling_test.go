@@ -129,9 +129,9 @@ func TestCategorizeError(t *testing.T) {
 	svc := &ReconcileService{}
 
 	tests := []struct {
-		name          string
-		errorMessage  string
-		expectedType  string
+		name         string
+		errorMessage string
+		expectedType string
 	}{
 		{
 			name:         "purchase not found",

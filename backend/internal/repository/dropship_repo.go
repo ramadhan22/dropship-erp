@@ -160,7 +160,7 @@ func (r *DropshipRepo) GetDropshipPurchasesByInvoices(ctx context.Context, invoi
 		return []*models.DropshipPurchase{}, nil
 	}
 	log.Printf("DropshipRepo.GetDropshipPurchasesByInvoices fetching %d invoices", len(invoices))
-	
+
 	// Build IN clause with placeholders
 	placeholders := make([]string, len(invoices))
 	args := make([]interface{}, len(invoices))
@@ -168,22 +168,22 @@ func (r *DropshipRepo) GetDropshipPurchasesByInvoices(ctx context.Context, invoi
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 		args[i] = inv
 	}
-	
-	query := fmt.Sprintf(`SELECT * FROM dropship_purchases WHERE kode_invoice_channel IN (%s)`, 
+
+	query := fmt.Sprintf(`SELECT * FROM dropship_purchases WHERE kode_invoice_channel IN (%s)`,
 		strings.Join(placeholders, ","))
-	
+
 	var purchases []models.DropshipPurchase
 	err := r.db.SelectContext(ctx, &purchases, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert to slice of pointers
 	result := make([]*models.DropshipPurchase, len(purchases))
 	for i := range purchases {
 		result[i] = &purchases[i]
 	}
-	
+
 	log.Printf("DropshipRepo.GetDropshipPurchasesByInvoices found %d purchases", len(result))
 	return result, nil
 }
@@ -308,38 +308,38 @@ func (r *DropshipRepo) ListDropshipPurchasesFiltered(
 ) (*models.QueryResult, error) {
 	// Define allowed fields for filtering and sorting
 	allowedFields := map[string]string{
-		"kode_pesanan":             "kode_pesanan",
-		"kode_transaksi":           "kode_transaksi",
-		"waktu_pesanan_terbuat":    "waktu_pesanan_terbuat",
-		"status_pesanan_terakhir":  "status_pesanan_terakhir",
-		"biaya_lainnya":            "biaya_lainnya",
-		"biaya_mitra_jakmall":      "biaya_mitra_jakmall",
-		"total_transaksi":          "total_transaksi",
-		"dibuat_oleh":              "dibuat_oleh",
-		"jenis_channel":            "jenis_channel",
-		"nama_toko":                "nama_toko",
-		"kode_invoice_channel":     "kode_invoice_channel",
-		"gudang_pengiriman":        "gudang_pengiriman",
-		"jenis_ekspedisi":          "jenis_ekspedisi",
-		"cashless":                 "cashless",
-		"nomor_resi":               "nomor_resi",
-		"waktu_pengiriman":         "waktu_pengiriman",
-		"provinsi":                 "provinsi",
-		"kota":                     "kota",
-		"created_at":               "waktu_pesanan_terbuat", // Alias for convenience
+		"kode_pesanan":            "kode_pesanan",
+		"kode_transaksi":          "kode_transaksi",
+		"waktu_pesanan_terbuat":   "waktu_pesanan_terbuat",
+		"status_pesanan_terakhir": "status_pesanan_terakhir",
+		"biaya_lainnya":           "biaya_lainnya",
+		"biaya_mitra_jakmall":     "biaya_mitra_jakmall",
+		"total_transaksi":         "total_transaksi",
+		"dibuat_oleh":             "dibuat_oleh",
+		"jenis_channel":           "jenis_channel",
+		"nama_toko":               "nama_toko",
+		"kode_invoice_channel":    "kode_invoice_channel",
+		"gudang_pengiriman":       "gudang_pengiriman",
+		"jenis_ekspedisi":         "jenis_ekspedisi",
+		"cashless":                "cashless",
+		"nomor_resi":              "nomor_resi",
+		"waktu_pengiriman":        "waktu_pengiriman",
+		"provinsi":                "provinsi",
+		"kota":                    "kota",
+		"created_at":              "waktu_pesanan_terbuat", // Alias for convenience
 	}
 
 	baseQuery := "SELECT * FROM dropship_purchases"
-	
+
 	// Build query with filters
 	qb := NewQueryBuilder(baseQuery).SetAllowedFields(allowedFields)
-	
+
 	// Get total count first
 	countQuery, countArgs, err := qb.BuildCountQuery(params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build count query: %w", err)
 	}
-	
+
 	var total int
 	if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
 		return nil, fmt.Errorf("failed to get total count: %w", err)

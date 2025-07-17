@@ -36,18 +36,18 @@ func (m *mockAdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID
 
 func (m *mockAdsPerformanceService) GetPerformanceSummary(ctx context.Context, storeID *int, startDate, endDate time.Time) (*models.AdsPerformanceSummary, error) {
 	return &models.AdsPerformanceSummary{
-		TotalCampaigns:          5,
-		ActiveCampaigns:         3,
-		TotalAdsViewed:          10000,
-		TotalClicks:             500,
-		OverallClickPercent:     0.05,
-		TotalOrders:             25,
-		TotalProductsSold:       30,
-		TotalSalesFromAds:       1250000,
-		TotalAdCosts:            500000,
-		OverallRoas:             2.5,
-		OverallConversionRate:   0.05,
-		DateRange:               "2024-01-01 to 2024-01-31",
+		TotalCampaigns:        5,
+		ActiveCampaigns:       3,
+		TotalAdsViewed:        10000,
+		TotalClicks:           500,
+		OverallClickPercent:   0.05,
+		TotalOrders:           25,
+		TotalProductsSold:     30,
+		TotalSalesFromAds:     1250000,
+		TotalAdCosts:          500000,
+		OverallRoas:           2.5,
+		OverallConversionRate: 0.05,
+		DateRange:             "2024-01-01 to 2024-01-31",
 	}, nil
 }
 
@@ -68,35 +68,35 @@ func (m *mockBatchScheduler) CreateSyncBatch(ctx context.Context, storeID int) (
 
 func TestAdsPerformanceHandler_GetAdsCampaigns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	handler := &AdsPerformanceHandler{
 		adsService:     &mockAdsPerformanceService{},
 		batchScheduler: &mockBatchScheduler{},
 	}
-	
+
 	router := gin.New()
 	router.GET("/campaigns", handler.GetAdsCampaigns)
-	
+
 	req := httptest.NewRequest("GET", "/campaigns?limit=10", nil)
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
 		t.Errorf("Failed to parse response: %v", err)
 	}
-	
+
 	campaigns, ok := response["campaigns"].([]interface{})
 	if !ok {
 		t.Error("Expected campaigns array in response")
 	}
-	
+
 	if len(campaigns) != 1 {
 		t.Errorf("Expected 1 campaign, got %d", len(campaigns))
 	}
@@ -104,34 +104,34 @@ func TestAdsPerformanceHandler_GetAdsCampaigns(t *testing.T) {
 
 func TestAdsPerformanceHandler_GetPerformanceSummary(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	handler := &AdsPerformanceHandler{
 		adsService:     &mockAdsPerformanceService{},
 		batchScheduler: &mockBatchScheduler{},
 	}
-	
+
 	router := gin.New()
 	router.GET("/summary", handler.GetPerformanceSummary)
-	
+
 	req := httptest.NewRequest("GET", "/summary?start_date=2024-01-01&end_date=2024-01-31", nil)
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var summary models.AdsPerformanceSummary
 	err := json.Unmarshal(w.Body.Bytes(), &summary)
 	if err != nil {
 		t.Errorf("Failed to parse response: %v", err)
 	}
-	
+
 	if summary.TotalCampaigns != 5 {
 		t.Errorf("Expected 5 total campaigns, got %d", summary.TotalCampaigns)
 	}
-	
+
 	if summary.OverallRoas != 2.5 {
 		t.Errorf("Expected ROAS 2.5, got %f", summary.OverallRoas)
 	}
@@ -139,36 +139,36 @@ func TestAdsPerformanceHandler_GetPerformanceSummary(t *testing.T) {
 
 func TestAdsPerformanceHandler_FetchAdsCampaigns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	handler := &AdsPerformanceHandler{
 		adsService:     &mockAdsPerformanceService{},
 		batchScheduler: &mockBatchScheduler{},
 	}
-	
+
 	router := gin.New()
 	router.POST("/campaigns/fetch", handler.FetchAdsCampaigns)
-	
+
 	requestBody := map[string]interface{}{
 		"store_id": 1,
 	}
-	
+
 	body, _ := json.Marshal(requestBody)
 	req := httptest.NewRequest("POST", "/campaigns/fetch", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 	}
-	
+
 	var response map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
 		t.Errorf("Failed to parse response: %v", err)
 	}
-	
+
 	message, ok := response["message"].(string)
 	if !ok || message != "Campaigns fetched successfully" {
 		t.Errorf("Expected success message, got %v", response)

@@ -85,7 +85,7 @@ func (r *JournalRepo) InsertJournalLines(ctx context.Context, lines []models.Jou
 			totalCredit += line.Amount
 		}
 	}
-	
+
 	if totalDebit != totalCredit {
 		return fmt.Errorf("debits %.2f do not equal credits %.2f", totalDebit, totalCredit)
 	}

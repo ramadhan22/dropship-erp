@@ -35,9 +35,9 @@ type ServerConfig struct {
 
 // DatabaseConfig contains DB connection info.
 type DatabaseConfig struct {
-	URL            string
-	MaxOpenConns   int `mapstructure:"max_open_conns"`
-	MaxIdleConns   int `mapstructure:"max_idle_conns"`
+	URL             string
+	MaxOpenConns    int    `mapstructure:"max_open_conns"`
+	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime string `mapstructure:"conn_max_lifetime"`
 }
 
@@ -61,12 +61,12 @@ type CacheConfig struct {
 
 // PerformanceConfig contains performance-related settings.
 type PerformanceConfig struct {
-	BatchSize             int    `mapstructure:"batch_size"`
-	SlowQueryThreshold    string `mapstructure:"slow_query_threshold"`
-	ShopeeRateLimit       int    `mapstructure:"shopee_rate_limit"`
+	BatchSize              int    `mapstructure:"batch_size"`
+	SlowQueryThreshold     string `mapstructure:"slow_query_threshold"`
+	ShopeeRateLimit        int    `mapstructure:"shopee_rate_limit"`
 	ShopeeRetryMaxAttempts int    `mapstructure:"shopee_retry_max_attempts"`
-	ShopeeRetryDelay      string `mapstructure:"shopee_retry_delay"`
-	EnableMetrics         bool   `mapstructure:"enable_metrics"`
+	ShopeeRetryDelay       string `mapstructure:"shopee_retry_delay"`
+	EnableMetrics          bool   `mapstructure:"enable_metrics"`
 }
 
 // LoggingConfig specifies where log files are stored.
@@ -104,7 +104,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("server.cors_origins", []string{"http://localhost:5173"})
 	viper.SetDefault("logging.dir", "logs")
 	viper.SetDefault("max_threads", 5)
-	
+
 	// Cache defaults
 	viper.SetDefault("cache.enabled", false)
 	viper.SetDefault("cache.redis_url", "redis://localhost:6379")
@@ -114,12 +114,12 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("cache.read_timeout", "3s")
 	viper.SetDefault("cache.write_timeout", "3s")
 	viper.SetDefault("cache.default_ttl", "5m")
-	
+
 	// Database connection pool defaults
 	viper.SetDefault("database.max_open_conns", 25)
 	viper.SetDefault("database.max_idle_conns", 5)
 	viper.SetDefault("database.conn_max_lifetime", "1h")
-	
+
 	// Performance defaults
 	viper.SetDefault("performance.batch_size", 100)
 	viper.SetDefault("performance.slow_query_threshold", "2s")

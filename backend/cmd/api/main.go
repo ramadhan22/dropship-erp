@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		logutil.Fatalf("DB connection failed: %v", err)
 	}
-	
+
 	// Apply optimized connection pool settings
 	repo.DB.SetMaxOpenConns(cfg.Database.MaxOpenConns)
 	repo.DB.SetMaxIdleConns(cfg.Database.MaxIdleConns)
@@ -145,7 +145,7 @@ func main() {
 
 	// 5) Setup Gin router and API routes
 	router := gin.Default()
-	
+
 	// Add performance monitoring middleware
 	if cfg.Performance.EnableMetrics {
 		router.Use(middleware.PerformanceMiddleware())
@@ -232,7 +232,7 @@ func main() {
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
-		
+
 		// Performance metrics endpoint (system monitoring)
 		if cfg.Performance.EnableMetrics {
 			apiGroup.GET("/performance", middleware.GetMetricsHandler())

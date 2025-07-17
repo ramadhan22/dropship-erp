@@ -26,8 +26,8 @@ type AdsPerformanceBatchSchedulerInterface interface {
 
 // AdsPerformanceHandler handles HTTP requests for ads performance data
 type AdsPerformanceHandler struct {
-	adsService       AdsPerformanceServiceInterface
-	batchScheduler   AdsPerformanceBatchSchedulerInterface
+	adsService     AdsPerformanceServiceInterface
+	batchScheduler AdsPerformanceBatchSchedulerInterface
 }
 
 // NewAdsPerformanceHandler creates a new ads performance handler
@@ -52,7 +52,7 @@ func (h *AdsPerformanceHandler) GetAdsCampaigns(c *gin.Context) {
 	}
 
 	status := c.Query("status")
-	
+
 	limit := 50 // default
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {

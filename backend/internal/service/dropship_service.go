@@ -558,11 +558,11 @@ func (s *DropshipService) fetchAndStoreDetail(ctx context.Context, header *model
 	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
 		return 0, err
 	}
-	
+
 	// Use external API timeout for Shopee API calls
 	apiCtx, cancel := WithExternalAPITimeout(ctx)
 	defer cancel()
-	
+
 	det, err := s.client.FetchShopeeOrderDetail(apiCtx, *st.AccessToken, *st.ShopID, header.KodeInvoiceChannel)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
 		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
@@ -619,7 +619,7 @@ func (s *DropshipService) fetchAndStoreDetailBatch(ctx context.Context, headers 
 	// Use external API timeout for bulk Shopee API calls
 	apiCtx, cancel := WithExternalAPITimeout(ctx)
 	defer cancel()
-	
+
 	details, err := s.client.FetchShopeeOrderDetails(apiCtx, *st.AccessToken, *st.ShopID, sns)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
 		if e := s.ensureStoreTokenValid(ctx, st); e == nil {
@@ -839,7 +839,7 @@ func (s *DropshipService) BatchInsertPurchases(ctx context.Context, purchases []
 	}
 
 	log.Printf("BatchInsertPurchases: processing %d purchases in batches of %d", len(purchases), s.batchSize)
-	
+
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -852,10 +852,10 @@ func (s *DropshipService) BatchInsertPurchases(ctx context.Context, purchases []
 		if end > len(purchases) {
 			end = len(purchases)
 		}
-		
+
 		batch := purchases[i:end]
 		log.Printf("Processing batch %d/%d (items %d-%d)", i/s.batchSize+1, (len(purchases)-1)/s.batchSize+1, i, end-1)
-		
+
 		for _, purchase := range batch {
 			if err := s.repo.InsertDropshipPurchase(ctx, purchase); err != nil {
 				return fmt.Errorf("failed to insert purchase %s: %w", purchase.KodePesanan, err)
@@ -880,7 +880,7 @@ func (s *DropshipService) GetCachedPurchaseData(ctx context.Context, channel, st
 
 	// Generate cache key
 	cacheKey := fmt.Sprintf("purchases:%s:%s:%s:%s:%d:%d", channel, store, from, to, limit, offset)
-	
+
 	// Try to get from cache first
 	if data, err := s.cache.Get(ctx, cacheKey); err == nil {
 		var cached struct {
@@ -908,7 +908,7 @@ func (s *DropshipService) GetCachedPurchaseData(ctx context.Context, channel, st
 		Purchases: purchases,
 		Total:     total,
 	}
-	
+
 	if data, err := json.Marshal(cached); err == nil {
 		// Cache for 5 minutes by default
 		if err := s.cache.Set(ctx, cacheKey, data, 5*time.Minute); err != nil {
@@ -942,7 +942,7 @@ func (s *DropshipService) GetPurchaseSummaryCache(ctx context.Context, channel, 
 	}
 
 	cacheKey := fmt.Sprintf("purchase_summary:%s:%s:%s:%s", channel, store, from, to)
-	
+
 	// Try cache first
 	if data, err := s.cache.Get(ctx, cacheKey); err == nil {
 		if total, err := strconv.ParseFloat(string(data), 64); err == nil {
