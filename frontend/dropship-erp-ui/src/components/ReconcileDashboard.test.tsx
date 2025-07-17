@@ -27,10 +27,14 @@ jest.mock("../api", () => ({
     .mockResolvedValue([{ store_id: 1, nama_toko: "S", jenis_channel_id: 1 }]),
 }));
 
+// Mock the createReconcileBatch API call
 jest.mock("../api/reconcile", () => ({
   listCandidates: jest.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
   updateShopeeStatuses: jest.fn().mockResolvedValue({}),
+  createReconcileBatch: jest.fn().mockResolvedValue({ 
+    data: { batches_created: 2, total_transactions: 100 } 
+  }),
   fetchShopeeDetail: jest.fn().mockResolvedValue({
     data: { order_sn: "INV", order_status: "PROCESSED" },
   }),
@@ -65,7 +69,6 @@ test("load candidates with filter", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
   
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
-});
 });
 
 test("filter by invoice", async () => {
