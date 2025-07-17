@@ -466,6 +466,23 @@ export interface ShopeeAdjustment {
   created_at: string;
 }
 
+export interface ShippingDiscrepancy {
+  id: number;
+  invoice_number: string;
+  order_id?: string;
+  discrepancy_type: string; // 'selisih_ongkir' or 'reverse_shipping_fee'
+  discrepancy_amount: number;
+  actual_shipping_fee?: number;
+  buyer_paid_shipping_fee?: number;
+  shopee_shipping_rebate?: number;
+  seller_shipping_discount?: number;
+  reverse_shipping_fee?: number;
+  order_date?: string;
+  store_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TaxPayment {
   id: string;
   store: string;

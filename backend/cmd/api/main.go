@@ -109,6 +109,7 @@ func main() {
 		shClient,
 		batchSvc,
 		repo.FailedReconciliationRepo,
+		repo.ShippingDiscrepancyRepo,
 		cfg.MaxThreads,
 		nil, // Use default reconciliation config
 	)
@@ -134,6 +135,7 @@ func main() {
 	withdrawalSvc := service.NewWithdrawalService(repo.DB, repo.WithdrawalRepo, repo.JournalRepo)
 	adjustSvc := service.NewShopeeAdjustmentService(repo.DB, repo.ShopeeAdjustmentRepo, repo.JournalRepo)
 	orderDetailSvc := service.NewOrderDetailService(repo.OrderDetailRepo)
+	shippingDiscrepancySvc := service.NewShippingDiscrepancyService(repo.DB, repo.ShippingDiscrepancyRepo)
 	adsPerformanceSvc := service.NewAdsPerformanceService(repo.DB, cfg.Shopee, repo)
 	adsPerformanceBatchScheduler := service.NewAdsPerformanceBatchScheduler(batchSvc, adsPerformanceSvc, time.Minute)
 	adsPerformanceBatchScheduler.Start(context.Background())
@@ -228,6 +230,7 @@ func main() {
 		handlers.NewWithdrawalHandler(withdrawalSvc).RegisterRoutes(apiGroup)
 		handlers.NewShopeeAdjustmentHandler(adjustSvc).RegisterRoutes(apiGroup)
 		handlers.NewOrderDetailHandler(orderDetailSvc).RegisterRoutes(apiGroup)
+		handlers.NewShippingDiscrepancyHandler(shippingDiscrepancySvc).RegisterRoutes(apiGroup)
 		handlers.NewAdsPerformanceHandler(adsPerformanceSvc, adsPerformanceBatchScheduler).RegisterRoutes(apiGroup)
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
