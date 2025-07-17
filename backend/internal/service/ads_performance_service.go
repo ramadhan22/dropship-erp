@@ -35,19 +35,8 @@ func NewAdsPerformanceService(db *sqlx.DB, cfg config.ShopeeAPIConfig, repo *rep
 // Shopee Marketing API response structures
 type ShopeeAdsCampaignsResponse struct {
 	Response struct {
-		CampaignList []struct {
-			CampaignID     int64  `json:"ads_id"`
-			CampaignName   string `json:"ads_name"`
-			CampaignType   string `json:"ads_type"`
-			CampaignStatus string `json:"ads_status"`
-			PlacementType  string `json:"placement_type"`
-			DailyBudget    int64  `json:"daily_budget"` // in cents
-			TotalBudget    int64  `json:"total_budget"` // in cents
-			TargetRoas     int    `json:"target_roas"`  // in percentage
-			StartTime      int64  `json:"start_time"`   // unix timestamp
-			EndTime        int64  `json:"end_time"`     // unix timestamp
-		} `json:"ads_list"`
-		More bool `json:"more"`
+		CampaignList []int64 `json:"campaign_id_list"`
+		More         bool    `json:"more"`
 	} `json:"response"`
 	Error   string `json:"error"`
 	Message string `json:"message"`
@@ -56,7 +45,7 @@ type ShopeeAdsCampaignsResponse struct {
 type ShopeeAdsPerformanceResponse struct {
 	Response struct {
 		AdsData []struct {
-			CampaignID int64 `json:"ads_id"`
+			CampaignID int64 `json:"campaign_id"`
 			Data       []struct {
 				Date            string  `json:"date"`
 				Hour            *int    `json:"hour,omitempty"` // Present for hourly data
@@ -100,7 +89,7 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 	s.shopeeClient.AccessToken = *store.AccessToken
 
 	// Build API request
-	path := "/api/v2/ads/get_ads_list"
+	path := "/api/v2/ads/get_product_level_campaign_id_list"
 	ts := time.Now().Unix()
 	sign := s.shopeeClient.signWithToken(path, ts, *store.AccessToken)
 
@@ -110,6 +99,7 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 	params.Set("timestamp", strconv.FormatInt(ts, 10))
 	params.Set("access_token", *store.AccessToken)
 	params.Set("sign", sign)
+	params.Set("ad_type", "all")
 
 	apiURL := s.shopeeClient.BaseURL + path + "?" + params.Encode()
 	log.Printf("Making API request to Shopee for store %d: %s", storeID, path)
@@ -133,14 +123,25 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 		return fmt.Errorf("Shopee API error: %s - %s", campaignsResp.Error, campaignsResp.Message)
 	}
 
-	log.Printf("Successfully received %d campaigns from Shopee API for store %d", len(campaignsResp.Response.CampaignList), storeID)
+	log.Printf("Successfully received %d campaign IDs from Shopee API for store %d", len(campaignsResp.Response.CampaignList), storeID)
 
-	// Store campaigns in database
+	// Store campaign IDs in database (with minimal campaign data)
 	successCount := 0
-	for _, campaign := range campaignsResp.Response.CampaignList {
+	for _, campaignID := range campaignsResp.Response.CampaignList {
+		// Create minimal campaign object with just ID and store info
+		campaign := struct {
+			CampaignID   int64  `json:"campaign_id"`
+			CampaignName string `json:"campaign_name"`
+			StoreID      int    `json:"store_id"`
+		}{
+			CampaignID:   campaignID,
+			CampaignName: fmt.Sprintf("Campaign %d", campaignID), // Placeholder name
+			StoreID:      storeID,
+		}
+		
 		err := s.upsertCampaign(ctx, storeID, &campaign)
 		if err != nil {
-			logutil.Errorf("Failed to upsert campaign %d (%s) for store %d: %v", campaign.CampaignID, campaign.CampaignName, storeID, err)
+			logutil.Errorf("Failed to upsert campaign %d for store %d: %v", campaignID, storeID, err)
 			continue
 		}
 		successCount++
@@ -171,42 +172,78 @@ func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID
 	s.shopeeClient.ShopID = *store.ShopID
 	s.shopeeClient.AccessToken = *store.AccessToken
 
+	// Since the new API only accepts one date at a time, iterate through each date
+	totalDataPoints := 0
+	successCount := 0
+	currentDate := startDate
+	
+	for currentDate.Before(endDate) || currentDate.Equal(endDate) {
+		log.Printf("Fetching performance data for campaign %d on date %s", campaignID, currentDate.Format("2006-01-02"))
+		
+		dataPoints, err := s.fetchAdsPerformanceForDate(ctx, storeID, campaignID, currentDate, store)
+		if err != nil {
+			logutil.Errorf("Failed to fetch performance data for campaign %d on date %s: %v", 
+				campaignID, currentDate.Format("2006-01-02"), err)
+			// Continue with next date instead of failing entire operation
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
+		}
+		
+		totalDataPoints += dataPoints
+		successCount += dataPoints
+		
+		// Move to next day
+		currentDate = currentDate.AddDate(0, 0, 1)
+		
+		// Small delay to respect API rate limits
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	log.Printf("Successfully fetched and stored %d/%d performance data points for campaign %d, store %d", 
+		successCount, totalDataPoints, campaignID, storeID)
+	return nil
+}
+
+// fetchAdsPerformanceForDate fetches performance data for a specific date
+func (s *AdsPerformanceService) fetchAdsPerformanceForDate(ctx context.Context, storeID int, campaignID int64, date time.Time, store interface{}) (int, error) {
 	// Build API request
-	path := "/api/v2/ads/get_ads_performance"
+	path := "/api/v2/ads/get_product_campaign_hourly_performance"
 	ts := time.Now().Unix()
-	sign := s.shopeeClient.signWithToken(path, ts, *store.AccessToken)
+	sign := s.shopeeClient.signWithToken(path, ts, s.shopeeClient.AccessToken)
 
 	params := url.Values{}
 	params.Set("partner_id", s.shopeeClient.PartnerID)
 	params.Set("shop_id", s.shopeeClient.ShopID)
 	params.Set("timestamp", strconv.FormatInt(ts, 10))
-	params.Set("access_token", *store.AccessToken)
+	params.Set("access_token", s.shopeeClient.AccessToken)
 	params.Set("sign", sign)
-	params.Set("ads_id", strconv.FormatInt(campaignID, 10))
-	params.Set("data_type", "hourly") // daily or hourly
-	params.Set("start_date", startDate.Format("2006-01-02"))
-	params.Set("end_date", endDate.Format("2006-01-02"))
+	params.Set("campaign_id_list", strconv.FormatInt(campaignID, 10))
+	params.Set("performance_date", date.Format("02-01-2006")) // DD-MM-YYYY format as per Shopee API
 
 	apiURL := s.shopeeClient.BaseURL + path + "?" + params.Encode()
-	log.Printf("Making API request to Shopee for performance data - campaign %d, store %d: %s", campaignID, storeID, path)
+	log.Printf("Making API request to Shopee for performance data - campaign %d, store %d, date %s: %s", 
+		campaignID, storeID, date.Format("2006-01-02"), path)
 
 	// Make API request
 	resp, err := s.shopeeClient.makeRequestWithRetry(ctx, "GET", apiURL, nil, nil)
 	if err != nil {
-		logutil.Errorf("Failed to fetch ads performance from Shopee API for campaign %d, store %d: %v", campaignID, storeID, err)
-		return fmt.Errorf("failed to fetch ads performance: %w", err)
+		logutil.Errorf("Failed to fetch ads performance from Shopee API for campaign %d, store %d, date %s: %v", 
+			campaignID, storeID, date.Format("2006-01-02"), err)
+		return 0, fmt.Errorf("failed to fetch ads performance: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var performanceResp ShopeeAdsPerformanceResponse
 	if err := json.NewDecoder(resp.Body).Decode(&performanceResp); err != nil {
-		logutil.Errorf("Failed to decode performance response for campaign %d, store %d: %v", campaignID, storeID, err)
-		return fmt.Errorf("failed to decode performance response: %w", err)
+		logutil.Errorf("Failed to decode performance response for campaign %d, store %d, date %s: %v", 
+			campaignID, storeID, date.Format("2006-01-02"), err)
+		return 0, fmt.Errorf("failed to decode performance response: %w", err)
 	}
 
 	if performanceResp.Error != "" {
-		logutil.Errorf("Shopee API error for campaign %d, store %d: %s - %s", campaignID, storeID, performanceResp.Error, performanceResp.Message)
-		return fmt.Errorf("Shopee API error: %s - %s", performanceResp.Error, performanceResp.Message)
+		logutil.Errorf("Shopee API error for campaign %d, store %d, date %s: %s - %s", 
+			campaignID, storeID, date.Format("2006-01-02"), performanceResp.Error, performanceResp.Message)
+		return 0, fmt.Errorf("Shopee API error: %s - %s", performanceResp.Error, performanceResp.Message)
 	}
 
 	// Store performance data in database
@@ -225,24 +262,26 @@ func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID
 		}
 	}
 
-	log.Printf("Successfully fetched and stored %d/%d performance data points for campaign %d, store %d", successCount, totalDataPoints, campaignID, storeID)
-	return nil
+	log.Printf("Processed %d/%d performance data points for campaign %d, store %d, date %s", 
+		successCount, totalDataPoints, campaignID, storeID, date.Format("2006-01-02"))
+	return successCount, nil
 }
 
 // upsertCampaign stores or updates campaign data in the database
 func (s *AdsPerformanceService) upsertCampaign(ctx context.Context, storeID int, campaign interface{}) error {
 	// Type assertion for the campaign data structure
 	type campaignData struct {
-		CampaignID     int64  `json:"ads_id"`
-		CampaignName   string `json:"ads_name"`
-		CampaignType   string `json:"ads_type"`
-		CampaignStatus string `json:"ads_status"`
+		CampaignID     int64  `json:"campaign_id"`
+		CampaignName   string `json:"campaign_name"`
+		CampaignType   string `json:"campaign_type"`
+		CampaignStatus string `json:"campaign_status"`
 		PlacementType  string `json:"placement_type"`
 		DailyBudget    int64  `json:"daily_budget"`
 		TotalBudget    int64  `json:"total_budget"`
 		TargetRoas     int    `json:"target_roas"`
 		StartTime      int64  `json:"start_time"`
 		EndTime        int64  `json:"end_time"`
+		StoreID        int    `json:"store_id"`
 	}
 
 	// Convert interface{} to our expected structure
@@ -254,6 +293,11 @@ func (s *AdsPerformanceService) upsertCampaign(ctx context.Context, storeID int,
 	var c campaignData
 	if err := json.Unmarshal(jsonData, &c); err != nil {
 		return fmt.Errorf("failed to unmarshal campaign data: %w", err)
+	}
+
+	// Use provided store ID if campaign doesn't have one
+	if c.StoreID == 0 {
+		c.StoreID = storeID
 	}
 
 	query := `
@@ -286,12 +330,23 @@ func (s *AdsPerformanceService) upsertCampaign(ctx context.Context, storeID int,
 		endDate = &t
 	}
 
+	// Provide default values for missing fields
+	campaignType := c.CampaignType
+	if campaignType == "" {
+		campaignType = "product"
+	}
+	
+	campaignStatus := c.CampaignStatus
+	if campaignStatus == "" {
+		campaignStatus = "unknown"
+	}
+
 	_, err = s.db.ExecContext(ctx, query,
 		c.CampaignID,
-		storeID,
+		c.StoreID,
 		c.CampaignName,
-		c.CampaignType,
-		c.CampaignStatus,
+		campaignType,
+		campaignStatus,
 		c.PlacementType,
 		float64(c.DailyBudget)/100.0, // Convert from cents
 		float64(c.TotalBudget)/100.0, // Convert from cents
