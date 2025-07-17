@@ -9,6 +9,7 @@ backend/backend/uploads/*
 # Go build artifacts
 backend/bin/
 backend/pkg/
+backend/backend
 
 # IDE settings
 .vscode/
