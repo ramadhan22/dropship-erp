@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import type { JSX } from "react";
 import {
   Alert,
@@ -8,15 +8,17 @@ import {
   DialogContent,
   DialogActions,
   LinearProgress,
+  CircularProgress,
+  Box,
+  Pagination,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useNavigate } from "react-router-dom";
-import SortableTable from "./SortableTable";
+import VirtualizedTable from "./VirtualizedTable";
 import type { Column } from "./SortableTable";
 import {
-  listCandidates,
   reconcileCheck,
   cancelPurchase,
   updateShopeeStatus,
@@ -32,7 +34,8 @@ import type {
   ShopeeEscrowDetail,
 } from "../types";
 import { getCurrentMonthRange } from "../utils/date";
-import useServerPagination from "../useServerPagination";
+import { useReconcileCandidates, useReconcileMutations } from "../hooks/useReconcileData";
+import { useDebouncedInput } from "../hooks/useDebounce";
 import JsonTabs from "./JsonTabs";
 import { formatCurrency, formatDateTime } from "../utils/format";
 
@@ -117,18 +120,33 @@ function renderValue(key: string, value: any): JSX.Element {
 }
 
 export default function ReconcileDashboard() {
-  const [shop, setShop] = useState("");
-  const [order, setOrder] = useState("");
-  const [status, setStatus] = useState("");
   const [firstOfMonth, lastOfMonth] = getCurrentMonthRange();
   const [from, setFrom] = useState(firstOfMonth);
   const [to, setTo] = useState(lastOfMonth);
   const [stores, setStores] = useState<Store[]>([]);
-  const { data, controls, reload } = useServerPagination((params) =>
-    listCandidates(shop, order, status, from, to, params.page, params.pageSize).then(
-      (r) => r.data,
-    ),
-  );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  
+  // Use debounced inputs for better performance
+  const shopInput = useDebouncedInput('');
+  const orderInput = useDebouncedInput('');
+  const statusInput = useDebouncedInput('');
+
+  // Memoize filters to prevent unnecessary re-renders
+  const filters = useMemo(() => ({
+    shop: shopInput.debouncedValue,
+    order: orderInput.debouncedValue,
+    status: statusInput.debouncedValue,
+    from,
+    to,
+    page,
+    pageSize,
+  }), [shopInput.debouncedValue, orderInput.debouncedValue, statusInput.debouncedValue, from, to, page, pageSize]);
+
+  // Use optimized React Query hook
+  const { data, error, isLoading, refetch } = useReconcileCandidates(filters);
+  const { optimisticUpdateCandidate } = useReconcileMutations();
+
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -141,28 +159,51 @@ export default function ReconcileDashboard() {
   >(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailInvoice, setDetailInvoice] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     listAllStores().then((s) => setStores(s));
   }, []);
 
+  // Clear message after 5 seconds
   useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shop, order, status, from, to]);
+    if (msg) {
+      const timer = setTimeout(() => setMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [msg]);
 
-  const handleReconcile = async (kode: string) => {
+  const handleReconcile = useCallback(async (kode: string) => {
+    if (actionLoading) return;
+    
+    setActionLoading(kode);
     try {
       const res = await reconcileCheck(kode);
       setMsg({ type: "success", text: res.data.message });
-      reload();
+      
+      // Optimistically update the candidate status
+      const updatedCandidate = data?.data.find(c => c.kode_pesanan === kode);
+      if (updatedCandidate) {
+        optimisticUpdateCandidate({
+          ...updatedCandidate,
+          status_pesanan_terakhir: 'Pesanan selesai'
+        });
+      }
+      
+      // Refresh data
+      refetch();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.message || e.message });
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [actionLoading, data?.data, optimisticUpdateCandidate, refetch]);
 
-  const handleCheckStatus = async (inv: string, status: string) => {
+  const handleCheckStatus = useCallback(async (inv: string, status: string) => {
+    if (actionLoading) return;
+    
+    setActionLoading(inv);
     try {
       const apiCall = status.toLowerCase() === "completed" ? fetchEscrowDetail : fetchShopeeDetail;
       const res = await apiCall(inv);
@@ -171,47 +212,70 @@ export default function ReconcileDashboard() {
       setDetailOpen(true);
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [actionLoading]);
 
-  const handleUpdateStatus = async () => {
+  const handleUpdateStatus = useCallback(async () => {
+    if (actionLoading) return;
+    
+    setActionLoading(detailInvoice);
     try {
       await updateShopeeStatus(detailInvoice);
       setMsg({ type: "success", text: "Updated" });
-      reload();
+      refetch();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [actionLoading, detailInvoice, refetch]);
 
-  const handleCancel = async (kode: string) => {
+  const handleCancel = useCallback(async (kode: string) => {
+    if (actionLoading) return;
+    
+    setActionLoading(kode);
     try {
       await cancelPurchase(kode);
       setMsg({ type: "success", text: "Canceled" });
-      reload();
+      refetch();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [actionLoading, refetch]);
 
-  const handleReconcileAll = async () => {
+  const handleReconcileAll = useCallback(async () => {
+    if (actionLoading) return;
+    
+    setActionLoading('reconcile-all');
     try {
-      const response = await createReconcileBatch(shop, order, status, from, to);
-      const data = response.data;
+      const response = await createReconcileBatch(
+        shopInput.debouncedValue, 
+        orderInput.debouncedValue, 
+        statusInput.debouncedValue, 
+        from, 
+        to
+      );
+      const responseData = response.data;
       let message = "Reconcile batches created successfully";
-      if (data.batches_created && data.total_transactions) {
-        message = `Created ${data.batches_created} batches for ${data.total_transactions} transactions. Processing will begin shortly.`;
-      } else if (data.message) {
-        message = data.message;
+      if (responseData.batches_created && responseData.total_transactions) {
+        message = `Created ${responseData.batches_created} batches for ${responseData.total_transactions} transactions. Processing will begin shortly.`;
+      } else if (responseData.message) {
+        message = responseData.message;
       }
       setMsg({ type: "success", text: message });
-      reload();
+      refetch();
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [actionLoading, shopInput.debouncedValue, orderInput.debouncedValue, statusInput.debouncedValue, from, to, refetch]);
 
-  const columns: Column<ReconcileCandidate>[] = [
+  const columns: Column<ReconcileCandidate>[] = useMemo(() => [
     { label: "Kode Pesanan", key: "kode_pesanan" },
     { label: "Kode Invoice Channel", key: "kode_invoice_channel" },
     { label: "Status", key: "status_pesanan_terakhir" },
@@ -236,16 +300,32 @@ export default function ReconcileDashboard() {
     {
       label: "Action",
       render: (_, row) => (
-        <Button size="small" onClick={() => handleReconcile(row.kode_pesanan)}>
-          Reconcile
+        <Button 
+          size="small" 
+          onClick={() => handleReconcile(row.kode_pesanan)}
+          disabled={actionLoading === row.kode_pesanan}
+        >
+          {actionLoading === row.kode_pesanan ? (
+            <CircularProgress size={16} />
+          ) : (
+            'Reconcile'
+          )}
         </Button>
       ),
     },
     {
       label: "Cancel",
       render: (_, row) => (
-        <Button size="small" onClick={() => handleCancel(row.kode_pesanan)}>
-          Cancel
+        <Button 
+          size="small" 
+          onClick={() => handleCancel(row.kode_pesanan)}
+          disabled={actionLoading === row.kode_pesanan}
+        >
+          {actionLoading === row.kode_pesanan ? (
+            <CircularProgress size={16} />
+          ) : (
+            'Cancel'
+          )}
         </Button>
       ),
     },
@@ -255,76 +335,157 @@ export default function ReconcileDashboard() {
         <Button
           size="small"
           onClick={() => handleCheckStatus(row.kode_invoice_channel, row.shopee_order_status)}
+          disabled={actionLoading === row.kode_invoice_channel}
         >
-          Check Status
+          {actionLoading === row.kode_invoice_channel ? (
+            <CircularProgress size={16} />
+          ) : (
+            'Check Status'
+          )}
         </Button>
       ),
     },
-  ];
+  ], [navigate, handleReconcile, handleCancel, handleCheckStatus, actionLoading]);
+
+  // Pagination controls
+  const totalPages = Math.max(1, Math.ceil((data?.total || 0) / pageSize));
+  const paginationControls = useMemo(() => (
+    <div
+      style={{
+        marginTop: "1rem",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div>
+        Total: {data?.total || 0} 
+        {isLoading && ' (loading...)'}
+        {shopInput.value !== shopInput.debouncedValue && ' (filtering...)'}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}
+          disabled={isLoading}
+        >
+          {[10, 20, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <Pagination
+          page={page}
+          count={totalPages}
+          onChange={(_, val) => setPage(val)}
+          disabled={isLoading}
+          showFirstButton
+          showLastButton
+        />
+      </div>
+    </div>
+  ), [data?.total, isLoading, shopInput.value, shopInput.debouncedValue, pageSize, page, totalPages]);
 
   return (
     <div>
       <h2>Reconcile Dashboard</h2>
-      <select
-        aria-label="Shop"
-        value={shop}
-        onChange={(e) => setShop(e.target.value)}
-        style={{ marginRight: "0.5rem" }}
-      >
-        <option value="">Select Store</option>
-        {stores.map((s) => (
-          <option key={s.store_id} value={s.nama_toko}>
-            {s.nama_toko}
-          </option>
-        ))}
-      </select>
-      <input
-        aria-label="Search Invoice"
-        placeholder="Kode Invoice"
-        value={order}
-        onChange={(e) => setOrder(e.target.value)}
-        style={{ height: "2rem", marginRight: "0.5rem" }}
-      />
-      <input
-        aria-label="Status"
-        placeholder="Status"
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        style={{ height: "2rem", marginRight: "0.5rem" }}
-      />
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="From"
-          format="yyyy-MM-dd"
-          value={new Date(from)}
-          onChange={(date) => {
-            if (!date) return;
-            setFrom(date.toISOString().split("T")[0]);
-          }}
-          slotProps={{ textField: { size: "small" } }}
+      
+      {/* Filters Section */}
+      <Box mb={2} display="flex" gap={1} flexWrap="wrap" alignItems="center">
+        <select
+          aria-label="Shop"
+          value={shopInput.value}
+          onChange={(e) => shopInput.setValue(e.target.value)}
+          style={{ marginRight: "0.5rem" }}
+          disabled={isLoading}
+        >
+          <option value="">Select Store</option>
+          {stores.map((s) => (
+            <option key={s.store_id} value={s.nama_toko}>
+              {s.nama_toko}
+            </option>
+          ))}
+        </select>
+        <input
+          aria-label="Search Invoice"
+          placeholder="Kode Invoice"
+          value={orderInput.value}
+          onChange={(e) => orderInput.setValue(e.target.value)}
+          style={{ height: "2rem", marginRight: "0.5rem" }}
+          disabled={isLoading}
         />
-      </LocalizationProvider>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="To"
-          format="yyyy-MM-dd"
-          value={new Date(to)}
-          onChange={(date) => {
-            if (!date) return;
-            setTo(date.toISOString().split("T")[0]);
-          }}
-          slotProps={{ textField: { size: "small" } }}
+        <input
+          aria-label="Status"
+          placeholder="Status"
+          value={statusInput.value}
+          onChange={(e) => statusInput.setValue(e.target.value)}
+          style={{ height: "2rem", marginRight: "0.5rem" }}
+          disabled={isLoading}
         />
-      </LocalizationProvider>
-      <Button onClick={() => reload()}>Refresh</Button>
-      <Button onClick={handleReconcileAll} sx={{ ml: 1 }}>
-        Reconcile All
-      </Button>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="From"
+            format="yyyy-MM-dd"
+            value={new Date(from)}
+            onChange={(date) => {
+              if (!date) return;
+              setFrom(date.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+            disabled={isLoading}
+          />
+        </LocalizationProvider>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DatePicker
+            label="To"
+            format="yyyy-MM-dd"
+            value={new Date(to)}
+            onChange={(date) => {
+              if (!date) return;
+              setTo(date.toISOString().split("T")[0]);
+            }}
+            slotProps={{ textField: { size: "small" } }}
+            disabled={isLoading}
+          />
+        </LocalizationProvider>
+        <Button 
+          onClick={() => refetch()} 
+          disabled={isLoading}
+          variant="outlined"
+        >
+          {isLoading ? <CircularProgress size={20} /> : 'Refresh'}
+        </Button>
+        <Button 
+          onClick={handleReconcileAll} 
+          sx={{ ml: 1 }}
+          disabled={actionLoading === 'reconcile-all' || isLoading}
+          variant="contained"
+        >
+          {actionLoading === 'reconcile-all' ? (
+            <CircularProgress size={20} />
+          ) : (
+            'Reconcile All'
+          )}
+        </Button>
+      </Box>
+
+      {/* Error and Success Messages */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       {msg && (
-        <Alert severity={msg.type} sx={{ mt: 2 }}>
+        <Alert severity={msg.type} sx={{ mb: 2 }}>
           {msg.text}
         </Alert>
       )}
+
+      {/* Progress Dialog */}
       <Dialog open={progress !== null} fullWidth maxWidth="sm">
         <DialogTitle>Reconciling</DialogTitle>
         <DialogContent
@@ -343,8 +504,20 @@ export default function ReconcileDashboard() {
           )}
         </DialogContent>
       </Dialog>
-      <SortableTable columns={columns} data={data} />
-      {controls}
+
+      {/* Data Table - Now virtualized for better performance */}
+      <VirtualizedTable 
+        columns={columns} 
+        data={data?.data || []} 
+        loading={isLoading}
+        height={500}
+        emptyMessage="No reconcile candidates found"
+      />
+      
+      {/* Pagination Controls */}
+      {paginationControls}
+
+      {/* Detail Modal */}
       <Dialog
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
@@ -375,7 +548,16 @@ export default function ReconcileDashboard() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleUpdateStatus}>Update Status Shopee</Button>
+          <Button 
+            onClick={handleUpdateStatus}
+            disabled={actionLoading === detailInvoice}
+          >
+            {actionLoading === detailInvoice ? (
+              <CircularProgress size={20} />
+            ) : (
+              'Update Status Shopee'
+            )}
+          </Button>
           <Button onClick={() => setDetailOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>

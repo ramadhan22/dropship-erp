@@ -2,8 +2,24 @@ import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { waitFor, screen, fireEvent } from "@testing-library/dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api/reconcile";
 import ReconcileDashboard from "./ReconcileDashboard";
+
+// Create a test utility to wrap components with QueryClient
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+};
 
 jest.mock("../api", () => ({
   listAllStores: jest
@@ -11,10 +27,14 @@ jest.mock("../api", () => ({
     .mockResolvedValue([{ store_id: 1, nama_toko: "S", jenis_channel_id: 1 }]),
 }));
 
+// Mock the createReconcileBatch API call
 jest.mock("../api/reconcile", () => ({
   listCandidates: jest.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
   reconcileCheck: jest.fn().mockResolvedValue({ data: { message: "ok" } }),
   updateShopeeStatuses: jest.fn().mockResolvedValue({}),
+  createReconcileBatch: jest.fn().mockResolvedValue({ 
+    data: { batches_created: 2, total_transactions: 100 } 
+  }),
   fetchShopeeDetail: jest.fn().mockResolvedValue({
     data: { order_sn: "INV", order_status: "PROCESSED" },
   }),
@@ -28,55 +48,56 @@ beforeEach(() => {
 });
 
 test("load all data on mount", async () => {
-  render(
-    <MemoryRouter>
-      <ReconcileDashboard />
-    </MemoryRouter>,
-  );
-  await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
+  const Wrapper = createWrapper();
+  render(<ReconcileDashboard />, { wrapper: Wrapper });
+  
+  // Wait for the component to settle and check React Query calls
+  await waitFor(() => {
+    expect(api.listCandidates).toHaveBeenCalled();
+  }, { timeout: 3000 });
 });
 
 test("load candidates with filter", async () => {
-  render(
-    <MemoryRouter>
-      <ReconcileDashboard />
-    </MemoryRouter>,
-  );
+  const Wrapper = createWrapper();
+  render(<ReconcileDashboard />, { wrapper: Wrapper });
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
   jest.clearAllMocks();
+  
   await screen.findByText("S");
   fireEvent.change(screen.getByLabelText(/Shop/i), { target: { value: "S" } });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
 });
 
 test("filter by invoice", async () => {
-  render(
-    <MemoryRouter>
-      <ReconcileDashboard />
-    </MemoryRouter>,
-  );
+  const Wrapper = createWrapper();
+  render(<ReconcileDashboard />, { wrapper: Wrapper });
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
   jest.clearAllMocks();
+  
   fireEvent.change(screen.getByLabelText(/Search Invoice/i), {
     target: { value: "INV" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
 });
 
 test("filter by status", async () => {
-  render(
-    <MemoryRouter>
-      <ReconcileDashboard />
-    </MemoryRouter>,
-  );
+  const Wrapper = createWrapper();
+  render(<ReconcileDashboard />, { wrapper: Wrapper });
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
   jest.clearAllMocks();
+  
   fireEvent.change(screen.getByLabelText(/Status/i), {
     target: { value: "diproses" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Refresh/i }));
+  
   await waitFor(() => expect(api.listCandidates).toHaveBeenCalled());
 });
 
@@ -96,11 +117,10 @@ test("click reconcile button", async () => {
       total: 1,
     },
   });
-  render(
-    <MemoryRouter>
-      <ReconcileDashboard />
-    </MemoryRouter>,
-  );
+  
+  const Wrapper = createWrapper();
+  render(<ReconcileDashboard />, { wrapper: Wrapper });
+  
   await screen.findByText("Reconcile");
   fireEvent.click(screen.getByText("Reconcile"));
   await waitFor(() => expect(api.reconcileCheck).toHaveBeenCalledWith("A"));
