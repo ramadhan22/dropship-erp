@@ -214,7 +214,7 @@ export default function ReconcileDashboard() {
       if (res.data && typeof res.data === 'object' && 'status' in res.data && res.data.status === 'processing') {
         const batchData = res.data as { status: string; batch_id: number; message: string };
         setPendingJobs(prev => new Map(prev.set(inv, batchData.batch_id)));
-        setMsg({ type: "info", text: batchData.message });
+        setMsg({ type: "success", text: batchData.message });
         
         // Start polling for job completion
         pollForJobCompletion(inv, batchData.batch_id);
