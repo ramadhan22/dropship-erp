@@ -28,6 +28,7 @@ import {
   fetchAdsPerformanceSummary, 
   syncHistoricalAdsPerformance 
 } from "../api/adsPerformance";
+import { listAllStoresDirect } from "../api";
 
 // Types for ads performance data
 interface AdsCampaign {
@@ -83,11 +84,8 @@ export default function AdsPerformancePage() {
     setStoresLoading(true);
     setStoresError(null);
     try {
-      const response = await fetch("/api/stores/all");
-      if (!response.ok) {
-        throw new Error(`Failed to fetch stores: ${response.status} ${response.statusText}`);
-      }
-      const data = await response.json();
+      const response = await listAllStoresDirect();
+      const data = response.data;
       setStores(data || []);
       
       if (!data || data.length === 0) {
