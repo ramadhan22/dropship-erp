@@ -16,6 +16,7 @@ type AdsPerformanceServiceInterface interface {
 	GetAdsCampaigns(ctx context.Context, storeID *int, status string, limit, offset int) ([]models.AdsCampaignWithMetrics, error)
 	GetPerformanceSummary(ctx context.Context, storeID *int, startDate, endDate time.Time) (*models.AdsPerformanceSummary, error)
 	FetchAdsCampaigns(ctx context.Context, storeID int) error
+	FetchAdsCampaignSettings(ctx context.Context, storeID int, campaignIDs []int64) error
 	FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error
 }
 
@@ -155,7 +156,38 @@ func (h *AdsPerformanceHandler) FetchAdsCampaigns(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Campaigns fetched successfully"})
 }
 
-// FetchAdsPerformance triggers fetching of performance data from Shopee API
+// FetchAdsCampaignSettings triggers fetching of campaign settings from Shopee API
+// POST /api/ads/campaigns/settings/fetch
+// Body: {"store_id": 1, "campaign_ids": [123, 456]}
+func (h *AdsPerformanceHandler) FetchAdsCampaignSettings(c *gin.Context) {
+	var request struct {
+		StoreID     int     `json:"store_id" binding:"required"`
+		CampaignIDs []int64 `json:"campaign_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	if len(request.CampaignIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Campaign IDs list cannot be empty"})
+		return
+	}
+
+	ctx := context.Background()
+	err := h.adsService.FetchAdsCampaignSettings(ctx, request.StoreID, request.CampaignIDs)
+	if err != nil {
+		logutil.Errorf("Failed to fetch campaign settings from Shopee: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch campaign settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "Campaign settings fetched successfully",
+		"campaigns_count": len(request.CampaignIDs),
+	})
+}
 // POST /api/ads/performance/fetch
 // Body: {"store_id": 1, "campaign_id": 123, "start_date": "2024-01-01", "end_date": "2024-01-31"}
 func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
@@ -245,6 +277,7 @@ func (h *AdsPerformanceHandler) RegisterRoutes(apiGroup *gin.RouterGroup) {
 		adsGroup.GET("/summary", h.GetPerformanceSummary)
 		adsGroup.GET("/stores-with-credentials", h.GetStoresWithShopeeCredentials)
 		adsGroup.POST("/campaigns/fetch", h.FetchAdsCampaigns)
+		adsGroup.POST("/campaigns/settings/fetch", h.FetchAdsCampaignSettings)
 		adsGroup.POST("/performance/fetch", h.FetchAdsPerformance)
 		adsGroup.POST("/sync/historical", h.SyncHistoricalAdsPerformance)
 	}

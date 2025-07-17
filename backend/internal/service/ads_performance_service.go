@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -47,6 +48,72 @@ type ShopeeAdsCampaignsResponse struct {
 	Message   string `json:"message"`
 	Warning   string `json:"warning"`
 	RequestID string `json:"request_id"`
+}
+
+// Campaign settings API response structures
+type ShopeeCampaignSettingsResponse struct {
+	Response struct {
+		ShopID       int64                     `json:"shop_id"`
+		Region       string                    `json:"region"`
+		CampaignList []ShopeeCampaignSettings `json:"campaign_list"`
+	} `json:"response"`
+	Error     string `json:"error"`
+	Message   string `json:"message"`
+	Warning   string `json:"warning"`
+	RequestID string `json:"request_id"`
+}
+
+type ShopeeCampaignSettings struct {
+	CampaignID           int64                            `json:"campaign_id"`
+	CommonInfo           *ShopeeCampaignCommonInfo        `json:"common_info,omitempty"`
+	ManualBiddingInfo    *ShopeeCampaignManualBidding     `json:"manual_bidding_info,omitempty"`
+	AutoBiddingInfo      *ShopeeCampaignAutoBidding       `json:"auto_bidding_info,omitempty"`
+	AutoProductAdsInfo   []ShopeeCampaignAutoProductAds   `json:"auto_product_ads_info,omitempty"`
+}
+
+type ShopeeCampaignCommonInfo struct {
+	AdType             string                         `json:"ad_type"`
+	AdName             string                         `json:"ad_name"`
+	CampaignStatus     string                         `json:"campaign_status"`
+	BiddingMethod      string                         `json:"bidding_method"`
+	CampaignPlacement  string                         `json:"campaign_placement"`
+	CampaignBudget     float64                        `json:"campaign_budget"`
+	CampaignDuration   ShopeeCampaignDuration         `json:"campaign_duration"`
+	ItemIDList         []int64                        `json:"item_id_list"`
+}
+
+type ShopeeCampaignDuration struct {
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
+}
+
+type ShopeeCampaignManualBidding struct {
+	EnhancedCPC             bool                                   `json:"enhanced_cpc"`
+	SelectedKeywords        []ShopeeCampaignKeyword                `json:"selected_keywords"`
+	DiscoveryAdsLocations   []ShopeeCampaignDiscoveryAdsLocation   `json:"discovery_ads_locations"`
+}
+
+type ShopeeCampaignKeyword struct {
+	Keyword            string  `json:"keyword"`
+	Status             string  `json:"status"`
+	MatchType          string  `json:"match_type"`
+	BidPricePerClick   float64 `json:"bid_price_per_click"`
+}
+
+type ShopeeCampaignDiscoveryAdsLocation struct {
+	Location  string  `json:"location"`
+	Status    string  `json:"status"`
+	BidPrice  float64 `json:"bid_price"`
+}
+
+type ShopeeCampaignAutoBidding struct {
+	RoasTarget float64 `json:"roas_target"`
+}
+
+type ShopeeCampaignAutoProductAds struct {
+	ProductName string `json:"product_name"`
+	Status      string `json:"status"`
+	ItemID      int64  `json:"item_id"`
 }
 
 type ShopeeAdsPerformanceResponse struct {
@@ -158,8 +225,9 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 
 		log.Printf("Successfully received %d campaign objects from Shopee API for store %d on page %d", len(campaignsResp.Response.CampaignList), storeID, pageNo)
 
-		// Store campaign IDs in database (with minimal campaign data)
+		// Store campaign IDs in database (with minimal campaign data) and collect IDs for settings fetch
 		successCount := 0
+		var campaignIDsForSettings []int64
 		for _, campaign := range campaignsResp.Response.CampaignList {
 			// Create minimal campaign object with just ID and store info
 			campaignData := struct {
@@ -169,7 +237,7 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 				StoreID      int    `json:"store_id"`
 			}{
 				CampaignID:   campaign.CampaignID,
-				CampaignName: fmt.Sprintf("Campaign %d", campaign.CampaignID), // Placeholder name
+				CampaignName: fmt.Sprintf("Campaign %d", campaign.CampaignID), // Placeholder name, will be updated by settings
 				CampaignType: campaign.AdType,
 				StoreID:      storeID,
 			}
@@ -180,12 +248,25 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 				continue
 			}
 			successCount++
+			campaignIDsForSettings = append(campaignIDsForSettings, campaign.CampaignID)
 		}
 
 		totalCampaigns += len(campaignsResp.Response.CampaignList)
 		totalSuccessCount += successCount
 
 		log.Printf("Successfully processed %d/%d campaigns from page %d for store %d", successCount, len(campaignsResp.Response.CampaignList), pageNo, storeID)
+
+		// Fetch detailed campaign settings for the campaigns we just stored
+		if len(campaignIDsForSettings) > 0 {
+			log.Printf("Fetching detailed settings for %d campaigns from page %d for store %d", len(campaignIDsForSettings), pageNo, storeID)
+			err := s.FetchAdsCampaignSettings(ctx, storeID, campaignIDsForSettings)
+			if err != nil {
+				logutil.Errorf("Failed to fetch campaign settings for page %d, store %d: %v", pageNo, storeID, err)
+				// Don't fail the entire operation, just log the error
+			} else {
+				log.Printf("Successfully fetched campaign settings for page %d, store %d", pageNo, storeID)
+			}
+		}
 
 		// Check if there are more pages
 		if !campaignsResp.Response.HasNextPage {
@@ -203,7 +284,176 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 	return nil
 }
 
-// FetchAdsPerformance retrieves ads performance data from Shopee Marketing API
+// FetchAdsCampaignSettings retrieves detailed campaign settings from Shopee Marketing API
+func (s *AdsPerformanceService) FetchAdsCampaignSettings(ctx context.Context, storeID int, campaignIDs []int64) error {
+	if len(campaignIDs) == 0 {
+		log.Printf("No campaign IDs provided for fetching settings for store %d", storeID)
+		return nil
+	}
+
+	log.Printf("Starting to fetch campaign settings for %d campaigns, store %d", len(campaignIDs), storeID)
+
+	// Get store details and validate credentials
+	store, err := s.repo.ChannelRepo.GetStoreByID(ctx, int64(storeID))
+	if err != nil {
+		logutil.Errorf("Failed to get store details for store %d: %v", storeID, err)
+		return fmt.Errorf("failed to get store details: %w", err)
+	}
+
+	if store.ShopID == nil || store.AccessToken == nil {
+		logutil.Errorf("Store %d does not have shop_id or access_token configured", storeID)
+		return fmt.Errorf("store %d does not have shop_id or access_token configured", storeID)
+	}
+
+	// Update client with store-specific credentials
+	s.shopeeClient.ShopID = *store.ShopID
+	s.shopeeClient.AccessToken = *store.AccessToken
+
+	// Process campaigns in batches of 100 (API limit)
+	const batchSize = 100
+	for i := 0; i < len(campaignIDs); i += batchSize {
+		end := i + batchSize
+		if end > len(campaignIDs) {
+			end = len(campaignIDs)
+		}
+		batch := campaignIDs[i:end]
+
+		log.Printf("Fetching campaign settings batch %d-%d for store %d", i+1, end, storeID)
+
+		err := s.fetchCampaignSettingsBatch(ctx, storeID, batch, store)
+		if err != nil {
+			logutil.Errorf("Failed to fetch campaign settings batch for store %d: %v", storeID, err)
+			// Continue with next batch instead of failing entire operation
+			continue
+		}
+
+		// Small delay to respect API rate limits
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	log.Printf("Successfully completed fetching campaign settings for store %d", storeID)
+	return nil
+}
+
+// fetchCampaignSettingsBatch fetches settings for a batch of campaigns
+func (s *AdsPerformanceService) fetchCampaignSettingsBatch(ctx context.Context, storeID int, campaignIDs []int64, store interface{}) error {
+	// Build campaign ID list string
+	campaignIDStrings := make([]string, len(campaignIDs))
+	for i, id := range campaignIDs {
+		campaignIDStrings[i] = strconv.FormatInt(id, 10)
+	}
+	campaignIDList := strings.Join(campaignIDStrings, ",")
+
+	// Build API request
+	path := "/api/v2/ads/get_product_level_campaign_setting_info"
+	ts := time.Now().Unix()
+	sign := s.shopeeClient.signWithToken(path, ts, s.shopeeClient.AccessToken)
+
+	params := url.Values{}
+	params.Set("partner_id", s.shopeeClient.PartnerID)
+	params.Set("shop_id", s.shopeeClient.ShopID)
+	params.Set("timestamp", strconv.FormatInt(ts, 10))
+	params.Set("access_token", s.shopeeClient.AccessToken)
+	params.Set("sign", sign)
+	params.Set("info_type_list", "1,2,3,4") // All info types: Common, Manual Bidding, Auto Bidding, Auto Product Ads
+	params.Set("campaign_id_list", campaignIDList)
+
+	apiURL := s.shopeeClient.BaseURL + path + "?" + params.Encode()
+	log.Printf("Making API request to Shopee for campaign settings - store %d: %s", storeID, path)
+
+	// Make API request
+	resp, err := s.shopeeClient.makeRequestWithRetry(ctx, "GET", apiURL, nil, nil)
+	if err != nil {
+		logutil.Errorf("Failed to fetch campaign settings from Shopee API for store %d: %v", storeID, err)
+		return fmt.Errorf("failed to fetch campaign settings: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var settingsResp ShopeeCampaignSettingsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&settingsResp); err != nil {
+		logutil.Errorf("Failed to decode campaign settings response for store %d: %v", storeID, err)
+		return fmt.Errorf("failed to decode campaign settings response: %w", err)
+	}
+
+	if settingsResp.Error != "" {
+		logutil.Errorf("Shopee API error for campaign settings, store %d: %s - %s", storeID, settingsResp.Error, settingsResp.Message)
+		return fmt.Errorf("Shopee API error: %s - %s", settingsResp.Error, settingsResp.Message)
+	}
+
+	log.Printf("Successfully received %d campaign settings from Shopee API for store %d", len(settingsResp.Response.CampaignList), storeID)
+
+	// Update campaign data in database
+	successCount := 0
+	for _, campaignSettings := range settingsResp.Response.CampaignList {
+		err := s.updateCampaignWithSettings(ctx, storeID, &campaignSettings)
+		if err != nil {
+			logutil.Errorf("Failed to update campaign %d with settings for store %d: %v", campaignSettings.CampaignID, storeID, err)
+			continue
+		}
+		successCount++
+	}
+
+	log.Printf("Successfully updated %d/%d campaigns with settings for store %d", successCount, len(settingsResp.Response.CampaignList), storeID)
+	return nil
+}
+
+// updateCampaignWithSettings updates campaign data with detailed settings from the API
+func (s *AdsPerformanceService) updateCampaignWithSettings(ctx context.Context, storeID int, settings *ShopeeCampaignSettings) error {
+	// Prepare campaign data from settings
+	campaignData := struct {
+		CampaignID      int64   `json:"campaign_id"`
+		CampaignName    string  `json:"campaign_name"`
+		CampaignType    string  `json:"campaign_type"`
+		CampaignStatus  string  `json:"campaign_status"`
+		PlacementType   string  `json:"placement_type"`
+		BiddingMethod   string  `json:"bidding_method"`
+		CampaignBudget  float64 `json:"campaign_budget"`
+		DailyBudget     float64 `json:"daily_budget"`
+		TotalBudget     float64 `json:"total_budget"`
+		TargetRoas      float64 `json:"target_roas"`
+		StartTime       int64   `json:"start_time"`
+		EndTime         int64   `json:"end_time"`
+		ItemIDList      string  `json:"item_id_list"`
+		EnhancedCPC     bool    `json:"enhanced_cpc"`
+		StoreID         int     `json:"store_id"`
+	}{
+		CampaignID: settings.CampaignID,
+		StoreID:    storeID,
+	}
+
+	// Extract common info if available
+	if settings.CommonInfo != nil {
+		campaignData.CampaignName = settings.CommonInfo.AdName
+		campaignData.CampaignType = settings.CommonInfo.AdType
+		campaignData.CampaignStatus = settings.CommonInfo.CampaignStatus
+		campaignData.PlacementType = settings.CommonInfo.CampaignPlacement
+		campaignData.BiddingMethod = settings.CommonInfo.BiddingMethod
+		campaignData.CampaignBudget = settings.CommonInfo.CampaignBudget
+		campaignData.StartTime = settings.CommonInfo.CampaignDuration.StartTime
+		campaignData.EndTime = settings.CommonInfo.CampaignDuration.EndTime
+
+		// Convert item ID list to JSON string
+		if len(settings.CommonInfo.ItemIDList) > 0 {
+			itemIDsJSON, err := json.Marshal(settings.CommonInfo.ItemIDList)
+			if err == nil {
+				campaignData.ItemIDList = string(itemIDsJSON)
+			}
+		}
+	}
+
+	// Extract auto bidding info if available
+	if settings.AutoBiddingInfo != nil {
+		campaignData.TargetRoas = settings.AutoBiddingInfo.RoasTarget
+	}
+
+	// Extract manual bidding info if available
+	if settings.ManualBiddingInfo != nil {
+		campaignData.EnhancedCPC = settings.ManualBiddingInfo.EnhancedCPC
+	}
+
+	// Use existing upsertCampaign method with enhanced data
+	return s.upsertCampaignWithSettings(ctx, storeID, &campaignData)
+}
 func (s *AdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error {
 	log.Printf("Starting to fetch ads performance for campaign %d, store %d, from %s to %s",
 		campaignID, storeID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
@@ -354,7 +604,145 @@ func (s *AdsPerformanceService) fetchAdsPerformanceForDate(ctx context.Context, 
 	return successCount, nil
 }
 
-// upsertCampaign stores or updates campaign data in the database
+// upsertCampaignWithSettings stores or updates campaign data with detailed settings in the database
+func (s *AdsPerformanceService) upsertCampaignWithSettings(ctx context.Context, storeID int, campaign interface{}) error {
+	// Type assertion for the campaign data structure with settings
+	type campaignDataWithSettings struct {
+		CampaignID      int64   `json:"campaign_id"`
+		CampaignName    string  `json:"campaign_name"`
+		CampaignType    string  `json:"campaign_type"`
+		CampaignStatus  string  `json:"campaign_status"`
+		PlacementType   string  `json:"placement_type"`
+		BiddingMethod   string  `json:"bidding_method"`
+		CampaignBudget  float64 `json:"campaign_budget"`
+		DailyBudget     float64 `json:"daily_budget"`
+		TotalBudget     float64 `json:"total_budget"`
+		TargetRoas      float64 `json:"target_roas"`
+		StartTime       int64   `json:"start_time"`
+		EndTime         int64   `json:"end_time"`
+		ItemIDList      string  `json:"item_id_list"`
+		EnhancedCPC     bool    `json:"enhanced_cpc"`
+		StoreID         int     `json:"store_id"`
+	}
+
+	// Convert interface{} to our expected structure
+	jsonData, err := json.Marshal(campaign)
+	if err != nil {
+		return fmt.Errorf("failed to marshal campaign data: %w", err)
+	}
+
+	var c campaignDataWithSettings
+	if err := json.Unmarshal(jsonData, &c); err != nil {
+		return fmt.Errorf("failed to unmarshal campaign data: %w", err)
+	}
+
+	// Use provided store ID if campaign doesn't have one
+	if c.StoreID == 0 {
+		c.StoreID = storeID
+	}
+
+	query := `
+		INSERT INTO ads_campaigns (
+			campaign_id, store_id, campaign_name, campaign_type, campaign_status,
+			placement_type, daily_budget, total_budget, target_roas, start_date, end_date,
+			bidding_method, campaign_budget, item_id_list, enhanced_cpc, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW()
+		)
+		ON CONFLICT (campaign_id) DO UPDATE SET
+			campaign_name = EXCLUDED.campaign_name,
+			campaign_type = EXCLUDED.campaign_type,
+			campaign_status = EXCLUDED.campaign_status,
+			placement_type = EXCLUDED.placement_type,
+			daily_budget = EXCLUDED.daily_budget,
+			total_budget = EXCLUDED.total_budget,
+			target_roas = EXCLUDED.target_roas,
+			start_date = EXCLUDED.start_date,
+			end_date = EXCLUDED.end_date,
+			bidding_method = EXCLUDED.bidding_method,
+			campaign_budget = EXCLUDED.campaign_budget,
+			item_id_list = EXCLUDED.item_id_list,
+			enhanced_cpc = EXCLUDED.enhanced_cpc,
+			updated_at = NOW()
+	`
+
+	var startDate, endDate *time.Time
+	if c.StartTime > 0 {
+		t := time.Unix(c.StartTime, 0)
+		startDate = &t
+	}
+	if c.EndTime > 0 {
+		t := time.Unix(c.EndTime, 0)
+		endDate = &t
+	}
+
+	// Provide default values for missing fields
+	campaignType := c.CampaignType
+	if campaignType == "" {
+		campaignType = "product"
+	}
+
+	campaignStatus := c.CampaignStatus
+	if campaignStatus == "" {
+		campaignStatus = "unknown"
+	}
+
+	campaignName := c.CampaignName
+	if campaignName == "" {
+		campaignName = fmt.Sprintf("Campaign %d", c.CampaignID)
+	}
+
+	// Handle null values properly
+	var dailyBudget, totalBudget, targetRoas, campaignBudget *float64
+	var placementType, biddingMethod, itemIDList *string
+	var enhancedCPC *bool
+
+	if c.DailyBudget > 0 {
+		dailyBudget = &c.DailyBudget
+	}
+	if c.TotalBudget > 0 {
+		totalBudget = &c.TotalBudget
+	}
+	if c.TargetRoas > 0 {
+		targetRoas = &c.TargetRoas
+	}
+	if c.CampaignBudget > 0 {
+		campaignBudget = &c.CampaignBudget
+	}
+	if c.PlacementType != "" {
+		placementType = &c.PlacementType
+	}
+	if c.BiddingMethod != "" {
+		biddingMethod = &c.BiddingMethod
+	}
+	if c.ItemIDList != "" {
+		itemIDList = &c.ItemIDList
+	}
+	// Only set enhancedCPC pointer if we have bidding info
+	if c.BiddingMethod != "" {
+		enhancedCPC = &c.EnhancedCPC
+	}
+
+	_, err = s.db.ExecContext(ctx, query,
+		c.CampaignID,
+		c.StoreID,
+		campaignName,
+		campaignType,
+		campaignStatus,
+		placementType,
+		dailyBudget,
+		totalBudget,
+		targetRoas,
+		startDate,
+		endDate,
+		biddingMethod,
+		campaignBudget,
+		itemIDList,
+		enhancedCPC,
+	)
+
+	return err
+}
 func (s *AdsPerformanceService) upsertCampaign(ctx context.Context, storeID int, campaign interface{}) error {
 	// Type assertion for the campaign data structure
 	type campaignData struct {
@@ -530,7 +918,8 @@ func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *in
 		SELECT 
 			c.campaign_id, c.store_id, c.campaign_name, c.campaign_type, c.campaign_status,
 			c.placement_type, c.daily_budget, c.total_budget, c.target_roas,
-			c.start_date, c.end_date, c.created_at, c.updated_at,
+			c.start_date, c.end_date, c.bidding_method, c.campaign_budget, 
+			c.item_id_list, c.enhanced_cpc, c.created_at, c.updated_at,
 			st.nama_toko as store_name
 		FROM ads_campaigns c
 		JOIN stores st ON c.store_id = st.store_id
@@ -579,8 +968,9 @@ func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *in
 			&campaign.CampaignID, &campaign.StoreID, &campaign.CampaignName,
 			&campaign.CampaignType, &campaign.CampaignStatus, &campaign.PlacementType,
 			&campaign.DailyBudget, &campaign.TotalBudget, &campaign.TargetRoas,
-			&campaign.StartDate, &campaign.EndDate, &campaign.CreatedAt, &campaign.UpdatedAt,
-			&storeName,
+			&campaign.StartDate, &campaign.EndDate, &campaign.BiddingMethod,
+			&campaign.CampaignBudget, &campaign.ItemIDList, &campaign.EnhancedCPC,
+			&campaign.CreatedAt, &campaign.UpdatedAt, &storeName,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)

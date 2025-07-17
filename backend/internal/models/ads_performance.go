@@ -6,19 +6,23 @@ import (
 
 // AdsCampaign represents an ads campaign from Shopee Marketing API
 type AdsCampaign struct {
-	CampaignID     int64      `db:"campaign_id" json:"campaign_id"`
-	StoreID        int        `db:"store_id" json:"store_id"`
-	CampaignName   string     `db:"campaign_name" json:"campaign_name"`
-	CampaignType   *string    `db:"campaign_type" json:"campaign_type"`
-	CampaignStatus string     `db:"campaign_status" json:"campaign_status"`
-	PlacementType  *string    `db:"placement_type" json:"placement_type"`
-	DailyBudget    *float64   `db:"daily_budget" json:"daily_budget"`
-	TotalBudget    *float64   `db:"total_budget" json:"total_budget"`
-	TargetRoas     *float64   `db:"target_roas" json:"target_roas"`
-	StartDate      *time.Time `db:"start_date" json:"start_date"`
-	EndDate        *time.Time `db:"end_date" json:"end_date"`
-	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
+	CampaignID      int64      `db:"campaign_id" json:"campaign_id"`
+	StoreID         int        `db:"store_id" json:"store_id"`
+	CampaignName    string     `db:"campaign_name" json:"campaign_name"`
+	CampaignType    *string    `db:"campaign_type" json:"campaign_type"`
+	CampaignStatus  string     `db:"campaign_status" json:"campaign_status"`
+	PlacementType   *string    `db:"placement_type" json:"placement_type"`
+	DailyBudget     *float64   `db:"daily_budget" json:"daily_budget"`
+	TotalBudget     *float64   `db:"total_budget" json:"total_budget"`
+	TargetRoas      *float64   `db:"target_roas" json:"target_roas"`
+	StartDate       *time.Time `db:"start_date" json:"start_date"`
+	EndDate         *time.Time `db:"end_date" json:"end_date"`
+	BiddingMethod   *string    `db:"bidding_method" json:"bidding_method"`
+	CampaignBudget  *float64   `db:"campaign_budget" json:"campaign_budget"`
+	ItemIDList      *string    `db:"item_id_list" json:"item_id_list"` // JSON array as string
+	EnhancedCPC     *bool      `db:"enhanced_cpc" json:"enhanced_cpc"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 // AdsPerformanceMetrics represents daily/hourly ads performance data
