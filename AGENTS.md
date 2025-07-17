@@ -12,6 +12,8 @@ If a command cannot be executed in the environment, mention this in the pull req
 ## Formatting
 - Format Go code with `gofmt -w` before committing.
 - Run `npm run lint` in `frontend/dropship-erp-ui` to check TypeScript/JavaScript style.
+## Version Control
+- Before finishing a task or committing changes, run `git pull origin master` to ensure your branch is up to date and minimize merge conflicts.
 
 ## Documentation
 - Update `README.md` when adding new commands, dependencies or features.
@@ -29,6 +31,7 @@ If a command cannot be executed in the environment, mention this in the pull req
 - When an API requires an `access_token`, generate the `sign` value using
   `partner_id + api path + timestamp + access_token + shop_id` hashed with the
   `partner_key` via HMAC-SHA256.
+- Before calling any Shopee API, confirm the access token has not expired and refresh it if necessary.
 - Add start and completion logs for critical service and repository operations to aid debugging.
 - Always include the error message in each error log across all services and repositories, especially when hitting Shopee API endpoints.
 - Write application logs to `logs/YYYY-MM-DD.log` (configurable via `logging.dir`) with a new file created each day.
