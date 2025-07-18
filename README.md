@@ -4,7 +4,23 @@ Dropship ERP is a full featured web application for managing dropshipping and
 online marketplace transactions.  The project consists of a Go backend and a
 React/TypeScript frontend.
 
-## Dependencies
+## API Rate Limiting
+
+The application implements robust rate limiting for Shopee API calls to comply with their usage policies:
+
+- **100 requests per minute limit**: All Shopee API calls are rate-limited to a maximum of 100 requests per minute across all endpoints
+- **Minute-based reset**: When the rate limit is reached, the system waits until the next minute before allowing additional requests
+- **Comprehensive coverage**: Rate limiting applies to all Shopee API endpoints including:
+  - Order details and batch fetching
+  - Escrow detail requests
+  - Wallet transaction lists
+  - Return list requests
+  - Access token refresh and authentication
+  - Order status queries
+- **Graceful handling**: When rate limits are exceeded, the system automatically waits for the next minute rather than failing requests
+- **Context-aware**: Rate limiting respects context cancellation for proper request timeout handling
+
+This ensures compliance with Shopee's API usage policies while maintaining system reliability.
 
 The backend and frontend only require Go and Node.js. Parsing ad invoice PDFs
 depends on the `pdftotext` utility from the `poppler-utils` package. Install this
