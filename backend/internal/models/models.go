@@ -440,3 +440,21 @@ type ReconciliationConfig struct {
 	RetryFailedTransactions bool     `json:"retry_failed_transactions"` // Whether to automatically retry failed transactions
 	GenerateDetailedReport  bool     `json:"generate_detailed_report"`  // Whether to include failed transaction details in report
 }
+
+// ShippingDiscrepancy represents transactions with shipping cost discrepancies
+type ShippingDiscrepancy struct {
+	ID                     int64     `db:"id" json:"id"`
+	InvoiceNumber          string    `db:"invoice_number" json:"invoice_number"`
+	OrderID                *string   `db:"order_id" json:"order_id,omitempty"`
+	DiscrepancyType        string    `db:"discrepancy_type" json:"discrepancy_type"` // 'selisih_ongkir' or 'reverse_shipping_fee'
+	DiscrepancyAmount      float64   `db:"discrepancy_amount" json:"discrepancy_amount"`
+	ActualShippingFee      *float64  `db:"actual_shipping_fee" json:"actual_shipping_fee,omitempty"`
+	BuyerPaidShippingFee   *float64  `db:"buyer_paid_shipping_fee" json:"buyer_paid_shipping_fee,omitempty"`
+	ShopeeShippingRebate   *float64  `db:"shopee_shipping_rebate" json:"shopee_shipping_rebate,omitempty"`
+	SellerShippingDiscount *float64  `db:"seller_shipping_discount" json:"seller_shipping_discount,omitempty"`
+	ReverseShippingFee     *float64  `db:"reverse_shipping_fee" json:"reverse_shipping_fee,omitempty"`
+	OrderDate              *time.Time `db:"order_date" json:"order_date,omitempty"`
+	StoreName              *string   `db:"store_name" json:"store_name,omitempty"`
+	CreatedAt              time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt              time.Time `db:"updated_at" json:"updated_at"`
+}

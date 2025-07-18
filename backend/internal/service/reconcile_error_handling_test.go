@@ -32,7 +32,7 @@ func TestBulkReconcileWithErrorHandling_Success(t *testing.T) {
 	fDetail := &fakeDetailRepo{}
 	fFailed := &fakeFailedRecRepo{}
 
-	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, fFailed, 5, nil)
+	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, fFailed, nil, 5, nil)
 
 	pairs := [][2]string{
 		{"DP-111", "SO-111"},
@@ -80,7 +80,7 @@ func TestBulkReconcileWithErrorHandling_WithFailures(t *testing.T) {
 	fDetail := &fakeDetailRepo{}
 	fFailed := &fakeFailedRecRepo{}
 
-	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, fFailed, 5, nil)
+	svc := NewReconcileService(nil, fDrop, fShopee, fJournal, fRec, nil, fDetail, nil, nil, nil, fFailed, nil, 5, nil)
 
 	pairs := [][2]string{
 		{"DP-111", "SO-111"},

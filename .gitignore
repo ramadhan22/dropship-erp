@@ -10,6 +10,7 @@ backend/backend/uploads/*
 backend/bin/
 backend/pkg/
 backend/backend
+backend/api
 
 # IDE settings
 .vscode/

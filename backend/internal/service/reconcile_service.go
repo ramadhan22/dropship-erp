@@ -83,6 +83,7 @@ type ReconcileService struct {
 	client           *ShopeeClient
 	batchSvc         ReconcileServiceBatchSvc
 	failedRepo       ReconcileServiceFailedRepo
+	shipDiscRepo     *repository.ShippingDiscrepancyRepo
 	backgroundSvc    *ShopeeDetailBackgroundService
 	maxThreads       int
 	config           *models.ReconciliationConfig
@@ -101,6 +102,7 @@ func NewReconcileService(
 	c *ShopeeClient,
 	b ReconcileServiceBatchSvc,
 	fr ReconcileServiceFailedRepo,
+	sdr *repository.ShippingDiscrepancyRepo,
 	maxThreads int,
 	config *models.ReconciliationConfig,
 ) *ReconcileService {
@@ -115,19 +117,20 @@ func NewReconcileService(
 		}
 	}
 	rs := &ReconcileService{
-		db:          db,
-		dropRepo:    dr,
-		shopeeRepo:  sr,
-		journalRepo: jr,
-		adjRepo:     ar,
-		recRepo:     rr,
-		storeRepo:   srp,
-		detailRepo:  drp,
-		client:      c,
-		batchSvc:    b,
-		failedRepo:  fr,
-		maxThreads:  maxThreads,
-		config:      config,
+		db:           db,
+		dropRepo:     dr,
+		shopeeRepo:   sr,
+		journalRepo:  jr,
+		adjRepo:      ar,
+		recRepo:      rr,
+		storeRepo:    srp,
+		detailRepo:   drp,
+		client:       c,
+		batchSvc:     b,
+		failedRepo:   fr,
+		shipDiscRepo: sdr,
+		maxThreads:   maxThreads,
+		config:       config,
 	}
 	
 	// Initialize background service for Shopee detail fetching
@@ -1149,6 +1152,59 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		shopeeRebate = *v
 	}
 	diff := actShip - buyerShip - shopeeRebate - shipDisc
+
+	// Track shipping discrepancy if it exists
+	if s.shipDiscRepo != nil && math.Abs(diff) > 0.01 {
+		orderDate, _ := time.Parse(time.RFC3339, dp.WaktuPesananTerbuat.Format(time.RFC3339))
+		// Try to get order_sn from escrow detail
+		var orderSN *string
+		if orderSNVal, ok := income["order_sn"].(string); ok {
+			orderSN = &orderSNVal
+		}
+		discrepancy := &models.ShippingDiscrepancy{
+			InvoiceNumber:          invoice,
+			OrderID:                orderSN,
+			DiscrepancyType:        "selisih_ongkir",
+			DiscrepancyAmount:      diff,
+			ActualShippingFee:      &actShip,
+			BuyerPaidShippingFee:   &buyerShip,
+			ShopeeShippingRebate:   &shopeeRebate,
+			SellerShippingDiscount: &shipDisc,
+			OrderDate:              &orderDate,
+			StoreName:              &dp.NamaToko,
+		}
+		if err := s.shipDiscRepo.InsertShippingDiscrepancy(ctx, discrepancy); err != nil {
+			log.Printf("Failed to insert shipping discrepancy for %s: %v", invoice, err)
+		}
+	}
+
+	// Track reverse shipping fee if it exists in order details
+	if s.shipDiscRepo != nil && s.detailRepo != nil {
+		// Try to get order_sn from escrow detail
+		var orderSNStr string
+		if orderSNVal, ok := income["order_sn"].(string); ok {
+			orderSNStr = orderSNVal
+		} else {
+			orderSNStr = invoice // fallback to invoice
+		}
+		if detail, _, _, err := s.detailRepo.GetOrderDetail(ctx, orderSNStr); err == nil && detail != nil {
+			if detail.ReverseShippingFee != nil && *detail.ReverseShippingFee != 0 {
+				orderDate, _ := time.Parse(time.RFC3339, dp.WaktuPesananTerbuat.Format(time.RFC3339))
+				discrepancy := &models.ShippingDiscrepancy{
+					InvoiceNumber:      invoice,
+					OrderID:            &orderSNStr,
+					DiscrepancyType:    "reverse_shipping_fee",
+					DiscrepancyAmount:  *detail.ReverseShippingFee,
+					ReverseShippingFee: detail.ReverseShippingFee,
+					OrderDate:          &orderDate,
+					StoreName:          &dp.NamaToko,
+				}
+				if err := s.shipDiscRepo.InsertShippingDiscrepancy(ctx, discrepancy); err != nil {
+					log.Printf("Failed to insert reverse shipping fee discrepancy for %s: %v", invoice, err)
+				}
+			}
+		}
+	}
 
 	// Logistic compensation occurs when the item is lost in transit and the
 	// logistic provider reimburses the seller.  Shopee records this as an
