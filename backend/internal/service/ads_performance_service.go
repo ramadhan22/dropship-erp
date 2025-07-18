@@ -913,7 +913,7 @@ func (s *AdsPerformanceService) upsertPerformanceMetrics(ctx context.Context, st
 }
 
 // GetAdsCampaigns retrieves campaigns with optional filters
-func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *int, status string, limit, offset int) ([]models.AdsCampaignWithMetrics, error) {
+func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *int, status string, startDate, endDate *time.Time, limit, offset int) ([]models.AdsCampaignWithMetrics, error) {
 	query := `
 		SELECT 
 			c.campaign_id, c.store_id, c.campaign_name, c.campaign_type, c.campaign_status,
@@ -936,8 +936,23 @@ func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *in
 	}
 
 	if status != "" {
+		// Map Indonesian status to backend status
+		mappedStatus := mapStatusToBackend(status)
 		query += fmt.Sprintf(" AND c.campaign_status = $%d", argIndex)
-		args = append(args, status)
+		args = append(args, mappedStatus)
+		argIndex++
+	}
+
+	// Add date range filter if provided
+	if startDate != nil {
+		query += fmt.Sprintf(" AND (c.start_date >= $%d OR c.start_date IS NULL)", argIndex)
+		args = append(args, *startDate)
+		argIndex++
+	}
+
+	if endDate != nil {
+		query += fmt.Sprintf(" AND (c.end_date <= $%d OR c.end_date IS NULL)", argIndex)
+		args = append(args, *endDate)
 		argIndex++
 	}
 
@@ -975,6 +990,9 @@ func (s *AdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *in
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan campaign: %w", err)
 		}
+
+		// Map backend status to Indonesian status for display
+		campaign.CampaignStatus = mapStatusToIndonesian(campaign.CampaignStatus)
 
 		// TODO: Fetch latest metrics for this campaign
 		campaigns = append(campaigns, campaign)
@@ -1059,7 +1077,7 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 	}
 
 	// Get all campaigns for the store from database
-	campaigns, err := s.GetAdsCampaigns(ctx, &storeID, "", 0, 0)
+	campaigns, err := s.GetAdsCampaigns(ctx, &storeID, "", nil, nil, 0, 0)
 	if err != nil {
 		logutil.Errorf("Failed to get campaigns from database for store %d: %v", storeID, err)
 		return fmt.Errorf("failed to get campaigns for store %d: %w", storeID, err)
@@ -1072,8 +1090,16 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 
 	log.Printf("Found %d campaigns for store %d", len(campaigns), storeID)
 
-	// Split campaigns into batches of 100
-	const batchSize = 100
+	// Use the optimized batch sync method
+	return s.SyncAdsPerformanceBatch(ctx, storeID, campaigns)
+}
+
+// SyncAdsPerformanceBatch syncs performance data for multiple campaigns efficiently
+func (s *AdsPerformanceService) SyncAdsPerformanceBatch(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics) error {
+	log.Printf("Starting batch sync for %d campaigns in store %d", len(campaigns), storeID)
+
+	// Split campaigns into batches of 50 for optimal API performance
+	const batchSize = 50
 	batches := make([][]models.AdsCampaignWithMetrics, 0)
 
 	for i := 0; i < len(campaigns); i += batchSize {
@@ -1086,12 +1112,12 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 
 	log.Printf("Split %d campaigns into %d batches of max %d campaigns each for store %d", len(campaigns), len(batches), batchSize, storeID)
 
-	// Process each batch going back in time
+	// Process each batch with date range optimization
 	currentDate := time.Now().Truncate(24 * time.Hour)
 	consecutiveEmptyDays := 0
-	maxConsecutiveEmptyDays := 2
+	maxConsecutiveEmptyDays := 3 // Increased from 2 to 3 for better coverage
 
-	log.Printf("Starting historical sync for store %d from date %s, will stop after %d consecutive empty days", storeID, currentDate.Format("2006-01-02"), maxConsecutiveEmptyDays)
+	log.Printf("Starting batch sync for store %d from date %s, will stop after %d consecutive empty days", storeID, currentDate.Format("2006-01-02"), maxConsecutiveEmptyDays)
 
 	for consecutiveEmptyDays < maxConsecutiveEmptyDays {
 		dayHasData := false
@@ -1100,7 +1126,7 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 		for batchIndex, batch := range batches {
 			log.Printf("Processing batch %d/%d for store %d on date %s", batchIndex+1, len(batches), storeID, currentDate.Format("2006-01-02"))
 
-			batchHasData, err := s.syncBatchForDate(ctx, storeID, batch, currentDate)
+			batchHasData, err := s.syncBatchForDateOptimized(ctx, storeID, batch, currentDate)
 			if err != nil {
 				logutil.Errorf("Failed to sync batch %d for store %d on date %s: %v", batchIndex+1, storeID, currentDate.Format("2006-01-02"), err)
 				// Continue with next batch instead of failing entire operation
@@ -1124,8 +1150,100 @@ func (s *AdsPerformanceService) SyncHistoricalAdsPerformance(ctx context.Context
 		currentDate = currentDate.AddDate(0, 0, -1)
 	}
 
-	log.Printf("Historical sync completed for store %d. Stopped after %d consecutive empty days", storeID, consecutiveEmptyDays)
+	log.Printf("Batch sync completed for store %d. Stopped after %d consecutive empty days", storeID, consecutiveEmptyDays)
 	return nil
+}
+
+// syncBatchForDateOptimized syncs a batch of campaigns for a specific date with optimizations
+func (s *AdsPerformanceService) syncBatchForDateOptimized(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics, date time.Time) (bool, error) {
+	anyDataFound := false
+	campaignCount := len(campaigns)
+	log.Printf("Syncing optimized batch of %d campaigns for store %d on date %s", campaignCount, storeID, date.Format("2006-01-02"))
+
+	// Check if we already have data for this date for any campaign (optimization)
+	existingDataCount := 0
+	for _, campaign := range campaigns {
+		hasData, err := s.hasPerformanceDataForDate(ctx, campaign.CampaignID, date)
+		if err != nil {
+			logutil.Errorf("Failed to check existing data for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
+			continue
+		}
+		if hasData {
+			existingDataCount++
+		}
+	}
+
+	// If we have data for most campaigns, skip this date (optimization)
+	if existingDataCount > campaignCount/2 {
+		log.Printf("Skipping date %s for store %d - already have data for %d/%d campaigns", date.Format("2006-01-02"), storeID, existingDataCount, campaignCount)
+		return existingDataCount > 0, nil
+	}
+
+	// Process campaigns in smaller groups for better error handling
+	const groupSize = 10
+	for i := 0; i < len(campaigns); i += groupSize {
+		end := i + groupSize
+		if end > len(campaigns) {
+			end = len(campaigns)
+		}
+		group := campaigns[i:end]
+
+		groupHasData, err := s.syncCampaignGroupForDate(ctx, storeID, group, date)
+		if err != nil {
+			logutil.Errorf("Failed to sync campaign group %d-%d for store %d on date %s: %v", i, end-1, storeID, date.Format("2006-01-02"), err)
+			continue
+		}
+
+		if groupHasData {
+			anyDataFound = true
+		}
+
+		// Small delay between groups
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	log.Printf("Completed optimized batch sync for store %d on date %s - data found: %v", storeID, date.Format("2006-01-02"), anyDataFound)
+	return anyDataFound, nil
+}
+
+// syncCampaignGroupForDate syncs a small group of campaigns for a specific date
+func (s *AdsPerformanceService) syncCampaignGroupForDate(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics, date time.Time) (bool, error) {
+	anyDataFound := false
+
+	for _, campaign := range campaigns {
+		// Skip if we already have data for this campaign and date
+		hasData, err := s.hasPerformanceDataForDate(ctx, campaign.CampaignID, date)
+		if err != nil {
+			logutil.Errorf("Failed to check existing data for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
+			continue
+		}
+		if hasData {
+			anyDataFound = true
+			continue
+		}
+
+		err = s.FetchAdsPerformance(ctx, storeID, campaign.CampaignID, date, date)
+		if err != nil {
+			logutil.Errorf("Failed to fetch performance for campaign %d (%s) on date %s for store %d: %v", campaign.CampaignID, campaign.CampaignName, date.Format("2006-01-02"), storeID, err)
+			continue
+		}
+
+		// Check if we got data after fetching
+		hasDataAfterFetch, err := s.hasPerformanceDataForDate(ctx, campaign.CampaignID, date)
+		if err != nil {
+			logutil.Errorf("Failed to check data after fetch for campaign %d on date %s: %v", campaign.CampaignID, date.Format("2006-01-02"), err)
+			continue
+		}
+
+		if hasDataAfterFetch {
+			anyDataFound = true
+		}
+
+		// Small delay between individual campaigns
+		time.Sleep(25 * time.Millisecond)
+	}
+
+	return anyDataFound, nil
 }
 
 // syncBatchForDate syncs a batch of campaigns for a specific date
@@ -1193,4 +1311,75 @@ func convertDateFormat(dateStr string) (string, error) {
 
 	// Return in YYYY-MM-DD format
 	return parsedDate.Format("2006-01-02"), nil
+}
+
+// mapStatusToIndonesian maps backend status to Indonesian display terms
+func mapStatusToIndonesian(status string) string {
+	switch status {
+	case "ongoing":
+		return "Berjalan"
+	case "paused":
+		return "Nonaktif"
+	case "ended":
+		return "Berakhir"
+	case "scheduled":
+		return "Terjadwal"
+	case "deleted":
+		return "Dihapus"
+	default:
+		return status
+	}
+}
+
+// mapStatusToBackend maps Indonesian display terms to backend status
+func mapStatusToBackend(status string) string {
+	switch status {
+	case "Berjalan":
+		return "ongoing"
+	case "Nonaktif":
+		return "paused"
+	case "Berakhir":
+		return "ended"
+	case "Terjadwal":
+		return "scheduled"
+	case "Dihapus":
+		return "deleted"
+	default:
+		return status
+	}
+}
+
+// GetDateRangePreset returns start and end dates for common presets
+func GetDateRangePreset(preset string) (time.Time, time.Time) {
+	now := time.Now()
+	switch preset {
+	case "today":
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		end := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+		return start, end
+	case "current_week":
+		// Get start of current week (Monday)
+		weekday := int(now.Weekday())
+		if weekday == 0 { // Sunday
+			weekday = 7
+		}
+		start := now.AddDate(0, 0, -weekday+1)
+		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+		end := start.AddDate(0, 0, 6)
+		end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 999999999, end.Location())
+		return start, end
+	case "current_month":
+		start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		end := start.AddDate(0, 1, -1)
+		end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 999999999, end.Location())
+		return start, end
+	case "current_year":
+		start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+		end := time.Date(now.Year(), 12, 31, 23, 59, 59, 999999999, now.Location())
+		return start, end
+	default:
+		// Default to last 30 days
+		start := now.AddDate(0, 0, -30)
+		return start, now
+	}
 }

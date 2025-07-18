@@ -4,12 +4,18 @@ import { api } from "./index";
 export const fetchAdsCampaigns = async (params?: { 
   store_id?: number; 
   status?: string; 
+  date_range?: string;
+  start_date?: string;
+  end_date?: string;
   limit?: number; 
   offset?: number; 
 }) => {
   const searchParams = new URLSearchParams();
   if (params?.store_id) searchParams.set("store_id", params.store_id.toString());
   if (params?.status) searchParams.set("status", params.status);
+  if (params?.date_range) searchParams.set("date_range", params.date_range);
+  if (params?.start_date) searchParams.set("start_date", params.start_date);
+  if (params?.end_date) searchParams.set("end_date", params.end_date);
   if (params?.limit) searchParams.set("limit", params.limit.toString());
   if (params?.offset) searchParams.set("offset", params.offset.toString());
 
@@ -19,11 +25,13 @@ export const fetchAdsCampaigns = async (params?: {
 
 export const fetchAdsPerformanceSummary = async (params?: {
   store_id?: number;
+  date_range?: string;
   start_date?: string;
   end_date?: string;
 }) => {
   const searchParams = new URLSearchParams();
   if (params?.store_id) searchParams.set("store_id", params.store_id.toString());
+  if (params?.date_range) searchParams.set("date_range", params.date_range);
   if (params?.start_date) searchParams.set("start_date", params.start_date);
   if (params?.end_date) searchParams.set("end_date", params.end_date);
 

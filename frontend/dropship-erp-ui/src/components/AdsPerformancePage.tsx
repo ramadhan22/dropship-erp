@@ -21,6 +21,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  TextField,
 } from "@mui/material";
 import { useEffect, useState, useCallback } from "react";
 import { 
@@ -67,6 +68,33 @@ interface AdsPerformanceSummary {
   store_filter?: number;
 }
 
+interface FilterState {
+  store_id: string;
+  status: string;
+  date_range: string;
+  start_date: string;
+  end_date: string;
+}
+
+// Define available status options
+const STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "Terjadwal", label: "Terjadwal" },
+  { value: "Berjalan", label: "Berjalan" },
+  { value: "Nonaktif", label: "Nonaktif" },
+  { value: "Berakhir", label: "Berakhir" },
+  { value: "Dihapus", label: "Dihapus" },
+];
+
+// Define available date range presets
+const DATE_RANGE_OPTIONS = [
+  { value: "", label: "Custom" },
+  { value: "today", label: "Today" },
+  { value: "current_week", label: "Current Week" },
+  { value: "current_month", label: "Current Month" },
+  { value: "current_year", label: "Current Year" },
+];
+
 export default function AdsPerformancePage() {
   const [campaigns, setCampaigns] = useState<AdsCampaign[]>([]);
   const [summary, setSummary] = useState<AdsPerformanceSummary | null>(null);
@@ -83,6 +111,15 @@ export default function AdsPerformancePage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>({
+    store_id: "",
+    status: "",
+    date_range: "current_month", // Default to current month
+    start_date: "",
+    end_date: "",
+  });
 
   const fetchStores = useCallback(async () => {
     setStoresLoading(true);
@@ -105,27 +142,61 @@ export default function AdsPerformancePage() {
 
   const fetchCampaignsData = useCallback(async () => {
     try {
-      const data = await fetchAdsCampaigns({ limit: 100 });
+      const params: any = { limit: 100 };
+      
+      if (filters.store_id) {
+        params.store_id = parseInt(filters.store_id);
+      }
+      
+      if (filters.status) {
+        params.status = filters.status;
+      }
+      
+      if (filters.date_range) {
+        params.date_range = filters.date_range;
+      } else {
+        // Use custom date range if no preset selected
+        if (filters.start_date) {
+          params.start_date = filters.start_date;
+        }
+        if (filters.end_date) {
+          params.end_date = filters.end_date;
+        }
+      }
+      
+      const data = await fetchAdsCampaigns(params);
       setCampaigns(data.campaigns || []);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
     }
-  }, []);
+  }, [filters]);
 
   const fetchSummaryData = useCallback(async () => {
     try {
-      const endDate = new Date();
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const params: any = {};
       
-      const data = await fetchAdsPerformanceSummary({
-        start_date: startDate.toISOString().split("T")[0],
-        end_date: endDate.toISOString().split("T")[0],
-      });
+      if (filters.store_id) {
+        params.store_id = parseInt(filters.store_id);
+      }
+      
+      if (filters.date_range) {
+        params.date_range = filters.date_range;
+      } else {
+        // Use custom date range if no preset selected
+        if (filters.start_date) {
+          params.start_date = filters.start_date;
+        }
+        if (filters.end_date) {
+          params.end_date = filters.end_date;
+        }
+      }
+      
+      const data = await fetchAdsPerformanceSummary(params);
       setSummary(data);
     } catch (error) {
       console.error("Error fetching summary:", error);
     }
-  }, []);
+  }, [filters]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -199,15 +270,36 @@ export default function AdsPerformancePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "ongoing":
+      case "Berjalan":
         return "success";
-      case "paused":
+      case "Nonaktif":
         return "warning";
-      case "ended":
+      case "Berakhir":
         return "default";
+      case "Terjadwal":
+        return "info";
+      case "Dihapus":
+        return "error";
       default:
         return "secondary";
     }
+  };
+
+  const handleFilterChange = (field: keyof FilterState, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      store_id: "",
+      status: "",
+      date_range: "current_month",
+      start_date: "",
+      end_date: "",
+    });
   };
 
   return (
@@ -216,15 +308,107 @@ export default function AdsPerformancePage() {
         Ads Performance Dashboard
       </Typography>
 
+      {/* Filter Section */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Filters
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Store</InputLabel>
+              <Select
+                value={filters.store_id}
+                onChange={(e) => handleFilterChange("store_id", e.target.value)}
+                label="Store"
+                disabled={storesLoading}
+              >
+                <MenuItem value="">All Stores</MenuItem>
+                {stores.map((store) => (
+                  <MenuItem key={store.store_id} value={store.store_id.toString()}>
+                    {store.nama_toko}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filters.status}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                label="Status"
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Date Range</InputLabel>
+              <Select
+                value={filters.date_range}
+                onChange={(e) => handleFilterChange("date_range", e.target.value)}
+                label="Date Range"
+              >
+                {DATE_RANGE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Custom Date Range Fields (shown only when date_range is empty) */}
+            {!filters.date_range && (
+              <>
+                <TextField
+                  label="Start Date"
+                  type="date"
+                  value={filters.start_date}
+                  onChange={(e) => handleFilterChange("start_date", e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  sx={{ minWidth: 200 }}
+                />
+                <TextField
+                  label="End Date"
+                  type="date"
+                  value={filters.end_date}
+                  onChange={(e) => handleFilterChange("end_date", e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  sx={{ minWidth: 200 }}
+                />
+              </>
+            )}
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              variant="contained"
+              onClick={fetchData}
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Apply Filters"}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={resetFilters}
+              disabled={loading}
+            >
+              Reset
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
       <Box sx={{ mb: 3 }}>
-        <Button
-          variant="contained"
-          onClick={fetchData}
-          disabled={loading}
-          sx={{ mr: 2 }}
-        >
-          {loading ? "Loading..." : "Refresh Data"}
-        </Button>
         <Button
           variant="outlined"
           onClick={handleSyncDialogOpen}
