@@ -184,10 +184,11 @@ func (h *AdsPerformanceHandler) FetchAdsCampaignSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":        "Campaign settings fetched successfully",
+		"message":         "Campaign settings fetched successfully",
 		"campaigns_count": len(request.CampaignIDs),
 	})
 }
+
 // POST /api/ads/performance/fetch
 // Body: {"store_id": 1, "campaign_id": 123, "start_date": "2024-01-01", "end_date": "2024-01-31"}
 func (h *AdsPerformanceHandler) FetchAdsPerformance(c *gin.Context) {
