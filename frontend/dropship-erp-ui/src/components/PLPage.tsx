@@ -79,6 +79,7 @@ function renderRows(
   fmt: Intl.NumberFormat,
   showComparison: boolean = true,
   indent = 1,
+  isExpense = false,
 ) {
   if (!rows) return null;
   return rows.map((r) => (
@@ -91,7 +92,9 @@ function renderRows(
             <Typography
               variant="body2"
               sx={{
-                color: r.change > 0 ? "success.main" : r.change < 0 ? "error.main" : "text.secondary",
+                color: isExpense ? 
+                  (r.change > 0 ? "error.main" : r.change < 0 ? "success.main" : "text.secondary") :
+                  (r.change > 0 ? "success.main" : r.change < 0 ? "error.main" : "text.secondary"),
                 fontWeight: "medium",
               }}
             >
@@ -100,8 +103,11 @@ function renderRows(
             <Typography
               variant="caption"
               sx={{
-                color: r.changePercent && r.changePercent > 0 ? "success.main" : 
-                       r.changePercent && r.changePercent < 0 ? "error.main" : "text.secondary",
+                color: isExpense ? 
+                  (r.changePercent && r.changePercent > 0 ? "error.main" : 
+                   r.changePercent && r.changePercent < 0 ? "success.main" : "text.secondary") :
+                  (r.changePercent && r.changePercent > 0 ? "success.main" : 
+                   r.changePercent && r.changePercent < 0 ? "error.main" : "text.secondary"),
                 fontWeight: "medium",
               }}
             >
@@ -286,7 +292,7 @@ export default function PLPage() {
                 REVENUE
               </TableCell>
             </TableRow>
-            {renderRows(data.pendapatanUsaha, numFmt, showComparison)}
+            {renderRows(data.pendapatanUsaha, numFmt, showComparison, 1, false)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Revenue</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -330,7 +336,7 @@ export default function PLPage() {
                 COST OF GOODS SOLD
               </TableCell>
             </TableRow>
-            {renderRows(data.hargaPokokPenjualan, numFmt, showComparison)}
+            {renderRows(data.hargaPokokPenjualan, numFmt, showComparison, 1, true)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Cost of Goods Sold</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -413,7 +419,7 @@ export default function PLPage() {
                 Operating Expenses
               </TableCell>
             </TableRow>
-            {renderRows(data.bebanOperasional, numFmt, showComparison, 2)}
+            {renderRows(data.bebanOperasional, numFmt, showComparison, 2, true)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Operating Expenses</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -456,7 +462,7 @@ export default function PLPage() {
                 Marketing Expenses
               </TableCell>
             </TableRow>
-            {renderRows(data.bebanPemasaran, numFmt, showComparison, 2)}
+            {renderRows(data.bebanPemasaran, numFmt, showComparison, 2, true)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Marketing Expenses</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -499,7 +505,7 @@ export default function PLPage() {
                 Administrative Expenses
               </TableCell>
             </TableRow>
-            {renderRows(data.bebanAdministrasi, numFmt, showComparison, 2)}
+            {renderRows(data.bebanAdministrasi, numFmt, showComparison, 2, true)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Administrative Expenses</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -614,7 +620,7 @@ export default function PLPage() {
                 TAXES
               </TableCell>
             </TableRow>
-            {renderRows(data.pajakPenghasilan, numFmt, showComparison)}
+            {renderRows(data.pajakPenghasilan, numFmt, showComparison, 1, true)}
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Total Taxes</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
