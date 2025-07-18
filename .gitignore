@@ -4,6 +4,7 @@
 # Node modules (frontend)
 frontend/dropship-erp-ui/node_modules
 frontend/dropship-erp-ui/build
+frontend/dropship-erp-ui/dist
 backend/backend/uploads/*
 
 # Go build artifacts
@@ -11,6 +12,7 @@ backend/bin/
 backend/pkg/
 backend/backend
 backend/api
+backend/tmp/
 
 # IDE settings
 .vscode/
