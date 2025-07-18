@@ -956,6 +956,14 @@ type withdrawResp struct {
 func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string, amount float64) error {
 	cfg := s.cfg
 
+	// Create a Shopee client with rate limiting
+	client := NewShopeeClient(cfg)
+	
+	// Apply rate limiting
+	if err := client.rateLimiter.Wait(ctx); err != nil {
+		return fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	form := url.Values{}
 	form.Set("shopid", cfg.ShopID)
 	form.Set("amount", fmt.Sprintf("%.2f", amount))
@@ -969,7 +977,7 @@ func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string,
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

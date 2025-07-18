@@ -48,8 +48,8 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 		base = "https://partner.test-stable.shopeemobile.com"
 	}
 
-	// Create rate limiter for 1000 requests per hour (Shopee API limit)
-	rateLimiter := NewRateLimiter(1000, time.Hour/1000)
+	// Create rate limiter for 100 requests per minute (Shopee API limit)
+	rateLimiter := NewRateLimiter(100, time.Minute)
 
 	retryConfig := RetryConfig{
 		MaxAttempts: 3,
@@ -72,7 +72,7 @@ func NewShopeeClient(cfg config.ShopeeAPIConfig) *ShopeeClient {
 // NewShopeeClientWithConfig constructs a ShopeeClient with custom rate limiting and retry configuration
 func NewShopeeClientWithConfig(cfg config.ShopeeAPIConfig, rateLimit int, maxAttempts int, baseDelay time.Duration) *ShopeeClient {
 	client := NewShopeeClient(cfg)
-	client.rateLimiter = NewRateLimiter(rateLimit, time.Hour/time.Duration(rateLimit))
+	client.rateLimiter = NewRateLimiter(rateLimit, time.Minute)
 	client.retryConfig = RetryConfig{
 		MaxAttempts: maxAttempts,
 		BaseDelay:   baseDelay,
@@ -237,6 +237,11 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 		return nil, fmt.Errorf("shop_id is empty")
 	}
 
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	partnerID, err := strconv.ParseInt(c.PartnerID, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid partner id: %w", err)
@@ -285,6 +290,11 @@ func (c *ShopeeClient) RefreshAccessToken(ctx context.Context) (*refreshResp, er
 
 // GetAccessToken retrieves a new access token using the authorization code and shop_id.
 func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) (*tokenResp, error) {
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/auth/token/get"
 	ts := time.Now().Unix()
 	sign := c.signSimple(path, ts)
@@ -336,6 +346,11 @@ func (c *ShopeeClient) GetAccessToken(ctx context.Context, code, shopID string) 
 // token and shop id. It mirrors the standalone FetchShopeeOrderDetail function
 // but uses credentials from the ShopeeClient, similar to GetAccessToken.
 func (c *ShopeeClient) FetchShopeeOrderDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeOrderDetail, error) {
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
@@ -390,6 +405,12 @@ func (c *ShopeeClient) FetchShopeeOrderDetails(ctx context.Context, accessToken,
 	if len(orderSNs) == 0 {
 		return nil, nil
 	}
+	
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
@@ -442,6 +463,11 @@ func (c *ShopeeClient) FetchShopeeOrderDetails(ctx context.Context, accessToken,
 // owns the order.
 func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID, orderSN string) (*ShopeeEscrowDetail, error) {
 	log.Printf("ShopeeClient GetEscrowDetail order=%s shop=%s", orderSN, shopID)
+
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
 
 	path := "/api/v2/payment/get_escrow_detail"
 	ts := time.Now().Unix()
@@ -501,6 +527,11 @@ func (c *ShopeeClient) GetEscrowDetail(ctx context.Context, accessToken, shopID,
 func (c *ShopeeClient) FetchShopeeEscrowDetails(ctx context.Context, accessToken, shopID string, orderSNs []string) (map[string]ShopeeEscrowDetail, error) {
 	if len(orderSNs) == 0 {
 		return map[string]ShopeeEscrowDetail{}, nil
+	}
+
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
 	}
 
 	path := "/api/v2/payment/get_escrow_detail_batch"
@@ -596,6 +627,12 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return "", err
 	}
+	
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return "", fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.sign(path, ts)
@@ -641,6 +678,12 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return nil, err
 	}
+	
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/order/get_order_detail"
 	ts := time.Now().Unix()
 	sign := c.sign(path, ts)
@@ -695,6 +738,12 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 		if _, err := c.RefreshAccessToken(ctx); err != nil {
 			return 0, err
 		}
+		
+		// Apply rate limiting
+		if err := c.rateLimiter.Wait(ctx); err != nil {
+			return 0, fmt.Errorf("rate limit timeout: %w", err)
+		}
+
 		path := "/api/v2/order/get_order_list"
 		ts := time.Now().Unix()
 		sign := c.sign(path, ts)
@@ -770,6 +819,11 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 
 // GetWalletTransactionList calls Shopee get_wallet_transaction_list API.
 func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken, shopID string, p WalletTransactionParams) (*WalletTransactionList, error) {
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/payment/get_wallet_transaction_list"
 	ts := time.Now().Unix()
 	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
@@ -838,6 +892,11 @@ func (c *ShopeeClient) GetWalletTransactionList(ctx context.Context, accessToken
 
 // GetReturnList fetches returns from Shopee's get_return_list API
 func (c *ShopeeClient) GetReturnList(ctx context.Context, accessToken, shopID string, params map[string]string) (*models.ShopeeReturnResponse, error) {
+	// Apply rate limiting
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("rate limit timeout: %w", err)
+	}
+
 	path := "/api/v2/returns/get_return_list"
 	ts := time.Now().Unix()
 	sign := c.signWithTokenShop(path, ts, accessToken, shopID)
