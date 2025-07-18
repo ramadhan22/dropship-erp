@@ -123,6 +123,7 @@ export const navigationSections = [
       { label: 'Shopee Sales', path: '/shopee', icon: <ShopeeIcon fontSize="small" /> },
       { label: 'Sales Profit', path: '/sales-profit', icon: <FinancialIcon fontSize="small" /> },
       { label: 'Adjustments', path: '/shopee/adjustments', icon: <ManagementIcon fontSize="small" /> },
+      { label: 'Shipping Discrepancies', path: '/shipping-discrepancies', icon: <PaymentIcon fontSize="small" /> },
       { label: 'Affiliate Sales', path: '/shopee/affiliate', icon: <BusinessIcon fontSize="small" /> },
       { label: 'Order Details', path: '/order-details', icon: <DashboardIcon fontSize="small" /> },
       { label: 'Order Returns', path: '/order-returns', icon: <PaymentIcon fontSize="small" /> },

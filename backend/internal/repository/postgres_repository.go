@@ -25,6 +25,7 @@ type Repository struct {
 	TaxRepo                  *TaxRepo
 	ShopeeAdjustmentRepo     *ShopeeAdjustmentRepo
 	OrderDetailRepo          *OrderDetailRepo
+	ShippingDiscrepancyRepo  *ShippingDiscrepancyRepo
 }
 
 // NewPostgresRepository connects to Postgres via sqlx and constructs all repos.
@@ -56,6 +57,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 	taxRepo := NewTaxRepo(db)
 	adjustmentRepo := NewShopeeAdjustmentRepo(db)
 	orderDetailRepo := NewOrderDetailRepo(db)
+	shippingDiscrepancyRepo := NewShippingDiscrepancyRepo(db)
 
 	return &Repository{
 		DB:                       db,
@@ -75,6 +77,7 @@ func NewPostgresRepository(databaseURL string) (*Repository, error) {
 		TaxRepo:                  taxRepo,
 		ShopeeAdjustmentRepo:     adjustmentRepo,
 		OrderDetailRepo:          orderDetailRepo,
+		ShippingDiscrepancyRepo:  shippingDiscrepancyRepo,
 	}, nil
 }
 

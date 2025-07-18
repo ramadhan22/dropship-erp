@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import type { JSX } from "react";
 import {
   Button,
@@ -7,13 +7,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
+  Box,
+  Pagination,
 } from "@mui/material";
-import SortableTable from "./SortableTable";
+import VirtualizedTable from "./VirtualizedTable";
 import type { Column } from "./SortableTable";
 import JsonTabs from "./JsonTabs";
 import { formatCurrency, formatDateTime } from "../utils/format";
 import {
-  listOrderDetails,
   getOrderDetail,
   listAllStores,
 } from "../api";
@@ -23,7 +25,8 @@ import type {
   ShopeeOrderPackageRow,
   Store,
 } from "../types";
-import useServerPagination from "../useServerPagination";
+import { useShopeeOrderDetails } from "../hooks/useReconcileData";
+import { useDebouncedInput } from "../hooks/useDebounce";
 
 function formatLabel(label: string): string {
   return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -67,27 +70,32 @@ function renderValue(value: any): JSX.Element {
 
 
 export default function ShopeeOrderDetailPage() {
-  const [store, setStore] = useState("");
-  const [order, setOrder] = useState("");
   const [stores, setStores] = useState<Store[]>([]);
-  const {
-    data,
-    controls,
-    reload,
-  } = useServerPagination((params) =>
-    listOrderDetails({
-      store,
-      order,
-      page: params.page,
-      page_size: params.pageSize,
-    }).then((r) => r.data),
-  );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  
+  // Use debounced inputs for better performance
+  const storeInput = useDebouncedInput('');
+  const orderInput = useDebouncedInput('');
+
+  // Memoize filters to prevent unnecessary re-renders
+  const filters = useMemo(() => ({
+    store: storeInput.debouncedValue,
+    order: orderInput.debouncedValue,
+    page,
+    pageSize,
+  }), [storeInput.debouncedValue, orderInput.debouncedValue, page, pageSize]);
+
+  // Use optimized React Query hook
+  const { data, error, isLoading, refetch } = useShopeeOrderDetails(filters);
+
   const [detail, setDetail] = useState<{
     detail: ShopeeOrderDetailRow;
     items: ShopeeOrderItemRow[];
     packages: ShopeeOrderPackageRow[];
   } | null>(null);
   const [open, setOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -97,14 +105,21 @@ export default function ShopeeOrderDetailPage() {
     listAllStores().then((s) => setStores(s));
   }, []);
 
+  // Clear message after 5 seconds
   useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store, order]);
+    if (msg) {
+      const timer = setTimeout(() => setMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [msg]);
 
-  const openDetail = async (sn: string) => {
+  const openDetail = useCallback(async (sn: string) => {
+    if (detailLoading) return;
+    
     setDetail(null);
     setOpen(true);
+    setDetailLoading(sn);
+    
     try {
       const res = await getOrderDetail(sn);
       setDetail({
@@ -114,24 +129,34 @@ export default function ShopeeOrderDetailPage() {
       });
     } catch (e: any) {
       setMsg({ type: "error", text: e.response?.data?.error || e.message });
+    } finally {
+      setDetailLoading(null);
     }
-  };
+  }, [detailLoading]);
 
-  const columns: Column<ShopeeOrderDetailRow>[] = [
+  const columns: Column<ShopeeOrderDetailRow>[] = useMemo(() => [
     { label: "Order SN", key: "order_sn" },
     { label: "Store", key: "nama_toko" },
     { label: "Status", key: "order_status" },
     {
       label: "Detail",
       render: (_, row) => (
-        <Button size="small" onClick={() => openDetail(row.order_sn)}>
-          View
+        <Button 
+          size="small" 
+          onClick={() => openDetail(row.order_sn)}
+          disabled={detailLoading === row.order_sn}
+        >
+          {detailLoading === row.order_sn ? (
+            <CircularProgress size={16} />
+          ) : (
+            'View'
+          )}
         </Button>
       ),
     },
-  ];
+  ], [openDetail, detailLoading]);
 
-  const itemColumns: Column<ShopeeOrderItemRow>[] = [
+  const itemColumns: Column<ShopeeOrderItemRow>[] = useMemo(() => [
     { label: "Item Name", key: "item_name" },
     { label: "Model SKU", key: "model_sku" },
     { label: "Qty", key: "model_quantity_purchased", align: "right" },
@@ -165,37 +190,85 @@ export default function ShopeeOrderDetailPage() {
             (row.model_quantity_purchased ?? 0),
         ),
     },
-  ];
+  ], []);
 
-  const packageColumns: Column<ShopeeOrderPackageRow>[] = [
+  const packageColumns: Column<ShopeeOrderPackageRow>[] = useMemo(() => [
     { label: "Package #", key: "package_number" },
     { label: "Status", key: "logistics_status" },
     { label: "Carrier", key: "shipping_carrier" },
-  ];
+  ], []);
 
-  const totalOrig =
+  // Calculations for totals
+  const totalOrig = useMemo(() =>
     detail?.items.reduce(
       (sum, it) =>
         sum + (it.model_original_price ?? 0) * (it.model_quantity_purchased ?? 0),
       0,
-    ) ?? 0;
-  const totalDisc =
+    ) ?? 0, [detail?.items]);
+  
+  const totalDisc = useMemo(() =>
     detail?.items.reduce(
       (sum, it) =>
         sum +
         (it.model_discounted_price ?? 0) * (it.model_quantity_purchased ?? 0),
       0,
-    ) ?? 0;
+    ) ?? 0, [detail?.items]);
+
+  // Pagination controls
+  const totalPages = Math.max(1, Math.ceil((data?.total || 0) / pageSize));
+  const paginationControls = useMemo(() => (
+    <div
+      style={{
+        marginTop: "1rem",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div>
+        Total: {data?.total || 0} 
+        {isLoading && ' (loading...)'}
+        {storeInput.value !== storeInput.debouncedValue && ' (filtering...)'}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}
+          disabled={isLoading}
+        >
+          {[10, 20, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <Pagination
+          page={page}
+          count={totalPages}
+          onChange={(_, val) => setPage(val)}
+          disabled={isLoading}
+          showFirstButton
+          showLastButton
+        />
+      </div>
+    </div>
+  ), [data?.total, isLoading, storeInput.value, storeInput.debouncedValue, pageSize, page, totalPages]);
 
   return (
     <div>
       <h2>Shopee Order Details</h2>
-      <div style={{ marginBottom: "0.5rem" }}>
+      
+      {/* Filters Section */}
+      <Box mb={2} display="flex" gap={1} alignItems="center">
         <select
           aria-label="Store"
-          value={store}
-          onChange={(e) => setStore(e.target.value)}
+          value={storeInput.value}
+          onChange={(e) => storeInput.setValue(e.target.value)}
           style={{ marginRight: "0.5rem" }}
+          disabled={isLoading}
         >
           <option value="">All Stores</option>
           {stores.map((s) => (
@@ -206,17 +279,44 @@ export default function ShopeeOrderDetailPage() {
         </select>
         <input
           placeholder="Order SN"
-          value={order}
-          onChange={(e) => setOrder(e.target.value)}
+          value={orderInput.value}
+          onChange={(e) => orderInput.setValue(e.target.value)}
+          disabled={isLoading}
         />
-      </div>
+        <Button 
+          onClick={() => refetch()} 
+          disabled={isLoading}
+          variant="outlined"
+        >
+          {isLoading ? <CircularProgress size={20} /> : 'Refresh'}
+        </Button>
+      </Box>
+
+      {/* Error Messages */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error.message || 'An error occurred'}
+        </Alert>
+      )}
       {msg && (
         <Alert severity={msg.type} sx={{ mb: 2 }}>
           {msg.text}
         </Alert>
       )}
-      <SortableTable columns={columns} data={data} />
-      {controls}
+
+      {/* Data Table - Now virtualized for better performance */}
+      <VirtualizedTable 
+        columns={columns} 
+        data={data?.data || []} 
+        loading={isLoading}
+        height={500}
+        emptyMessage="No order details found"
+      />
+      
+      {/* Pagination Controls */}
+      {paginationControls}
+
+      {/* Detail Modal */}
       <Dialog
         open={open}
         onClose={() => {
@@ -228,7 +328,11 @@ export default function ShopeeOrderDetailPage() {
       >
         <DialogTitle>Order Detail</DialogTitle>
         <DialogContent>
-          {detail ? (
+          {detailLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+              <CircularProgress />
+            </Box>
+          ) : detail ? (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <tbody>
                 {Object.entries(detail.detail).map(([k, v]) => (
@@ -254,7 +358,12 @@ export default function ShopeeOrderDetailPage() {
                     </tr>
                     <tr>
                       <td colSpan={2}>
-                        <SortableTable columns={itemColumns} data={detail.items} />
+                        <VirtualizedTable 
+                          columns={itemColumns} 
+                          data={detail.items} 
+                          height={300}
+                          itemHeight={53}
+                        />
                       </td>
                     </tr>
                     <tr>
@@ -274,7 +383,12 @@ export default function ShopeeOrderDetailPage() {
                     </tr>
                     <tr>
                       <td colSpan={2}>
-                        <SortableTable columns={packageColumns} data={detail.packages} />
+                        <VirtualizedTable 
+                          columns={packageColumns} 
+                          data={detail.packages} 
+                          height={200}
+                          itemHeight={53}
+                        />
                       </td>
                     </tr>
                   </>
@@ -282,7 +396,9 @@ export default function ShopeeOrderDetailPage() {
               </tbody>
             </table>
           ) : (
-            <>Loading...</>
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+              Failed to load order details
+            </Box>
           )}
         </DialogContent>
         <DialogActions>

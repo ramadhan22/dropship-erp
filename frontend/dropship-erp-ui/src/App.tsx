@@ -31,6 +31,7 @@ const PendingBalancePage = lazy(() => import("./components/PendingBalancePage"))
 const StoreDetailPage = lazy(() => import("./components/StoreDetailPage"));
 const WithdrawalPage = lazy(() => import("./components/WithdrawalPage"));
 const ShopeeAdjustmentPage = lazy(() => import("./components/ShopeeAdjustmentPage"));
+const ShippingDiscrepancyPage = lazy(() => import("./components/ShippingDiscrepancyPage"));
 const TaxPaymentPage = lazy(() => import("./components/TaxPaymentPage"));
 const ShopeeOrderDetailPage = lazy(() => import("./components/ShopeeOrderDetailPage"));
 const ShopeeOrderReturnPage = lazy(() => import("./components/ShopeeOrderReturnPage"));
@@ -80,6 +81,10 @@ export default function App() {
               <Route
                 path="/shopee/adjustments"
                 element={<ShopeeAdjustmentPage />}
+              />
+              <Route
+                path="/shipping-discrepancies"
+                element={<ShippingDiscrepancyPage />}
               />
               <Route path="/shopee/affiliate" element={<ShopeeAffiliatePage />} />
               <Route path="/reconcile" element={<ReconcileForm />} />
