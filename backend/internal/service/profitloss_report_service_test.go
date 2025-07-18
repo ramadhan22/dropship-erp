@@ -28,7 +28,7 @@ func TestProfitLossReportService_GetProfitLoss(t *testing.T) {
 	}}
 	svc := NewProfitLossReportService(repo)
 
-	pl, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX")
+	pl, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestProfitLossReportService_SkipMarketingParentAccount(t *testing.T) {
 	}}
 	svc := NewProfitLossReportService(repo)
 
-	pl, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX")
+	pl, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestProfitLossReportService_GetProfitLoss_MonthlyPeriod(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
 	svc := NewProfitLossReportService(repo)
 
-	_, err := svc.GetProfitLoss(context.Background(), "Monthly", 3, 2025, "ShopX")
+	_, err := svc.GetProfitLoss(context.Background(), "Monthly", 3, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestProfitLossReportService_GetProfitLoss_Yearly(t *testing.T) {
 	repo := &fakeJournalRepoPL{balances: []repository.AccountBalance{}}
 	svc := NewProfitLossReportService(repo)
 
-	_, err := svc.GetProfitLoss(context.Background(), "Yearly", 5, 2025, "ShopX")
+	_, err := svc.GetProfitLoss(context.Background(), "Yearly", 5, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -138,11 +138,11 @@ func TestProfitLossReportService_DifferentPeriods(t *testing.T) {
 	}}
 
 	svc := NewProfitLossReportService(repo)
-	may, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX")
+	may, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("error may: %v", err)
 	}
-	jun, err := svc.GetProfitLoss(context.Background(), "Monthly", 6, 2025, "ShopX")
+	jun, err := svc.GetProfitLoss(context.Background(), "Monthly", 6, 2025, "ShopX", false)
 	if err != nil {
 		t.Fatalf("error jun: %v", err)
 	}
@@ -151,5 +151,56 @@ func TestProfitLossReportService_DifferentPeriods(t *testing.T) {
 	}
 	if may.LabaRugiBersih.Amount == jun.LabaRugiBersih.Amount {
 		t.Errorf("expected different profit, got %v", may.LabaRugiBersih.Amount)
+	}
+}
+
+func TestProfitLossReportService_WithComparison(t *testing.T) {
+	startMay := time.Date(2025, 5, 1, 0, 0, 0, 0, time.UTC)
+	endMay := startMay.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	startApr := time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC)
+	endApr := startApr.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+	repo := &fakeJournalRepoPLMap{data: map[string][]repository.AccountBalance{
+		startMay.Format("2006-01-02") + "_" + endMay.Format("2006-01-02"): {
+			{AccountCode: "4.1", AccountName: "Penjualan", Balance: -200},
+			{AccountCode: "5.1", AccountName: "HPP", Balance: 100},
+		},
+		startApr.Format("2006-01-02") + "_" + endApr.Format("2006-01-02"): {
+			{AccountCode: "4.1", AccountName: "Penjualan", Balance: -100},
+			{AccountCode: "5.1", AccountName: "HPP", Balance: 50},
+		},
+	}}
+
+	svc := NewProfitLossReportService(repo)
+	may, err := svc.GetProfitLoss(context.Background(), "Monthly", 5, 2025, "ShopX", true)
+	if err != nil {
+		t.Fatalf("error may: %v", err)
+	}
+
+	// Check current period data
+	if may.TotalPendapatanUsaha != 200 {
+		t.Errorf("expected current revenue 200, got %v", may.TotalPendapatanUsaha)
+	}
+	if may.PrevTotalPendapatanUsaha != 100 {
+		t.Errorf("expected previous revenue 100, got %v", may.PrevTotalPendapatanUsaha)
+	}
+
+	// Check comparison data in rows
+	if len(may.PendapatanUsaha) != 1 {
+		t.Fatalf("expected 1 revenue row, got %d", len(may.PendapatanUsaha))
+	}
+	
+	revRow := may.PendapatanUsaha[0]
+	if revRow.Amount != 200 {
+		t.Errorf("expected current amount 200, got %v", revRow.Amount)
+	}
+	if revRow.PreviousAmount != 100 {
+		t.Errorf("expected previous amount 100, got %v", revRow.PreviousAmount)
+	}
+	if revRow.Change != 100 {
+		t.Errorf("expected change 100, got %v", revRow.Change)
+	}
+	if revRow.ChangePercent != 100 {
+		t.Errorf("expected change percent 100, got %v", revRow.ChangePercent)
 	}
 }

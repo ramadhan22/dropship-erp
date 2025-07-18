@@ -10,6 +10,7 @@ export interface ProfitLossParams {
   month?: number;
   year: number;
   store?: string;
+  comparison?: boolean;
 }
 
 export function fetchProfitLoss(params: ProfitLossParams) {

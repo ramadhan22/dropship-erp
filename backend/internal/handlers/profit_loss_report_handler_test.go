@@ -16,7 +16,7 @@ type fakePLReportSvc struct {
 	err  error
 }
 
-func (f *fakePLReportSvc) GetProfitLoss(ctx context.Context, typ string, month, year int, store string) (*service.ProfitLoss, error) {
+func (f *fakePLReportSvc) GetProfitLoss(ctx context.Context, typ string, month, year int, store string, comparison bool) (*service.ProfitLoss, error) {
 	return f.data, f.err
 }
 

@@ -102,7 +102,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context, f DashboardFilt
 		}
 	}
 
-	pl, _ := s.plSvc.GetProfitLoss(ctx, f.Period, f.Month, f.Year, f.Store)
+	pl, _ := s.plSvc.GetProfitLoss(ctx, f.Period, f.Month, f.Year, f.Store, false)
 	netProfit := 0.0
 	if pl != nil {
 		netProfit = pl.LabaRugiBersih.Amount
