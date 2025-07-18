@@ -23,6 +23,8 @@ const ExpensePage = lazy(() => import("./components/ExpensePage"));
 const JournalPage = lazy(() => import("./components/JournalPage"));
 const AdInvoicePage = lazy(() => import("./components/AdInvoicePage"));
 const PLPage = lazy(() => import("./components/PLPage"));
+const PLSankeyPage = lazy(() => import("./components/PLSankeyPage"));
+const PLSankeyPageDemo = lazy(() => import("./components/PLSankeyPageDemo"));
 const GLPage = lazy(() => import("./components/GLPage"));
 const SalesProfitPage = lazy(() => import("./components/SalesProfitPage"));
 const Dashboard = lazy(() => import("./components/Dashboard"));
@@ -91,6 +93,8 @@ export default function App() {
               <Route path="/reconcile/dashboard" element={<ReconcileDashboard />} />
               <Route path="/metrics" element={<MetricsPage />} />
               <Route path="/pl" element={<PLPage />} />
+              <Route path="/pl-sankey" element={<PLSankeyPage />} />
+              <Route path="/pl-sankey-demo" element={<PLSankeyPageDemo />} />
               <Route path="/balance" element={<BalanceSheetPage />} />
               <Route path="/gl" element={<GLPage />} />
               <Route path="/channels" element={<ChannelPage />} />
