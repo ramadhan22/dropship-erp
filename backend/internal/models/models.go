@@ -515,7 +515,7 @@ type ShopeeReturnResponse struct {
 type ShippingDiscrepancy struct {
 	ID                     int64      `db:"id" json:"id"`
 	InvoiceNumber          string     `db:"invoice_number" json:"invoice_number"`
-	OrderID                *string    `db:"order_id" json:"order_id,omitempty"`
+	ReturnID               *string    `db:"return_id" json:"return_id,omitempty"`
 	DiscrepancyType        string     `db:"discrepancy_type" json:"discrepancy_type"` // 'selisih_ongkir' or 'reverse_shipping_fee'
 	DiscrepancyAmount      float64    `db:"discrepancy_amount" json:"discrepancy_amount"`
 	ActualShippingFee      *float64   `db:"actual_shipping_fee" json:"actual_shipping_fee,omitempty"`

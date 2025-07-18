@@ -28,11 +28,11 @@ func NewShopeeDetailBackgroundScheduler(
 // Start starts the background scheduler
 func (s *ShopeeDetailBackgroundScheduler) Start(ctx context.Context) {
 	log.Printf("Starting Shopee detail background scheduler with interval: %v", s.interval)
-	
+
 	go func() {
 		ticker := time.NewTicker(s.interval)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ctx.Done():

@@ -18,18 +18,20 @@ func NewShippingDiscrepancyRepo(db DBTX) *ShippingDiscrepancyRepo {
 }
 
 // InsertShippingDiscrepancy saves a shipping discrepancy record.
+// It uses INSERT ON CONFLICT DO NOTHING to prevent duplicates.
 func (r *ShippingDiscrepancyRepo) InsertShippingDiscrepancy(
 	ctx context.Context,
 	discrepancy *models.ShippingDiscrepancy,
 ) error {
 	query := `
         INSERT INTO shipping_discrepancies
-          (invoice_number, order_id, discrepancy_type, discrepancy_amount, 
+          (invoice_number, return_id, discrepancy_type, discrepancy_amount, 
            actual_shipping_fee, buyer_paid_shipping_fee, shopee_shipping_rebate, 
            seller_shipping_discount, reverse_shipping_fee, order_date, store_name)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (invoice_number, discrepancy_type) DO NOTHING`
 	_, err := r.db.ExecContext(ctx, query,
-		discrepancy.InvoiceNumber, discrepancy.OrderID, discrepancy.DiscrepancyType,
+		discrepancy.InvoiceNumber, discrepancy.ReturnID, discrepancy.DiscrepancyType,
 		discrepancy.DiscrepancyAmount, discrepancy.ActualShippingFee,
 		discrepancy.BuyerPaidShippingFee, discrepancy.ShopeeShippingRebate,
 		discrepancy.SellerShippingDiscount, discrepancy.ReverseShippingFee,
@@ -99,13 +101,13 @@ func (r *ShippingDiscrepancyRepo) CountShippingDiscrepanciesByDateRange(
               FROM shipping_discrepancies 
               WHERE created_at >= $1 AND created_at <= $2 
               GROUP BY discrepancy_type`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, startDate, endDate)
 	if err != nil {
 		return result, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var discrepancyType string
 		var count int
@@ -114,7 +116,36 @@ func (r *ShippingDiscrepancyRepo) CountShippingDiscrepanciesByDateRange(
 		}
 		result[discrepancyType] = count
 	}
-	
+
+	return result, rows.Err()
+}
+
+// GetShippingDiscrepancySumsByDateRange returns total amounts for each discrepancy type within a date range.
+func (r *ShippingDiscrepancyRepo) GetShippingDiscrepancySumsByDateRange(
+	ctx context.Context,
+	startDate, endDate time.Time,
+) (map[string]float64, error) {
+	result := make(map[string]float64)
+	query := `SELECT discrepancy_type, COALESCE(SUM(discrepancy_amount), 0) as total_amount
+              FROM shipping_discrepancies 
+              WHERE created_at >= $1 AND created_at <= $2 
+              GROUP BY discrepancy_type`
+
+	rows, err := r.db.QueryContext(ctx, query, startDate, endDate)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var discrepancyType string
+		var totalAmount float64
+		if err := rows.Scan(&discrepancyType, &totalAmount); err != nil {
+			return result, err
+		}
+		result[discrepancyType] = totalAmount
+	}
+
 	return result, rows.Err()
 }
 

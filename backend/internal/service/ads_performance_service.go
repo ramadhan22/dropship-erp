@@ -53,8 +53,8 @@ type ShopeeAdsCampaignsResponse struct {
 // Campaign settings API response structures
 type ShopeeCampaignSettingsResponse struct {
 	Response struct {
-		ShopID       int64                     `json:"shop_id"`
-		Region       string                    `json:"region"`
+		ShopID       int64                    `json:"shop_id"`
+		Region       string                   `json:"region"`
 		CampaignList []ShopeeCampaignSettings `json:"campaign_list"`
 	} `json:"response"`
 	Error     string `json:"error"`
@@ -64,22 +64,22 @@ type ShopeeCampaignSettingsResponse struct {
 }
 
 type ShopeeCampaignSettings struct {
-	CampaignID           int64                            `json:"campaign_id"`
-	CommonInfo           *ShopeeCampaignCommonInfo        `json:"common_info,omitempty"`
-	ManualBiddingInfo    *ShopeeCampaignManualBidding     `json:"manual_bidding_info,omitempty"`
-	AutoBiddingInfo      *ShopeeCampaignAutoBidding       `json:"auto_bidding_info,omitempty"`
-	AutoProductAdsInfo   []ShopeeCampaignAutoProductAds   `json:"auto_product_ads_info,omitempty"`
+	CampaignID         int64                          `json:"campaign_id"`
+	CommonInfo         *ShopeeCampaignCommonInfo      `json:"common_info,omitempty"`
+	ManualBiddingInfo  *ShopeeCampaignManualBidding   `json:"manual_bidding_info,omitempty"`
+	AutoBiddingInfo    *ShopeeCampaignAutoBidding     `json:"auto_bidding_info,omitempty"`
+	AutoProductAdsInfo []ShopeeCampaignAutoProductAds `json:"auto_product_ads_info,omitempty"`
 }
 
 type ShopeeCampaignCommonInfo struct {
-	AdType             string                         `json:"ad_type"`
-	AdName             string                         `json:"ad_name"`
-	CampaignStatus     string                         `json:"campaign_status"`
-	BiddingMethod      string                         `json:"bidding_method"`
-	CampaignPlacement  string                         `json:"campaign_placement"`
-	CampaignBudget     float64                        `json:"campaign_budget"`
-	CampaignDuration   ShopeeCampaignDuration         `json:"campaign_duration"`
-	ItemIDList         []int64                        `json:"item_id_list"`
+	AdType            string                 `json:"ad_type"`
+	AdName            string                 `json:"ad_name"`
+	CampaignStatus    string                 `json:"campaign_status"`
+	BiddingMethod     string                 `json:"bidding_method"`
+	CampaignPlacement string                 `json:"campaign_placement"`
+	CampaignBudget    float64                `json:"campaign_budget"`
+	CampaignDuration  ShopeeCampaignDuration `json:"campaign_duration"`
+	ItemIDList        []int64                `json:"item_id_list"`
 }
 
 type ShopeeCampaignDuration struct {
@@ -88,22 +88,22 @@ type ShopeeCampaignDuration struct {
 }
 
 type ShopeeCampaignManualBidding struct {
-	EnhancedCPC             bool                                   `json:"enhanced_cpc"`
-	SelectedKeywords        []ShopeeCampaignKeyword                `json:"selected_keywords"`
-	DiscoveryAdsLocations   []ShopeeCampaignDiscoveryAdsLocation   `json:"discovery_ads_locations"`
+	EnhancedCPC           bool                                 `json:"enhanced_cpc"`
+	SelectedKeywords      []ShopeeCampaignKeyword              `json:"selected_keywords"`
+	DiscoveryAdsLocations []ShopeeCampaignDiscoveryAdsLocation `json:"discovery_ads_locations"`
 }
 
 type ShopeeCampaignKeyword struct {
-	Keyword            string  `json:"keyword"`
-	Status             string  `json:"status"`
-	MatchType          string  `json:"match_type"`
-	BidPricePerClick   float64 `json:"bid_price_per_click"`
+	Keyword          string  `json:"keyword"`
+	Status           string  `json:"status"`
+	MatchType        string  `json:"match_type"`
+	BidPricePerClick float64 `json:"bid_price_per_click"`
 }
 
 type ShopeeCampaignDiscoveryAdsLocation struct {
-	Location  string  `json:"location"`
-	Status    string  `json:"status"`
-	BidPrice  float64 `json:"bid_price"`
+	Location string  `json:"location"`
+	Status   string  `json:"status"`
+	BidPrice float64 `json:"bid_price"`
 }
 
 type ShopeeCampaignAutoBidding struct {
@@ -401,21 +401,21 @@ func (s *AdsPerformanceService) fetchCampaignSettingsBatch(ctx context.Context, 
 func (s *AdsPerformanceService) updateCampaignWithSettings(ctx context.Context, storeID int, settings *ShopeeCampaignSettings) error {
 	// Prepare campaign data from settings
 	campaignData := struct {
-		CampaignID      int64   `json:"campaign_id"`
-		CampaignName    string  `json:"campaign_name"`
-		CampaignType    string  `json:"campaign_type"`
-		CampaignStatus  string  `json:"campaign_status"`
-		PlacementType   string  `json:"placement_type"`
-		BiddingMethod   string  `json:"bidding_method"`
-		CampaignBudget  float64 `json:"campaign_budget"`
-		DailyBudget     float64 `json:"daily_budget"`
-		TotalBudget     float64 `json:"total_budget"`
-		TargetRoas      float64 `json:"target_roas"`
-		StartTime       int64   `json:"start_time"`
-		EndTime         int64   `json:"end_time"`
-		ItemIDList      string  `json:"item_id_list"`
-		EnhancedCPC     bool    `json:"enhanced_cpc"`
-		StoreID         int     `json:"store_id"`
+		CampaignID     int64   `json:"campaign_id"`
+		CampaignName   string  `json:"campaign_name"`
+		CampaignType   string  `json:"campaign_type"`
+		CampaignStatus string  `json:"campaign_status"`
+		PlacementType  string  `json:"placement_type"`
+		BiddingMethod  string  `json:"bidding_method"`
+		CampaignBudget float64 `json:"campaign_budget"`
+		DailyBudget    float64 `json:"daily_budget"`
+		TotalBudget    float64 `json:"total_budget"`
+		TargetRoas     float64 `json:"target_roas"`
+		StartTime      int64   `json:"start_time"`
+		EndTime        int64   `json:"end_time"`
+		ItemIDList     string  `json:"item_id_list"`
+		EnhancedCPC    bool    `json:"enhanced_cpc"`
+		StoreID        int     `json:"store_id"`
 	}{
 		CampaignID: settings.CampaignID,
 		StoreID:    storeID,
@@ -608,21 +608,21 @@ func (s *AdsPerformanceService) fetchAdsPerformanceForDate(ctx context.Context, 
 func (s *AdsPerformanceService) upsertCampaignWithSettings(ctx context.Context, storeID int, campaign interface{}) error {
 	// Type assertion for the campaign data structure with settings
 	type campaignDataWithSettings struct {
-		CampaignID      int64   `json:"campaign_id"`
-		CampaignName    string  `json:"campaign_name"`
-		CampaignType    string  `json:"campaign_type"`
-		CampaignStatus  string  `json:"campaign_status"`
-		PlacementType   string  `json:"placement_type"`
-		BiddingMethod   string  `json:"bidding_method"`
-		CampaignBudget  float64 `json:"campaign_budget"`
-		DailyBudget     float64 `json:"daily_budget"`
-		TotalBudget     float64 `json:"total_budget"`
-		TargetRoas      float64 `json:"target_roas"`
-		StartTime       int64   `json:"start_time"`
-		EndTime         int64   `json:"end_time"`
-		ItemIDList      string  `json:"item_id_list"`
-		EnhancedCPC     bool    `json:"enhanced_cpc"`
-		StoreID         int     `json:"store_id"`
+		CampaignID     int64   `json:"campaign_id"`
+		CampaignName   string  `json:"campaign_name"`
+		CampaignType   string  `json:"campaign_type"`
+		CampaignStatus string  `json:"campaign_status"`
+		PlacementType  string  `json:"placement_type"`
+		BiddingMethod  string  `json:"bidding_method"`
+		CampaignBudget float64 `json:"campaign_budget"`
+		DailyBudget    float64 `json:"daily_budget"`
+		TotalBudget    float64 `json:"total_budget"`
+		TargetRoas     float64 `json:"target_roas"`
+		StartTime      int64   `json:"start_time"`
+		EndTime        int64   `json:"end_time"`
+		ItemIDList     string  `json:"item_id_list"`
+		EnhancedCPC    bool    `json:"enhanced_cpc"`
+		StoreID        int     `json:"store_id"`
 	}
 
 	// Convert interface{} to our expected structure

@@ -72,21 +72,21 @@ type ReconcileServiceFailedRepo interface {
 
 // ReconcileService orchestrates matching Dropship + Shopee, creating journal entries + lines, and recording reconciliation.
 type ReconcileService struct {
-	db               *sqlx.DB
-	dropRepo         ReconcileServiceDropshipRepo
-	shopeeRepo       ReconcileServiceShopeeRepo
-	journalRepo      ReconcileServiceJournalRepo
-	adjRepo          *repository.ShopeeAdjustmentRepo
-	recRepo          ReconcileServiceRecRepo
-	storeRepo        ReconcileServiceStoreRepo
-	detailRepo       ReconcileServiceDetailRepo
-	client           *ShopeeClient
-	batchSvc         ReconcileServiceBatchSvc
-	failedRepo       ReconcileServiceFailedRepo
-	shipDiscRepo     *repository.ShippingDiscrepancyRepo
-	backgroundSvc    *ShopeeDetailBackgroundService
-	maxThreads       int
-	config           *models.ReconciliationConfig
+	db            *sqlx.DB
+	dropRepo      ReconcileServiceDropshipRepo
+	shopeeRepo    ReconcileServiceShopeeRepo
+	journalRepo   ReconcileServiceJournalRepo
+	adjRepo       *repository.ShopeeAdjustmentRepo
+	recRepo       ReconcileServiceRecRepo
+	storeRepo     ReconcileServiceStoreRepo
+	detailRepo    ReconcileServiceDetailRepo
+	client        *ShopeeClient
+	batchSvc      ReconcileServiceBatchSvc
+	failedRepo    ReconcileServiceFailedRepo
+	shipDiscRepo  *repository.ShippingDiscrepancyRepo
+	backgroundSvc *ShopeeDetailBackgroundService
+	maxThreads    int
+	config        *models.ReconciliationConfig
 }
 
 // NewReconcileService constructs a ReconcileService.
@@ -132,10 +132,10 @@ func NewReconcileService(
 		maxThreads:   maxThreads,
 		config:       config,
 	}
-	
+
 	// Initialize background service for Shopee detail fetching
 	rs.backgroundSvc = NewShopeeDetailBackgroundService(rs, b, drp, dr, srp, c)
-	
+
 	return rs
 }
 
@@ -743,7 +743,7 @@ func (s *ReconcileService) GetShopeeEscrowDetail(ctx context.Context, invoice st
 // GetShopeeOrderDetailCached returns cached order detail from database, or queues a background job if not available
 func (s *ReconcileService) GetShopeeOrderDetailCached(ctx context.Context, invoice string) (*ShopeeOrderDetail, *int64, error) {
 	log.Printf("GetShopeeOrderDetailCached: invoice=%s", invoice)
-	
+
 	// First, try to get from cache (database)
 	if s.detailRepo != nil {
 		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
@@ -758,7 +758,7 @@ func (s *ReconcileService) GetShopeeOrderDetailCached(ctx context.Context, invoi
 			}
 		}
 	}
-	
+
 	// Data not in cache, queue background job
 	log.Printf("GetShopeeOrderDetailCached: no cached data for %s, queueing background job", invoice)
 	if s.backgroundSvc != nil {
@@ -771,7 +771,7 @@ func (s *ReconcileService) GetShopeeOrderDetailCached(ctx context.Context, invoi
 		}
 		return nil, &batchID, nil
 	}
-	
+
 	// No background service available, fall back to immediate fetch
 	detail, err := s.GetShopeeOrderDetail(ctx, invoice)
 	return detail, nil, err
@@ -780,7 +780,7 @@ func (s *ReconcileService) GetShopeeOrderDetailCached(ctx context.Context, invoi
 // GetShopeeEscrowDetailCached returns cached escrow detail, with fallback to immediate fetch
 func (s *ReconcileService) GetShopeeEscrowDetailCached(ctx context.Context, invoice string) (*ShopeeEscrowDetail, error) {
 	log.Printf("GetShopeeEscrowDetailCached: invoice=%s", invoice)
-	
+
 	// For escrow details, we don't cache them as they change frequently
 	// But we can still make this non-blocking by using the background service pattern if needed
 	// For now, fall back to immediate fetch
@@ -790,7 +790,7 @@ func (s *ReconcileService) GetShopeeEscrowDetailCached(ctx context.Context, invo
 // convertDatabaseToShopeeDetail converts database models back to ShopeeOrderDetail format
 func (s *ReconcileService) convertDatabaseToShopeeDetail(detail *models.ShopeeOrderDetailRow, items []models.ShopeeOrderItemRow, packages []models.ShopeeOrderPackageRow) ShopeeOrderDetail {
 	result := make(map[string]any)
-	
+
 	// Convert detail fields
 	result["order_sn"] = detail.OrderSN
 	if detail.OrderStatus != nil {
@@ -808,7 +808,7 @@ func (s *ReconcileService) convertDatabaseToShopeeDetail(detail *models.ShopeeOr
 	if detail.UpdateTime != nil {
 		result["update_time"] = detail.UpdateTime.Unix()
 	}
-	
+
 	// Convert items
 	var itemList []map[string]any
 	for _, item := range items {
@@ -833,7 +833,7 @@ func (s *ReconcileService) convertDatabaseToShopeeDetail(detail *models.ShopeeOr
 	if len(itemList) > 0 {
 		result["item_list"] = itemList
 	}
-	
+
 	// Convert packages
 	var packageList []map[string]any
 	for _, pkg := range packages {
@@ -849,7 +849,7 @@ func (s *ReconcileService) convertDatabaseToShopeeDetail(detail *models.ShopeeOr
 	if len(packageList) > 0 {
 		result["package_list"] = packageList
 	}
-	
+
 	return ShopeeOrderDetail(result)
 }
 
@@ -858,17 +858,17 @@ func (s *ReconcileService) GetBackgroundJobStatus(ctx context.Context, batchID i
 	if s.batchSvc == nil {
 		return "", fmt.Errorf("batch service not configured")
 	}
-	
+
 	// Get batch details to check status
 	details, err := s.batchSvc.ListDetails(ctx, batchID)
 	if err != nil {
 		return "", fmt.Errorf("get batch details: %w", err)
 	}
-	
+
 	if len(details) == 0 {
 		return "not_found", nil
 	}
-	
+
 	// Return the status of the first detail (assuming single invoice per batch for order details)
 	return details[0].Status, nil
 }
@@ -1163,7 +1163,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 		}
 		discrepancy := &models.ShippingDiscrepancy{
 			InvoiceNumber:          invoice,
-			OrderID:                orderSN,
+			ReturnID:               orderSN,
 			DiscrepancyType:        "selisih_ongkir",
 			DiscrepancyAmount:      diff,
 			ActualShippingFee:      &actShip,
@@ -1192,7 +1192,7 @@ func (s *ReconcileService) createEscrowSettlementJournal(ctx context.Context, in
 				orderDate, _ := time.Parse(time.RFC3339, dp.WaktuPesananTerbuat.Format(time.RFC3339))
 				discrepancy := &models.ShippingDiscrepancy{
 					InvoiceNumber:      invoice,
-					OrderID:            &orderSNStr,
+					ReturnID:           &orderSNStr,
 					DiscrepancyType:    "reverse_shipping_fee",
 					DiscrepancyAmount:  *detail.ReverseShippingFee,
 					ReverseShippingFee: detail.ReverseShippingFee,

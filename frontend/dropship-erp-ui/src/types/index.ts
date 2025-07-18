@@ -469,7 +469,7 @@ export interface ShopeeAdjustment {
 export interface ShippingDiscrepancy {
   id: number;
   invoice_number: string;
-  order_id?: string;
+  return_id?: string;
   discrepancy_type: string; // 'selisih_ongkir' or 'reverse_shipping_fee'
   discrepancy_amount: number;
   actual_shipping_fee?: number;

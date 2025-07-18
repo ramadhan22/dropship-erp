@@ -46,12 +46,12 @@ func (h *ShippingDiscrepancyHandler) list(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":         discrepancies,
-		"page":         page,
-		"page_size":    size,
-		"total_count":  len(discrepancies),
-		"store_name":   storeName,
-		"type":         discrepancyType,
+		"data":        discrepancies,
+		"page":        page,
+		"page_size":   size,
+		"total_count": len(discrepancies),
+		"store_name":  storeName,
+		"type":        discrepancyType,
 	})
 }
 
@@ -59,6 +59,7 @@ func (h *ShippingDiscrepancyHandler) list(c *gin.Context) {
 func (h *ShippingDiscrepancyHandler) stats(c *gin.Context) {
 	startDateStr := c.DefaultQuery("start_date", time.Now().AddDate(0, -1, 0).Format("2006-01-02"))
 	endDateStr := c.DefaultQuery("end_date", time.Now().Format("2006-01-02"))
+	statsType := c.DefaultQuery("type", "amounts") // "amounts" or "counts"
 
 	startDate, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
@@ -72,19 +73,33 @@ func (h *ShippingDiscrepancyHandler) stats(c *gin.Context) {
 		return
 	}
 	// Include the whole end date
-	endDate = endDate.Add(24 * time.Hour - time.Second)
+	endDate = endDate.Add(24*time.Hour - time.Second)
 
-	stats, err := h.svc.GetShippingDiscrepancyStats(context.Background(), startDate, endDate)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	if statsType == "amounts" {
+		sums, err := h.svc.GetShippingDiscrepancySums(context.Background(), startDate, endDate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"start_date": startDateStr,
+			"end_date":   endDateStr,
+			"type":       "amounts",
+			"stats":      sums,
+		})
+	} else {
+		stats, err := h.svc.GetShippingDiscrepancyStats(context.Background(), startDate, endDate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"start_date": startDateStr,
+			"end_date":   endDateStr,
+			"type":       "counts",
+			"stats":      stats,
+		})
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"start_date": startDateStr,
-		"end_date":   endDateStr,
-		"stats":      stats,
-	})
 }
 
 // getByInvoice retrieves a shipping discrepancy by invoice number

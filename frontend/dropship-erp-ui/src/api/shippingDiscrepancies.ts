@@ -25,13 +25,16 @@ export const listShippingDiscrepancies = (params: {
 export const getShippingDiscrepancyStats = (params: {
   start_date?: string;
   end_date?: string;
+  type?: string; // "amounts" or "counts"
 }) => {
   const q = new URLSearchParams();
   if (params.start_date) q.append("start_date", params.start_date);
   if (params.end_date) q.append("end_date", params.end_date);
+  if (params.type) q.append("type", params.type);
   return api.get<{
     start_date: string;
     end_date: string;
+    type: string;
     stats: Record<string, number>;
   }>(`/shipping-discrepancies/stats?${q.toString()}`);
 };

@@ -33,6 +33,7 @@ export default function ShippingDiscrepancyPage() {
   const [storeName, setStoreName] = useState("");
   const [discrepancyType, setDiscrepancyType] = useState("");
   const [stats, setStats] = useState<Record<string, number>>({});
+  const [totalAmounts, setTotalAmounts] = useState<Record<string, number>>({});
   const { paginated, controls, setPage } = usePagination(list);
 
   const fetchData = async () => {
@@ -54,11 +55,22 @@ export default function ShippingDiscrepancyPage() {
     try {
       const fromStr = from ? from.toISOString().split("T")[0] : firstOfMonth;
       const toStr = to ? to.toISOString().split("T")[0] : lastOfMonth;
-      const res = await getShippingDiscrepancyStats({
+      
+      // Fetch total amounts
+      const amountsRes = await getShippingDiscrepancyStats({
         start_date: fromStr,
         end_date: toStr,
+        type: "amounts",
       });
-      setStats(res.data.stats);
+      setTotalAmounts(amountsRes.data.stats);
+      
+      // Fetch counts
+      const countsRes = await getShippingDiscrepancyStats({
+        start_date: fromStr,
+        end_date: toStr,
+        type: "counts",
+      });
+      setStats(countsRes.data.stats);
     } catch (e: any) {
       console.error("Failed to fetch stats:", e);
     }
@@ -80,10 +92,10 @@ export default function ShippingDiscrepancyPage() {
       render: (_, row) => row.invoice_number,
     },
     {
-      key: "order_id",
-      label: "Order ID",
+      key: "return_id",
+      label: "Return ID",
       align: "left",
-      render: (_, row) => row.order_id || "-",
+      render: (_, row) => row.return_id || "-",
     },
     {
       key: "discrepancy_type",
@@ -148,8 +160,10 @@ export default function ShippingDiscrepancyPage() {
     },
   ];
 
-  const totalSelisihOngkir = stats.selisih_ongkir || 0;
-  const totalReverseShipping = stats.reverse_shipping_fee || 0;
+  const totalSelisihOngkir = totalAmounts.selisih_ongkir || 0;
+  const totalReverseShipping = totalAmounts.reverse_shipping_fee || 0;
+  const countSelisihOngkir = stats.selisih_ongkir || 0;
+  const countReverseShipping = stats.reverse_shipping_fee || 0;
 
   return (
     <div style={{ padding: 20 }}>
@@ -171,10 +185,10 @@ export default function ShippingDiscrepancyPage() {
               Selisih Ongkir
             </Typography>
             <Typography variant="h4">
-              {totalSelisihOngkir}
+              Rp {totalSelisihOngkir.toLocaleString("id-ID")}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Transactions with shipping cost differences
+              {countSelisihOngkir} transactions with shipping cost differences
             </Typography>
           </CardContent>
         </Card>
@@ -184,10 +198,10 @@ export default function ShippingDiscrepancyPage() {
               Reverse Shipping Fee
             </Typography>
             <Typography variant="h4">
-              {totalReverseShipping}
+              Rp {totalReverseShipping.toLocaleString("id-ID")}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              Orders with reverse shipping fees
+              {countReverseShipping} orders with reverse shipping fees
             </Typography>
           </CardContent>
         </Card>

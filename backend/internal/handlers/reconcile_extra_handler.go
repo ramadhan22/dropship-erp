@@ -136,20 +136,20 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing invoice"})
 		return
 	}
-	
+
 	// Use cached version first
 	detail, batchID, err := h.svc.GetShopeeOrderDetailCached(context.Background(), invoice)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// If we have cached data, return it immediately
 	if detail != nil {
 		c.JSON(http.StatusOK, detail)
 		return
 	}
-	
+
 	// If we queued a background job, return job info
 	if batchID != nil {
 		c.JSON(http.StatusAccepted, gin.H{
@@ -159,7 +159,7 @@ func (h *ReconcileExtraHandler) status(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Should not reach here, but fallback
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "unexpected error"})
 }
@@ -257,13 +257,13 @@ func (h *ReconcileExtraHandler) jobStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid batch ID"})
 		return
 	}
-	
+
 	status, err := h.svc.GetBackgroundJobStatus(context.Background(), batchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"batch_id": batchID,
 		"status":   status,

@@ -7,7 +7,6 @@ import (
 	"github.com/ramadhan22/dropship-erp/backend/internal/config"
 )
 
-
 func TestFetchAdsCampaignSettings(t *testing.T) {
 	// Test that the method doesn't panic with empty campaign IDs
 	cfg := config.ShopeeAPIConfig{
