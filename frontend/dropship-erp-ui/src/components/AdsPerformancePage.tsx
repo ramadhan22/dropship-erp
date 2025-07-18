@@ -43,6 +43,10 @@ interface AdsCampaign {
   target_roas?: number;
   start_date?: string;
   end_date?: string;
+  bidding_method?: string;
+  campaign_budget?: number;
+  item_id_list?: string; // JSON array as string
+  enhanced_cpc?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -312,6 +316,8 @@ export default function AdsPerformancePage() {
                   <TableCell>Campaign Name</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Type</TableCell>
+                  <TableCell>Bidding Method</TableCell>
+                  <TableCell>Placement</TableCell>
                   <TableCell>Daily Budget</TableCell>
                   <TableCell>Target ROAS</TableCell>
                   <TableCell>Start Date</TableCell>
@@ -338,6 +344,17 @@ export default function AdsPerformancePage() {
                       />
                     </TableCell>
                     <TableCell>{campaign.campaign_type || "-"}</TableCell>
+                    <TableCell>
+                      {campaign.bidding_method ? (
+                        <Chip 
+                          label={campaign.bidding_method} 
+                          color={campaign.bidding_method === "auto" ? "success" : "default"}
+                          size="small"
+                          variant="outlined"
+                        />
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell>{campaign.placement_type || "-"}</TableCell>
                     <TableCell>
                       {campaign.daily_budget ? formatCurrency(campaign.daily_budget) : "-"}
                     </TableCell>
@@ -368,7 +385,8 @@ export default function AdsPerformancePage() {
         <DialogTitle>Sync Historical Ads Performance</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            This will sync all historical ads performance data hourly. The process runs in background and may take several minutes.
+            This will sync all historical ads performance data hourly, including detailed campaign settings 
+            (bidding method, placement, product IDs, keywords, etc.). The process runs in background and may take several minutes.
             Shopee credentials are automatically retrieved from the selected store configuration.
           </Typography>
           
