@@ -16,7 +16,7 @@ import (
 // Mock service for testing
 type mockAdsPerformanceService struct{}
 
-func (m *mockAdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *int, status string, limit, offset int) ([]models.AdsCampaignWithMetrics, error) {
+func (m *mockAdsPerformanceService) GetAdsCampaigns(ctx context.Context, storeID *int, status string, startDate, endDate *time.Time, limit, offset int) ([]models.AdsCampaignWithMetrics, error) {
 	return []models.AdsCampaignWithMetrics{
 		{
 			AdsCampaign: models.AdsCampaign{
@@ -55,7 +55,15 @@ func (m *mockAdsPerformanceService) FetchAdsCampaigns(ctx context.Context, store
 	return nil
 }
 
+func (m *mockAdsPerformanceService) FetchAdsCampaignSettings(ctx context.Context, storeID int, campaignIDs []int64) error {
+	return nil
+}
+
 func (m *mockAdsPerformanceService) FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error {
+	return nil
+}
+
+func (m *mockAdsPerformanceService) SyncAdsPerformanceBatch(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics) error {
 	return nil
 }
 

@@ -9,15 +9,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/models"
+	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
 // AdsPerformanceServiceInterface defines the methods needed by the handler
 type AdsPerformanceServiceInterface interface {
-	GetAdsCampaigns(ctx context.Context, storeID *int, status string, limit, offset int) ([]models.AdsCampaignWithMetrics, error)
+	GetAdsCampaigns(ctx context.Context, storeID *int, status string, startDate, endDate *time.Time, limit, offset int) ([]models.AdsCampaignWithMetrics, error)
 	GetPerformanceSummary(ctx context.Context, storeID *int, startDate, endDate time.Time) (*models.AdsPerformanceSummary, error)
 	FetchAdsCampaigns(ctx context.Context, storeID int) error
 	FetchAdsCampaignSettings(ctx context.Context, storeID int, campaignIDs []int64) error
 	FetchAdsPerformance(ctx context.Context, storeID int, campaignID int64, startDate, endDate time.Time) error
+	SyncAdsPerformanceBatch(ctx context.Context, storeID int, campaigns []models.AdsCampaignWithMetrics) error
 }
 
 // AdsPerformanceBatchSchedulerInterface defines methods needed by the handler
@@ -40,7 +42,7 @@ func NewAdsPerformanceHandler(adsService AdsPerformanceServiceInterface, batchSc
 }
 
 // GetAdsCampaigns returns ads campaigns with optional filters
-// GET /api/ads/campaigns?store_id=1&status=ongoing&limit=50&offset=0
+// GET /api/ads/campaigns?store_id=1&status=Berjalan&date_range=current_month&limit=50&offset=0
 func (h *AdsPerformanceHandler) GetAdsCampaigns(c *gin.Context) {
 	var storeID *int
 	if storeIDStr := c.Query("store_id"); storeIDStr != "" {
@@ -53,6 +55,34 @@ func (h *AdsPerformanceHandler) GetAdsCampaigns(c *gin.Context) {
 	}
 
 	status := c.Query("status")
+	dateRange := c.Query("date_range")
+
+	// Parse date range
+	var startDate, endDate *time.Time
+	if dateRange != "" {
+		start, end := service.GetDateRangePreset(dateRange)
+		startDate = &start
+		endDate = &end
+	}
+
+	// Parse custom date range if provided
+	if startDateStr := c.Query("start_date"); startDateStr != "" {
+		if date, err := time.Parse("2006-01-02", startDateStr); err == nil {
+			startDate = &date
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_date format (use YYYY-MM-DD)"})
+			return
+		}
+	}
+
+	if endDateStr := c.Query("end_date"); endDateStr != "" {
+		if date, err := time.Parse("2006-01-02", endDateStr); err == nil {
+			endDate = &date
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_date format (use YYYY-MM-DD)"})
+			return
+		}
+	}
 
 	limit := 50 // default
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -69,7 +99,7 @@ func (h *AdsPerformanceHandler) GetAdsCampaigns(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	campaigns, err := h.adsService.GetAdsCampaigns(ctx, storeID, status, limit, offset)
+	campaigns, err := h.adsService.GetAdsCampaigns(ctx, storeID, status, startDate, endDate, limit, offset)
 	if err != nil {
 		logutil.Errorf("Failed to get ads campaigns: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve campaigns"})
@@ -83,11 +113,18 @@ func (h *AdsPerformanceHandler) GetAdsCampaigns(c *gin.Context) {
 			"offset": offset,
 			"count":  len(campaigns),
 		},
+		"filters": gin.H{
+			"store_id":   storeID,
+			"status":     status,
+			"date_range": dateRange,
+			"start_date": startDate,
+			"end_date":   endDate,
+		},
 	})
 }
 
 // GetPerformanceSummary returns aggregated performance metrics
-// GET /api/ads/summary?store_id=1&start_date=2024-01-01&end_date=2024-01-31
+// GET /api/ads/summary?store_id=1&date_range=current_month&start_date=2024-01-01&end_date=2024-01-31
 func (h *AdsPerformanceHandler) GetPerformanceSummary(c *gin.Context) {
 	var storeID *int
 	if storeIDStr := c.Query("store_id"); storeIDStr != "" {
@@ -99,10 +136,18 @@ func (h *AdsPerformanceHandler) GetPerformanceSummary(c *gin.Context) {
 		}
 	}
 
+	dateRange := c.Query("date_range")
+	
 	// Default to last 30 days if no dates provided
-	endDate := time.Now()
-	startDate := endDate.AddDate(0, 0, -30)
+	var startDate, endDate time.Time
+	if dateRange != "" {
+		startDate, endDate = service.GetDateRangePreset(dateRange)
+	} else {
+		endDate = time.Now()
+		startDate = endDate.AddDate(0, 0, -30)
+	}
 
+	// Allow custom date range to override preset
 	if startDateStr := c.Query("start_date"); startDateStr != "" {
 		if date, err := time.Parse("2006-01-02", startDateStr); err == nil {
 			startDate = date
