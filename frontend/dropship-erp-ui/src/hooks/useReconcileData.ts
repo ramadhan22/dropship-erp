@@ -46,7 +46,7 @@ export function useReconcileCandidates(filters: ReconcileCandidateFilters) {
         filters.to || '',
         filters.page || 1,
         filters.pageSize || 20,
-        { headers: { 'X-Skip-Loading': 'true' } } // Disable global loading spinner
+        { headers: {  } } // Disable global loading spinner
       );
       return response.data;
     },
@@ -158,7 +158,7 @@ export function usePrefetchReconcileData() {
           nextPageFilters.to || '',
           nextPageFilters.page || 1,
           nextPageFilters.pageSize || 20,
-          { headers: { 'X-Skip-Loading': 'true' } }
+          { headers: {  } }
         );
         return response.data;
       },
