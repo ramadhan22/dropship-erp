@@ -1401,9 +1401,9 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 	if s.shopeeClient == nil || s.repo == nil || s.repo.ChannelRepo == nil {
 		return fmt.Errorf("missing client or store repository")
 	}
-	
+
 	log.Printf("ensureStoreTokenValid for store %d", store.StoreID)
-	
+
 	// Parse timezone for proper token expiration calculation
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 	reinterpreted := time.Date(
@@ -1412,7 +1412,7 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 		loc,
 	)
 	exp := reinterpreted.Add(time.Duration(*store.ExpireIn) * time.Second)
-	
+
 	// Check if required fields are available
 	if store.RefreshToken == nil {
 		return fmt.Errorf("missing refresh token for store %d", store.StoreID)
@@ -1420,7 +1420,7 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 	if store.ShopID == nil || *store.ShopID == "" {
 		return fmt.Errorf("missing shop id for store %d", store.StoreID)
 	}
-	
+
 	// Check if token is still valid (not expired)
 	if store.ExpireIn != nil && store.LastUpdated != nil {
 		if time.Now().Before(exp.Local()) {
@@ -1428,18 +1428,18 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 			return nil
 		}
 	}
-	
+
 	// Token is expired, refresh it
 	log.Printf("Token for store %d is expired, refreshing", store.StoreID)
-	
+
 	// Temporarily store original client credentials
 	oldShopID := s.shopeeClient.ShopID
 	oldRefreshToken := s.shopeeClient.RefreshToken
-	
+
 	// Set client credentials for refresh
 	s.shopeeClient.ShopID = *store.ShopID
 	s.shopeeClient.RefreshToken = *store.RefreshToken
-	
+
 	resp, err := s.shopeeClient.RefreshAccessToken(ctx)
 	if err != nil {
 		// Restore original credentials on error
@@ -1447,7 +1447,7 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 		s.shopeeClient.RefreshToken = oldRefreshToken
 		return fmt.Errorf("failed to refresh token for store %d: %w", store.StoreID, err)
 	}
-	
+
 	// Update store with new token information
 	store.AccessToken = &resp.Response.AccessToken
 	if resp.Response.RefreshToken != "" {
@@ -1457,17 +1457,17 @@ func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store
 	store.RequestID = &resp.Response.RequestID
 	now := time.Now()
 	store.LastUpdated = &now
-	
+
 	// Save updated store
 	if err := s.repo.ChannelRepo.UpdateStore(ctx, store); err != nil {
 		log.Printf("Warning: failed to update store token in database: %v", err)
 		// Don't fail the operation, just log the warning
 	}
-	
+
 	// Restore original client credentials
 	s.shopeeClient.ShopID = oldShopID
 	s.shopeeClient.RefreshToken = oldRefreshToken
-	
+
 	log.Printf("Successfully refreshed token for store %d", store.StoreID)
 	return nil
 }

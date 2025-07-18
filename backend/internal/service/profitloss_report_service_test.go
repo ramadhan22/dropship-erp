@@ -189,7 +189,7 @@ func TestProfitLossReportService_WithComparison(t *testing.T) {
 	if len(may.PendapatanUsaha) != 1 {
 		t.Fatalf("expected 1 revenue row, got %d", len(may.PendapatanUsaha))
 	}
-	
+
 	revRow := may.PendapatanUsaha[0]
 	if revRow.Amount != 200 {
 		t.Errorf("expected current amount 200, got %v", revRow.Amount)

@@ -29,7 +29,7 @@ func (s *PendingBalanceService) GetPendingBalance(ctx context.Context, store str
 	if s.client == nil {
 		return 0, nil
 	}
-	
+
 	// If we have a store repository, validate the token proactively
 	if s.storeRepo != nil {
 		st, err := s.storeRepo.GetStoreByName(ctx, store)
@@ -41,7 +41,7 @@ func (s *PendingBalanceService) GetPendingBalance(ctx context.Context, store str
 			if err := s.ensureTokenValid(ctx, st); err != nil {
 				return 0, fmt.Errorf("token validation failed for store %s: %w", store, err)
 			}
-			
+
 			// Update client with fresh token
 			if st.AccessToken != nil {
 				s.client.AccessToken = *st.AccessToken
@@ -51,7 +51,7 @@ func (s *PendingBalanceService) GetPendingBalance(ctx context.Context, store str
 			}
 		}
 	}
-	
+
 	// Call the API with potentially refreshed token
 	balance, err := s.client.GetPendingBalance(ctx, store)
 	if err != nil && strings.Contains(err.Error(), "invalid_access_token") && s.storeRepo != nil {
@@ -70,7 +70,7 @@ func (s *PendingBalanceService) GetPendingBalance(ctx context.Context, store str
 			}
 		}
 	}
-	
+
 	return balance, err
 }
 
@@ -79,7 +79,7 @@ func (s *PendingBalanceService) ensureTokenValid(ctx context.Context, st *models
 	if s.client == nil || s.storeRepo == nil {
 		return fmt.Errorf("missing client or store repo")
 	}
-	
+
 	// Use the same token validation logic as other services
 	return ensureTokenValid(ctx, st, s.client, s.storeRepo)
 }

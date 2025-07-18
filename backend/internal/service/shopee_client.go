@@ -182,7 +182,7 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 		return fmt.Errorf("missing store repository")
 	}
 	log.Printf("ensureTokenValidForStore for store %s", store.NamaToko)
-	
+
 	// Parse timezone for proper token expiration calculation
 	loc, _ := time.LoadLocation("Asia/Jakarta")
 	reinterpreted := time.Date(
@@ -191,7 +191,7 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 		loc,
 	)
 	exp := reinterpreted.Add(time.Duration(*store.ExpireIn) * time.Second)
-	
+
 	// Check if required fields are available
 	if store.RefreshToken == nil {
 		return fmt.Errorf("missing refresh token for store %s", store.NamaToko)
@@ -199,7 +199,7 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 	if store.ShopID == nil || *store.ShopID == "" {
 		return fmt.Errorf("missing shop id for store %s", store.NamaToko)
 	}
-	
+
 	// Check if token is still valid (not expired)
 	if store.ExpireIn != nil && store.LastUpdated != nil {
 		if time.Now().Before(exp.Local()) {
@@ -207,16 +207,16 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 			return nil
 		}
 	}
-	
+
 	// Token is expired, refresh it
 	log.Printf("Token for store %s is expired, refreshing", store.NamaToko)
 	oldShopID := c.ShopID
 	oldRefreshToken := c.RefreshToken
-	
+
 	// Temporarily set client credentials for refresh
 	c.ShopID = *store.ShopID
 	c.RefreshToken = *store.RefreshToken
-	
+
 	resp, err := c.RefreshAccessToken(ctx)
 	if err != nil {
 		// Restore old credentials on error
@@ -224,7 +224,7 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 		c.RefreshToken = oldRefreshToken
 		return fmt.Errorf("failed to refresh token for store %s: %w", store.NamaToko, err)
 	}
-	
+
 	// Update store with new token information
 	store.AccessToken = &resp.Response.AccessToken
 	if resp.Response.RefreshToken != "" {
@@ -234,17 +234,17 @@ func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *mode
 	store.RequestID = &resp.Response.RequestID
 	now := time.Now()
 	store.LastUpdated = &now
-	
+
 	// Save updated store
 	if err := repo.UpdateStore(ctx, store); err != nil {
 		log.Printf("Warning: failed to update store token in database: %v", err)
 		// Don't fail the operation, just log the warning
 	}
-	
+
 	// Restore original client credentials
 	c.ShopID = oldShopID
 	c.RefreshToken = oldRefreshToken
-	
+
 	log.Printf("Successfully refreshed token for store %s", store.NamaToko)
 	return nil
 }
