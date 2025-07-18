@@ -139,6 +139,14 @@ func NewReconcileService(
 	return rs
 }
 
+// StreamReconcileAll creates a streaming processor for handling millions of records
+func (s *ReconcileService) StreamReconcileAll(ctx context.Context, shop string, config *ReconcileStreamConfig) (*ReconcileStreamResult, error) {
+	processor := NewReconcileStreamProcessor(s, config)
+	return processor.StreamReconcileAll(ctx, shop, map[string]interface{}{
+		"shop": shop,
+	})
+}
+
 // MatchAndJournal does the following:
 //  1. Ensure both DropshipPurchase and ShopeeSettledOrder exist,
 //  2. Create a JournalEntry (header),
@@ -148,7 +156,18 @@ func (s *ReconcileService) MatchAndJournal(
 	ctx context.Context,
 	purchaseID, orderID, shop string,
 ) error {
-	log.Printf("Reconciling purchase %s with order %s for shop %s", purchaseID, orderID, shop)
+	logger := logutil.NewLogger("reconcile-service", logutil.INFO)
+	timer := logger.WithTimer(ctx, "MatchAndJournal")
+	defer timer.Finish("Reconciliation completed")
+
+	ctx = logutil.WithShop(ctx, shop)
+	
+	logger.Info(ctx, "MatchAndJournal", "Starting reconciliation", map[string]interface{}{
+		"purchase_id": purchaseID,
+		"order_id":    orderID,
+		"shop":        shop,
+	})
+	
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
 	jrRepo := s.journalRepo
@@ -157,6 +176,7 @@ func (s *ReconcileService) MatchAndJournal(
 		var err error
 		tx, err = s.db.BeginTxx(ctx, nil)
 		if err != nil {
+			logger.Error(ctx, "MatchAndJournal", "Failed to begin transaction", err)
 			return err
 		}
 		defer tx.Rollback()
@@ -168,14 +188,27 @@ func (s *ReconcileService) MatchAndJournal(
 	// 1. Fetch DropshipPurchase
 	dp, err := dropRepo.GetDropshipPurchaseByInvoice(ctx, purchaseID)
 	if err != nil || dp == nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to fetch DropshipPurchase", err, map[string]interface{}{
+			"purchase_id": purchaseID,
+		})
 		return fmt.Errorf("fetch DropshipPurchase %s: %w", purchaseID, err)
 	}
 
 	// 2. Fetch ShopeeSettledOrder
 	so, err := s.shopeeRepo.GetShopeeOrderByID(ctx, orderID)
 	if err != nil || so == nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to fetch ShopeeSettledOrder", err, map[string]interface{}{
+			"order_id": orderID,
+		})
 		return fmt.Errorf("fetch ShopeeOrder %s: %w", orderID, err)
 	}
+
+	logger.Debug(ctx, "MatchAndJournal", "Found orders for reconciliation", map[string]interface{}{
+		"purchase_id":       purchaseID,
+		"order_id":          orderID,
+		"dropship_total":    dp.TotalTransaksi,
+		"shopee_net_income": so.NetIncome,
+	})
 
 	// 3. Create JournalEntry
 	je := &models.JournalEntry{
@@ -189,8 +222,16 @@ func (s *ReconcileService) MatchAndJournal(
 	}
 	journalID, err := jrRepo.CreateJournalEntry(ctx, je)
 	if err != nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to create JournalEntry", err, map[string]interface{}{
+			"journal_entry": je,
+		})
 		return fmt.Errorf("create JournalEntry: %w", err)
 	}
+
+	logger.Debug(ctx, "MatchAndJournal", "Created journal entry", map[string]interface{}{
+		"journal_id": journalID,
+		"entry_date": so.SettledDate,
+	})
 
 	// 4. Debit COGS (account_id=5001) and credit Cash (account_id=1001)
 	//    Amounts: dp.TotalTransaksi debited, so.NetIncome credited
@@ -202,6 +243,9 @@ func (s *ReconcileService) MatchAndJournal(
 		Memo:      ptrString("COGS for " + purchaseID),
 	}
 	if err := jrRepo.InsertJournalLine(ctx, jl1); err != nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to insert JournalLine 1", err, map[string]interface{}{
+			"journal_line": jl1,
+		})
 		return fmt.Errorf("insert JournalLine 1: %w", err)
 	}
 	jl2 := &models.JournalLine{
@@ -212,6 +256,9 @@ func (s *ReconcileService) MatchAndJournal(
 		Memo:      ptrString("Cash for " + orderID),
 	}
 	if err := jrRepo.InsertJournalLine(ctx, jl2); err != nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to insert JournalLine 2", err, map[string]interface{}{
+			"journal_line": jl2,
+		})
 		return fmt.Errorf("insert JournalLine 2: %w", err)
 	}
 
@@ -224,14 +271,27 @@ func (s *ReconcileService) MatchAndJournal(
 		MatchedAt:    time.Now(),
 	}
 	if err := recRepo.InsertReconciledTransaction(ctx, rt); err != nil {
+		logger.Error(ctx, "MatchAndJournal", "Failed to insert ReconciledTransaction", err, map[string]interface{}{
+			"reconciled_transaction": rt,
+		})
 		return fmt.Errorf("insert ReconciledTransaction: %w", err)
 	}
+	
 	if tx != nil {
 		if err := tx.Commit(); err != nil {
+			logger.Error(ctx, "MatchAndJournal", "Failed to commit transaction", err)
 			return err
 		}
 	}
-	log.Printf("ReconcileService completed purchase %s order %s", purchaseID, orderID)
+	
+	logger.Info(ctx, "MatchAndJournal", "Reconciliation completed successfully", map[string]interface{}{
+		"purchase_id": purchaseID,
+		"order_id":    orderID,
+		"journal_id":  journalID,
+		"cogs_amount": dp.TotalTransaksi,
+		"cash_amount": so.NetIncome,
+	})
+	
 	return nil
 }
 
