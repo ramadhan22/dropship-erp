@@ -101,17 +101,17 @@ func main() {
 	// Initialize enhanced import components
 	streamingConfig := service.DefaultStreamingImportConfig()
 	streamingProcessor := service.NewStreamingImportProcessor(dropshipSvc, streamingConfig)
-	
+
 	// Initialize memory optimizer
 	memoryOptimizer := service.NewMemoryOptimizer(1024, 10*time.Second) // 1GB max, check every 10s
 	memoryOptimizer.StartMonitoring(context.Background())
-	
+
 	// Initialize enhanced scheduler
 	enhancedScheduler := service.NewEnhancedImportScheduler(
 		batchSvc, dropshipSvc, streamingProcessor, time.Minute, cfg.MaxThreads,
 	)
 	enhancedScheduler.Start()
-	
+
 	// Keep original scheduler for backward compatibility
 	service.NewDropshipImportScheduler(batchSvc, dropshipSvc, time.Minute).Start(context.Background())
 	shopeeSvc := service.NewShopeeService(repo.DB, repo.ShopeeRepo, repo.DropshipRepo, repo.JournalRepo, repo.ShopeeAdjustmentRepo, repo.ChannelRepo, cfg.Shopee)
@@ -193,7 +193,7 @@ func main() {
 		apiGroup.GET("/dropship/cancellations/summary", dh.HandleCancelledSummary)
 		apiGroup.GET("/dropship/purchases/:id/details", dh.HandleListDetails)
 		apiGroup.GET("/dropship/top-products", dh.HandleTopProducts)
-		
+
 		// Enhanced bulk import endpoints
 		bulkImportHandler := handlers.NewBulkImportHandler(dropshipSvc, batchSvc, streamingProcessor, enhancedScheduler)
 		apiGroup.POST("/dropship/bulk-import", bulkImportHandler.HandleBulkImport)
@@ -201,30 +201,30 @@ func main() {
 		apiGroup.GET("/dropship/bulk-import-status", bulkImportHandler.HandleBulkImportStatus)
 		apiGroup.POST("/dropship/force-process/:batch_id", bulkImportHandler.HandleForceProcessBatch)
 		apiGroup.GET("/dropship/import-recommendations", bulkImportHandler.HandleImportRecommendations)
-		
+
 		// Memory and performance monitoring endpoints
 		apiGroup.GET("/memory-stats", func(c *gin.Context) {
 			stats := memoryOptimizer.GetMemoryStats()
 			c.JSON(200, gin.H{
-				"memory_stats": stats,
+				"memory_stats":    stats,
 				"recommendations": memoryOptimizer.GetMemoryRecommendations(),
 			})
 		})
-		
+
 		apiGroup.GET("/performance", func(c *gin.Context) {
 			var memStats runtime.MemStats
 			runtime.ReadMemStats(&memStats)
-			
+
 			c.JSON(200, gin.H{
 				"system_stats": gin.H{
 					"allocated_memory": memStats.Alloc,
-					"total_allocated": memStats.TotalAlloc,
-					"system_memory": memStats.Sys,
-					"gc_count": memStats.NumGC,
-					"goroutines": runtime.NumGoroutine(),
+					"total_allocated":  memStats.TotalAlloc,
+					"system_memory":    memStats.Sys,
+					"gc_count":         memStats.NumGC,
+					"goroutines":       runtime.NumGoroutine(),
 				},
 				"streaming_stats": streamingProcessor.GetStats(),
-				"queue_status": enhancedScheduler.GetQueueStatus(),
+				"queue_status":    enhancedScheduler.GetQueueStatus(),
 			})
 		})
 		shHandler := handlers.NewShopeeHandler(shopeeSvc)
@@ -291,9 +291,7 @@ func main() {
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
 
 		// Performance metrics endpoint (system monitoring)
-		if cfg.Performance.EnableMetrics {
-			apiGroup.GET("/performance", middleware.GetMetricsHandler())
-		}
+		// Note: /api/performance is already registered above at line 214
 	}
 
 	// 6) Start the HTTP server
