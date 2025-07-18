@@ -173,7 +173,13 @@ func (s *AdsPerformanceService) FetchAdsCampaigns(ctx context.Context, storeID i
 
 	log.Printf("Store %d credentials validated - shop_id: %s", storeID, *store.ShopID)
 
-	// Update client with store-specific credentials
+	// Validate token before making API calls
+	if err := s.ensureStoreTokenValid(ctx, store); err != nil {
+		logutil.Errorf("Token validation failed for store %d: %v", storeID, err)
+		return fmt.Errorf("token validation failed for store %d: %w", storeID, err)
+	}
+
+	// Update client with store-specific credentials (potentially refreshed)
 	s.shopeeClient.ShopID = *store.ShopID
 	s.shopeeClient.AccessToken = *store.AccessToken
 
@@ -305,7 +311,13 @@ func (s *AdsPerformanceService) FetchAdsCampaignSettings(ctx context.Context, st
 		return fmt.Errorf("store %d does not have shop_id or access_token configured", storeID)
 	}
 
-	// Update client with store-specific credentials
+	// Validate token before making API calls
+	if err := s.ensureStoreTokenValid(ctx, store); err != nil {
+		logutil.Errorf("Token validation failed for store %d: %v", storeID, err)
+		return fmt.Errorf("token validation failed for store %d: %w", storeID, err)
+	}
+
+	// Update client with store-specific credentials (potentially refreshed)
 	s.shopeeClient.ShopID = *store.ShopID
 	s.shopeeClient.AccessToken = *store.AccessToken
 
@@ -1382,4 +1394,80 @@ func GetDateRangePreset(preset string) (time.Time, time.Time) {
 		start := now.AddDate(0, 0, -30)
 		return start, now
 	}
+}
+
+// ensureStoreTokenValid validates and refreshes the store token if needed
+func (s *AdsPerformanceService) ensureStoreTokenValid(ctx context.Context, store *models.Store) error {
+	if s.shopeeClient == nil || s.repo == nil || s.repo.ChannelRepo == nil {
+		return fmt.Errorf("missing client or store repository")
+	}
+
+	log.Printf("ensureStoreTokenValid for store %d", store.StoreID)
+
+	// Parse timezone for proper token expiration calculation
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	reinterpreted := time.Date(
+		store.LastUpdated.Year(), store.LastUpdated.Month(), store.LastUpdated.Day(),
+		store.LastUpdated.Hour(), store.LastUpdated.Minute(), store.LastUpdated.Second(), store.LastUpdated.Nanosecond(),
+		loc,
+	)
+	exp := reinterpreted.Add(time.Duration(*store.ExpireIn) * time.Second)
+
+	// Check if required fields are available
+	if store.RefreshToken == nil {
+		return fmt.Errorf("missing refresh token for store %d", store.StoreID)
+	}
+	if store.ShopID == nil || *store.ShopID == "" {
+		return fmt.Errorf("missing shop id for store %d", store.StoreID)
+	}
+
+	// Check if token is still valid (not expired)
+	if store.ExpireIn != nil && store.LastUpdated != nil {
+		if time.Now().Before(exp.Local()) {
+			log.Printf("Token for store %d is still valid until %v", store.StoreID, exp)
+			return nil
+		}
+	}
+
+	// Token is expired, refresh it
+	log.Printf("Token for store %d is expired, refreshing", store.StoreID)
+
+	// Temporarily store original client credentials
+	oldShopID := s.shopeeClient.ShopID
+	oldRefreshToken := s.shopeeClient.RefreshToken
+
+	// Set client credentials for refresh
+	s.shopeeClient.ShopID = *store.ShopID
+	s.shopeeClient.RefreshToken = *store.RefreshToken
+
+	resp, err := s.shopeeClient.RefreshAccessToken(ctx)
+	if err != nil {
+		// Restore original credentials on error
+		s.shopeeClient.ShopID = oldShopID
+		s.shopeeClient.RefreshToken = oldRefreshToken
+		return fmt.Errorf("failed to refresh token for store %d: %w", store.StoreID, err)
+	}
+
+	// Update store with new token information
+	store.AccessToken = &resp.Response.AccessToken
+	if resp.Response.RefreshToken != "" {
+		store.RefreshToken = &resp.Response.RefreshToken
+	}
+	store.ExpireIn = &resp.Response.ExpireIn
+	store.RequestID = &resp.Response.RequestID
+	now := time.Now()
+	store.LastUpdated = &now
+
+	// Save updated store
+	if err := s.repo.ChannelRepo.UpdateStore(ctx, store); err != nil {
+		log.Printf("Warning: failed to update store token in database: %v", err)
+		// Don't fail the operation, just log the warning
+	}
+
+	// Restore original client credentials
+	s.shopeeClient.ShopID = oldShopID
+	s.shopeeClient.RefreshToken = oldRefreshToken
+
+	log.Printf("Successfully refreshed token for store %d", store.StoreID)
+	return nil
 }

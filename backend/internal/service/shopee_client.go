@@ -170,6 +170,85 @@ func (c *ShopeeClient) GetRateLimiterStats() (availableTokens int, maxTokens int
 	return c.rateLimiter.GetStats()
 }
 
+// TokenValidationInterface provides methods for token validation
+type TokenValidationInterface interface {
+	GetStoreByName(ctx context.Context, name string) (*models.Store, error)
+	UpdateStore(ctx context.Context, s *models.Store) error
+}
+
+// ensureTokenValidForStore checks token expiration for a store and refreshes if needed
+func (c *ShopeeClient) ensureTokenValidForStore(ctx context.Context, store *models.Store, repo TokenValidationInterface) error {
+	if repo == nil {
+		return fmt.Errorf("missing store repository")
+	}
+	log.Printf("ensureTokenValidForStore for store %s", store.NamaToko)
+
+	// Parse timezone for proper token expiration calculation
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	reinterpreted := time.Date(
+		store.LastUpdated.Year(), store.LastUpdated.Month(), store.LastUpdated.Day(),
+		store.LastUpdated.Hour(), store.LastUpdated.Minute(), store.LastUpdated.Second(), store.LastUpdated.Nanosecond(),
+		loc,
+	)
+	exp := reinterpreted.Add(time.Duration(*store.ExpireIn) * time.Second)
+
+	// Check if required fields are available
+	if store.RefreshToken == nil {
+		return fmt.Errorf("missing refresh token for store %s", store.NamaToko)
+	}
+	if store.ShopID == nil || *store.ShopID == "" {
+		return fmt.Errorf("missing shop id for store %s", store.NamaToko)
+	}
+
+	// Check if token is still valid (not expired)
+	if store.ExpireIn != nil && store.LastUpdated != nil {
+		if time.Now().Before(exp.Local()) {
+			log.Printf("Token for store %s is still valid until %v", store.NamaToko, exp)
+			return nil
+		}
+	}
+
+	// Token is expired, refresh it
+	log.Printf("Token for store %s is expired, refreshing", store.NamaToko)
+	oldShopID := c.ShopID
+	oldRefreshToken := c.RefreshToken
+
+	// Temporarily set client credentials for refresh
+	c.ShopID = *store.ShopID
+	c.RefreshToken = *store.RefreshToken
+
+	resp, err := c.RefreshAccessToken(ctx)
+	if err != nil {
+		// Restore old credentials on error
+		c.ShopID = oldShopID
+		c.RefreshToken = oldRefreshToken
+		return fmt.Errorf("failed to refresh token for store %s: %w", store.NamaToko, err)
+	}
+
+	// Update store with new token information
+	store.AccessToken = &resp.Response.AccessToken
+	if resp.Response.RefreshToken != "" {
+		store.RefreshToken = &resp.Response.RefreshToken
+	}
+	store.ExpireIn = &resp.Response.ExpireIn
+	store.RequestID = &resp.Response.RequestID
+	now := time.Now()
+	store.LastUpdated = &now
+
+	// Save updated store
+	if err := repo.UpdateStore(ctx, store); err != nil {
+		log.Printf("Warning: failed to update store token in database: %v", err)
+		// Don't fail the operation, just log the warning
+	}
+
+	// Restore original client credentials
+	c.ShopID = oldShopID
+	c.RefreshToken = oldRefreshToken
+
+	log.Printf("Successfully refreshed token for store %s", store.NamaToko)
+	return nil
+}
+
 // ========== End Optimized Methods ==========
 
 // orderDetailResp only includes the order_status field we care about.

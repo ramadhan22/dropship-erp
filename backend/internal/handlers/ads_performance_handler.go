@@ -137,7 +137,7 @@ func (h *AdsPerformanceHandler) GetPerformanceSummary(c *gin.Context) {
 	}
 
 	dateRange := c.Query("date_range")
-	
+
 	// Default to last 30 days if no dates provided
 	var startDate, endDate time.Time
 	if dateRange != "" {

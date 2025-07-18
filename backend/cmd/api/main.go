@@ -131,7 +131,7 @@ func main() {
 	plSvc := service.NewPLService(repo.MetricRepo, metricSvc)
 	plReportSvc := service.NewProfitLossReportService(repo.JournalRepo)
 	glSvc := service.NewGLService(repo.JournalRepo)
-	pbSvc := service.NewPendingBalanceService(shClient)
+	pbSvc := service.NewPendingBalanceService(shClient, repo.ChannelRepo)
 	walletSvc := service.NewWalletTransactionService(repo.ChannelRepo, shClient)
 	adsTopupSvc := service.NewAdsTopupService(walletSvc, repo.JournalRepo)
 	walletWdSvc := service.NewWalletWithdrawalService(walletSvc, repo.JournalRepo)

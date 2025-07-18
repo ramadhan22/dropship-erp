@@ -24,29 +24,29 @@ type ProfitLossRow struct {
 
 // ProfitLoss aggregates profit and loss data for a period.
 type ProfitLoss struct {
-	PendapatanUsaha          []ProfitLossRow `json:"pendapatanUsaha"`
-	TotalPendapatanUsaha     float64         `json:"totalPendapatanUsaha"`
-	PrevTotalPendapatanUsaha float64         `json:"prevTotalPendapatanUsaha,omitempty"`
-	HargaPokokPenjualan      []ProfitLossRow `json:"hargaPokokPenjualan"`
-	TotalHargaPokokPenjualan float64         `json:"totalHargaPokokPenjualan"`
-	PrevTotalHargaPokokPenjualan float64     `json:"prevTotalHargaPokokPenjualan,omitempty"`
-	LabaKotor                ProfitLossRow   `json:"labaKotor"`
-	BebanOperasional         []ProfitLossRow `json:"bebanOperasional"`
-	TotalBebanOperasional    float64         `json:"totalBebanOperasional"`
-	PrevTotalBebanOperasional float64        `json:"prevTotalBebanOperasional,omitempty"`
-	BebanPemasaran           []ProfitLossRow `json:"bebanPemasaran"`
-	TotalBebanPemasaran      float64         `json:"totalBebanPemasaran"`
-	PrevTotalBebanPemasaran  float64         `json:"prevTotalBebanPemasaran,omitempty"`
-	BebanAdministrasi        []ProfitLossRow `json:"bebanAdministrasi"`
-	TotalBebanAdministrasi   float64         `json:"totalBebanAdministrasi"`
-	PrevTotalBebanAdministrasi float64       `json:"prevTotalBebanAdministrasi,omitempty"`
-	TotalBebanUsaha          ProfitLossRow   `json:"totalBebanUsaha"`
-	LabaSebelumPajak         float64         `json:"labaSebelumPajak"`
-	PrevLabaSebelumPajak     float64         `json:"prevLabaSebelumPajak,omitempty"`
-	PajakPenghasilan         []ProfitLossRow `json:"pajakPenghasilan"`
-	TotalPajakPenghasilan    float64         `json:"totalPajakPenghasilan"`
-	PrevTotalPajakPenghasilan float64        `json:"prevTotalPajakPenghasilan,omitempty"`
-	LabaRugiBersih           ProfitLossRow   `json:"labaRugiBersih"`
+	PendapatanUsaha              []ProfitLossRow `json:"pendapatanUsaha"`
+	TotalPendapatanUsaha         float64         `json:"totalPendapatanUsaha"`
+	PrevTotalPendapatanUsaha     float64         `json:"prevTotalPendapatanUsaha,omitempty"`
+	HargaPokokPenjualan          []ProfitLossRow `json:"hargaPokokPenjualan"`
+	TotalHargaPokokPenjualan     float64         `json:"totalHargaPokokPenjualan"`
+	PrevTotalHargaPokokPenjualan float64         `json:"prevTotalHargaPokokPenjualan,omitempty"`
+	LabaKotor                    ProfitLossRow   `json:"labaKotor"`
+	BebanOperasional             []ProfitLossRow `json:"bebanOperasional"`
+	TotalBebanOperasional        float64         `json:"totalBebanOperasional"`
+	PrevTotalBebanOperasional    float64         `json:"prevTotalBebanOperasional,omitempty"`
+	BebanPemasaran               []ProfitLossRow `json:"bebanPemasaran"`
+	TotalBebanPemasaran          float64         `json:"totalBebanPemasaran"`
+	PrevTotalBebanPemasaran      float64         `json:"prevTotalBebanPemasaran,omitempty"`
+	BebanAdministrasi            []ProfitLossRow `json:"bebanAdministrasi"`
+	TotalBebanAdministrasi       float64         `json:"totalBebanAdministrasi"`
+	PrevTotalBebanAdministrasi   float64         `json:"prevTotalBebanAdministrasi,omitempty"`
+	TotalBebanUsaha              ProfitLossRow   `json:"totalBebanUsaha"`
+	LabaSebelumPajak             float64         `json:"labaSebelumPajak"`
+	PrevLabaSebelumPajak         float64         `json:"prevLabaSebelumPajak,omitempty"`
+	PajakPenghasilan             []ProfitLossRow `json:"pajakPenghasilan"`
+	TotalPajakPenghasilan        float64         `json:"totalPajakPenghasilan"`
+	PrevTotalPajakPenghasilan    float64         `json:"prevTotalPajakPenghasilan,omitempty"`
+	LabaRugiBersih               ProfitLossRow   `json:"labaRugiBersih"`
 }
 
 // ProfitLossJournalRepo defines the journal repo method needed for PL reports.
@@ -71,7 +71,7 @@ func NewProfitLossReportService(jr ProfitLossJournalRepo) *ProfitLossReportServi
 func (s *ProfitLossReportService) GetProfitLoss(ctx context.Context, typ string, month, year int, store string, comparison bool) (*ProfitLoss, error) {
 	var start, end time.Time
 	var prevStart, prevEnd time.Time
-	
+
 	switch typ {
 	case "Yearly":
 		// Ignore the month argument and return data for the entire year.

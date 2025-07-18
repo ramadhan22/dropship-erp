@@ -661,6 +661,39 @@ func (s *ReconcileService) GetShopeeOrderStatus(ctx context.Context, invoice str
 	if s.client == nil {
 		return "", fmt.Errorf("shopee client not configured")
 	}
+
+	// First, try to get store information for token validation
+	if s.dropRepo != nil && s.storeRepo != nil {
+		dp, err := s.dropRepo.GetDropshipPurchaseByInvoice(ctx, invoice)
+		if err == nil && dp != nil {
+			st, err := s.storeRepo.GetStoreByName(ctx, dp.NamaToko)
+			if err == nil && st != nil && st.AccessToken != nil && st.ShopID != nil {
+				// We have store info, validate token before API call
+				if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+					return "", fmt.Errorf("token validation failed for store %s: %w", dp.NamaToko, err)
+				}
+
+				// Update client with fresh token
+				s.client.AccessToken = *st.AccessToken
+				s.client.ShopID = *st.ShopID
+
+				// Make API call with validated token
+				status, err := s.client.GetOrderDetail(ctx, invoice)
+				if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+					// Fallback: refresh token and retry
+					if refreshErr := s.ensureStoreTokenValid(ctx, st); refreshErr == nil {
+						s.client.AccessToken = *st.AccessToken
+						s.client.ShopID = *st.ShopID
+						status, err = s.client.GetOrderDetail(ctx, invoice)
+					}
+				}
+				return status, err
+			}
+		}
+	}
+
+	// Fallback: call without token validation if we can't get store info
+	log.Printf("Warning: calling GetOrderDetail without token validation for invoice %s", invoice)
 	return s.client.GetOrderDetail(ctx, invoice)
 }
 
