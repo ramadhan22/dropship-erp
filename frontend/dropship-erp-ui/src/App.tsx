@@ -42,6 +42,12 @@ const AdsTopupPage = lazy(() => import("./components/AdsTopupPage"));
 const BatchHistoryPage = lazy(() => import("./components/BatchHistoryPage"));
 const AdsPerformancePage = lazy(() => import("./components/AdsPerformancePage"));
 
+// Performance Dashboard Components
+const FinancialPerformanceDashboard = lazy(() => import("./components/FinancialPerformanceDashboard"));
+const OperationalAnalyticsDashboard = lazy(() => import("./components/OperationalAnalyticsDashboard"));
+const MarketplaceIntegrationDashboard = lazy(() => import("./components/MarketplaceIntegrationDashboard"));
+const FinancialManagementDashboard = lazy(() => import("./components/FinancialManagementDashboard"));
+
 // Loading fallback component
 const LoadingFallback = () => (
   <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -77,6 +83,14 @@ export default function App() {
             <Routes>
               <Route path="/" element={<SalesSummaryPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Performance Dashboard Routes */}
+              <Route path="/performance-dashboard/financial" element={<FinancialPerformanceDashboard />} />
+              <Route path="/performance-dashboard/operational" element={<OperationalAnalyticsDashboard />} />
+              <Route path="/performance-dashboard/marketplace" element={<MarketplaceIntegrationDashboard />} />
+              <Route path="/performance-dashboard/management" element={<FinancialManagementDashboard />} />
+              
+              {/* Existing Routes */}
               <Route path="/dropship" element={<DropshipImport />} />
               <Route path="/shopee" element={<ShopeeSalesPage />} />
               <Route path="/sales-profit" element={<SalesProfitPage />} />

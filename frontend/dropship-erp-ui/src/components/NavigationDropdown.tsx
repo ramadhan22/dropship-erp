@@ -18,7 +18,11 @@ import {
   Campaign as AdsIcon,
   Payment as TransactionIcon,
   Business as BusinessIcon,
-  Payment as PaymentIcon
+  Payment as PaymentIcon,
+  Analytics as AnalyticsIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon,
+  Insights as InsightsIcon
 } from '@mui/icons-material';
 
 interface NavigationItem {
@@ -106,6 +110,16 @@ export const navigationSections = [
     items: [
       { label: 'Home', path: '/', icon: <HomeIcon fontSize="small" /> },
       { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon fontSize="small" /> },
+    ]
+  },
+  {
+    label: 'Performance Dashboard',
+    icon: <AnalyticsIcon fontSize="small" />,
+    items: [
+      { label: 'Financial Performance', path: '/performance-dashboard/financial', icon: <TrendingUpIcon fontSize="small" /> },
+      { label: 'Operational Analytics', path: '/performance-dashboard/operational', icon: <AssessmentIcon fontSize="small" /> },
+      { label: 'Marketplace Integration', path: '/performance-dashboard/marketplace', icon: <ShopeeIcon fontSize="small" /> },
+      { label: 'Financial Management', path: '/performance-dashboard/management', icon: <InsightsIcon fontSize="small" /> },
     ]
   },
   {
