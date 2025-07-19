@@ -19,7 +19,10 @@ import {
   Payment as TransactionIcon,
   Business as BusinessIcon,
   Payment as PaymentIcon,
-  TrendingUp as ForecastIcon
+  Analytics as AnalyticsIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon,
+  Insights as InsightsIcon
 } from '@mui/icons-material';
 
 interface NavigationItem {
@@ -110,6 +113,16 @@ export const navigationSections = [
     ]
   },
   {
+    label: 'Performance Dashboard',
+    icon: <AnalyticsIcon fontSize="small" />,
+    items: [
+      { label: 'Financial Performance', path: '/performance-dashboard/financial', icon: <TrendingUpIcon fontSize="small" /> },
+      { label: 'Operational Analytics', path: '/performance-dashboard/operational', icon: <AssessmentIcon fontSize="small" /> },
+      { label: 'Marketplace Integration', path: '/performance-dashboard/marketplace', icon: <ShopeeIcon fontSize="small" /> },
+      { label: 'Financial Management', path: '/performance-dashboard/management', icon: <InsightsIcon fontSize="small" /> },
+    ]
+  },
+  {
     label: 'Operations',
     icon: <ImportIcon fontSize="small" />,
     items: [
@@ -142,7 +155,7 @@ export const navigationSections = [
       { label: 'Balance Sheet', path: '/balance', icon: <FinancialIcon fontSize="small" /> },
       { label: 'General Ledger', path: '/gl', icon: <BusinessIcon fontSize="small" /> },
       { label: 'Metrics', path: '/metrics', icon: <DashboardIcon fontSize="small" /> },
-      { label: 'Forecast', path: '/forecast', icon: <ForecastIcon fontSize="small" /> },
+      { label: 'Forecast', path: '/forecast', icon: <TrendingUpIcon fontSize="small" /> },
     ]
   },
   {
