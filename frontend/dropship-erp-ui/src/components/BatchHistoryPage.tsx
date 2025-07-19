@@ -11,6 +11,25 @@ import type { Column } from "./SortableTable";
 import { listBatchHistory, listBatchDetails } from "../api";
 import type { BatchHistory, BatchHistoryDetail } from "../types";
 
+// Helper function to format PostgreSQL interval strings into readable format
+const formatDuration = (intervalStr: string): string => {
+  if (!intervalStr) return "-";
+  
+  // PostgreSQL INTERVAL format examples: "00:05:30", "01:23:45.123456", "2 days 03:45:30"
+  const matches = intervalStr.match(/(?:(\d+)\s+days?\s+)?(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/);
+  if (!matches) return intervalStr; // Return original if can't parse
+  
+  const [, days, hours, minutes, seconds] = matches;
+  const parts = [];
+  
+  if (days && parseInt(days) > 0) parts.push(`${days}d`);
+  if (hours && parseInt(hours) > 0) parts.push(`${hours}h`);
+  if (minutes && parseInt(minutes) > 0) parts.push(`${minutes}m`);
+  if (seconds && parseInt(seconds) > 0) parts.push(`${seconds}s`);
+  
+  return parts.length > 0 ? parts.join(" ") : "< 1s";
+};
+
 export default function BatchHistoryPage() {
   const [data, setData] = useState<BatchHistory[]>([]);
   const [details, setDetails] = useState<BatchHistoryDetail[]>([]);
@@ -32,6 +51,16 @@ export default function BatchHistoryPage() {
       label: "Started",
       key: "started_at",
       render: (v) => new Date(v).toLocaleString(),
+    },
+    {
+      label: "Ended",
+      key: "ended_at",
+      render: (v) => v ? new Date(v).toLocaleString() : "-",
+    },
+    {
+      label: "Duration",
+      key: "time_spent",
+      render: (v) => v ? formatDuration(v) : "-",
     },
     { label: "Total", key: "total_data", align: "right" },
     { label: "Done", key: "done_data", align: "right" },

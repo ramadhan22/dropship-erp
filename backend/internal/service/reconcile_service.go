@@ -55,6 +55,7 @@ type ReconcileServiceBatchSvc interface {
 	Create(ctx context.Context, b *models.BatchHistory) (int64, error)
 	UpdateDone(ctx context.Context, id int64, done int) error
 	UpdateStatus(ctx context.Context, id int64, status, msg string) error
+	UpdateStatusWithEndTime(ctx context.Context, id int64, status, msg string) error
 	CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error
 	ListDetails(ctx context.Context, batchID int64) ([]models.BatchHistoryDetail, error)
 	UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error
@@ -1684,7 +1685,7 @@ func (s *ReconcileService) UpdateShopeeStatuses(ctx context.Context, invoices []
 			s.processShopeeStatusBatch(ctx, store, list)
 			if s.batchSvc != nil && batchID != 0 {
 				s.batchSvc.UpdateDone(ctx, batchID, len(list))
-				s.batchSvc.UpdateStatus(ctx, batchID, "completed", "")
+				s.batchSvc.UpdateStatusWithEndTime(ctx, batchID, "completed", "")
 			}
 			return nil
 		})
@@ -2015,7 +2016,7 @@ func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, ma
 	masterBatch, err := s.batchSvc.GetByID(ctx, masterBatchID)
 	if err != nil {
 		log.Printf("ProcessReconcileBatchCreation %d: failed to get master batch: %v", masterBatchID, err)
-		s.batchSvc.UpdateStatus(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to get master batch: %v", err))
+		s.batchSvc.UpdateStatusWithEndTime(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to get master batch: %v", err))
 		return
 	}
 
@@ -2038,7 +2039,7 @@ func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, ma
 	result, err := s.CreateReconcileBatches(ctx, shop, order, status, from, to)
 	if err != nil {
 		log.Printf("ProcessReconcileBatchCreation %d: failed to create batches: %v", masterBatchID, err)
-		s.batchSvc.UpdateStatus(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to create batches: %v", err))
+		s.batchSvc.UpdateStatusWithEndTime(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to create batches: %v", err))
 		return
 	}
 
@@ -2048,7 +2049,7 @@ func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, ma
 	
 	// Update the master batch to reflect the total data processed
 	s.batchSvc.UpdateBatchData(ctx, masterBatchID, result.TotalTransactions, result.TotalTransactions)
-	s.batchSvc.UpdateStatus(ctx, masterBatchID, "completed", completionMsg)
+	s.batchSvc.UpdateStatusWithEndTime(ctx, masterBatchID, "completed", completionMsg)
 
 	log.Printf("ProcessReconcileBatchCreation %d: completed successfully - %s", masterBatchID, completionMsg)
 }
@@ -2082,7 +2083,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	details, err := s.batchSvc.ListDetails(ctx, id)
 	if err != nil {
 		log.Printf("list batch details %d: %v", id, err)
-		s.batchSvc.UpdateStatus(ctx, id, "failed", err.Error())
+		s.batchSvc.UpdateStatusWithEndTime(ctx, id, "failed", err.Error())
 		return
 	}
 	s.batchSvc.UpdateStatus(ctx, id, "processing", "")
@@ -2107,7 +2108,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 	purchases, err := s.bulkGetDropshipPurchasesByInvoices(ctx, invoices)
 	if err != nil {
 		log.Printf("bulk fetch purchases batch %d: %v", id, err)
-		s.batchSvc.UpdateStatus(ctx, id, "failed", err.Error())
+		s.batchSvc.UpdateStatusWithEndTime(ctx, id, "failed", err.Error())
 		return
 	}
 	fetchDuration := time.Since(fetchStart)
@@ -2197,7 +2198,7 @@ func (s *ReconcileService) ProcessReconcileBatch(ctx context.Context, id int64) 
 		statusMsg = fmt.Sprintf("High failure rate: %.2f%%", failureRate)
 	}
 
-	s.batchSvc.UpdateStatus(ctx, id, status, statusMsg)
+	s.batchSvc.UpdateStatusWithEndTime(ctx, id, status, statusMsg)
 	log.Printf("ProcessReconcileBatch %d completed in %v: %d successful, %d failed, %.2f%% failure rate (status: %v, fetch: %v, process: %v)",
 		id, totalDuration, done, failed, failureRate, statusDuration, fetchDuration, processDuration)
 }

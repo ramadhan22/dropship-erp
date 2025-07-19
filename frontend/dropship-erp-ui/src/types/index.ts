@@ -607,6 +607,8 @@ export interface BatchHistory {
   id: number;
   process_type: string;
   started_at: string;
+  ended_at?: string;
+  time_spent?: string;
   total_data: number;
   done_data: number;
   status: string;
