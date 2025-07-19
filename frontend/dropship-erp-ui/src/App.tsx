@@ -41,6 +41,7 @@ const WalletTransactionPage = lazy(() => import("./components/WalletTransactionP
 const AdsTopupPage = lazy(() => import("./components/AdsTopupPage"));
 const BatchHistoryPage = lazy(() => import("./components/BatchHistoryPage"));
 const AdsPerformancePage = lazy(() => import("./components/AdsPerformancePage"));
+const ForecastPage = lazy(() => import("./components/ForecastPage"));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="/ads-topups" element={<AdsTopupPage />} />
               <Route path="/ads-performance" element={<AdsPerformancePage />} />
               <Route path="/batches" element={<BatchHistoryPage />} />
+              <Route path="/forecast" element={<ForecastPage />} />
               <Route
                 path="/wallet-transactions"
                 element={<WalletTransactionPage />}

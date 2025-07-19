@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
 	"github.com/ramadhan22/dropship-erp/backend/internal/service"
 )
 
@@ -24,11 +24,11 @@ func NewForecastHandler(fs *service.ForecastService) *ForecastHandler {
 
 // HandleGenerateForecast handles POST /api/forecast/generate
 func (fh *ForecastHandler) HandleGenerateForecast(c *gin.Context) {
-	logutil.Printf("Processing forecast generation request")
+	log.Printf("Processing forecast generation request")
 
 	var req service.ForecastRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logutil.Errorf("Invalid forecast request: %v", err)
+		log.Printf("Invalid forecast request: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid request format",
 			"details": err.Error(),
@@ -81,14 +81,14 @@ func (fh *ForecastHandler) HandleGenerateForecast(c *gin.Context) {
 		}
 	}
 
-	logutil.Printf("Generating forecast: shop=%s, period=%s, start=%s, end=%s, forecastTo=%s",
+	log.Printf("Generating forecast: shop=%s, period=%s, start=%s, end=%s, forecastTo=%s",
 		req.Shop, req.Period, req.StartDate.Format("2006-01-02"), 
 		req.EndDate.Format("2006-01-02"), req.ForecastTo.Format("2006-01-02"))
 
 	// Generate forecast
 	forecast, err := fh.forecastService.GenerateForecast(c.Request.Context(), req)
 	if err != nil {
-		logutil.Errorf("Failed to generate forecast: %v", err)
+		log.Printf("Failed to generate forecast: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to generate forecast",
 			"details": err.Error(),
@@ -96,7 +96,7 @@ func (fh *ForecastHandler) HandleGenerateForecast(c *gin.Context) {
 		return
 	}
 
-	logutil.Printf("Forecast generated successfully for shop %s", req.Shop)
+	log.Printf("Forecast generated successfully for shop %s", req.Shop)
 	c.JSON(http.StatusOK, forecast)
 }
 
@@ -173,7 +173,7 @@ func (fh *ForecastHandler) HandleGetForecastSummary(c *gin.Context) {
 
 	forecast, err := fh.forecastService.GenerateForecast(c.Request.Context(), req)
 	if err != nil {
-		logutil.Errorf("Failed to generate forecast summary: %v", err)
+		log.Printf("Failed to generate forecast summary: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to generate forecast summary",
 			"details": err.Error(),

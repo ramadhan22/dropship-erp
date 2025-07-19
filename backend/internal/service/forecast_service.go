@@ -3,12 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
-	"sort"
 	"time"
-
-	"github.com/ramadhan22/dropship-erp/backend/internal/logutil"
-	"github.com/ramadhan22/dropship-erp/backend/internal/repository"
 )
 
 // ForecastDataPoint represents a single data point in time series
@@ -70,20 +67,20 @@ func NewForecastService(
 
 // GenerateForecast creates forecasts for sales, expenses, and profit
 func (fs *ForecastService) GenerateForecast(ctx context.Context, req ForecastRequest) (*ForecastResponse, error) {
-	logutil.Printf("Generating forecast for shop=%s, period=%s, from=%s to=%s", 
+	log.Printf("Generating forecast for shop=%s, period=%s, from=%s to=%s", 
 		req.Shop, req.Period, req.StartDate.Format("2006-01-02"), req.ForecastTo.Format("2006-01-02"))
 
 	// Generate sales forecast
 	salesForecast, err := fs.forecastSales(ctx, req)
 	if err != nil {
-		logutil.Errorf("Failed to forecast sales: %v", err)
+		log.Printf("Failed to forecast sales: %v", err)
 		return nil, fmt.Errorf("failed to forecast sales: %w", err)
 	}
 
 	// Generate expenses forecast
 	expensesForecast, err := fs.forecastExpenses(ctx, req)
 	if err != nil {
-		logutil.Errorf("Failed to forecast expenses: %v", err)
+		log.Printf("Failed to forecast expenses: %v", err)
 		return nil, fmt.Errorf("failed to forecast expenses: %w", err)
 	}
 
@@ -98,7 +95,7 @@ func (fs *ForecastService) GenerateForecast(ctx context.Context, req ForecastReq
 		Generated: time.Now(),
 	}
 
-	logutil.Printf("Forecast generated: Sales=%.2f, Expenses=%.2f, Profit=%.2f", 
+	log.Printf("Forecast generated: Sales=%.2f, Expenses=%.2f, Profit=%.2f", 
 		salesForecast.TotalForecast, expensesForecast.TotalForecast, profitForecast.TotalForecast)
 
 	return response, nil
