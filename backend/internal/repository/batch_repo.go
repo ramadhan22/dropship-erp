@@ -14,8 +14,8 @@ type BatchRepo struct{ db DBTX }
 func NewBatchRepo(db DBTX) *BatchRepo { return &BatchRepo{db: db} }
 
 func (r *BatchRepo) Insert(ctx context.Context, b *models.BatchHistory) (int64, error) {
-	query := `INSERT INTO batch_history (process_type, started_at, total_data, done_data, status, error_message, file_name, file_path)
-              VALUES (:process_type, NOW(), :total_data, :done_data, :status, :error_message, :file_name, :file_path)
+	query := `INSERT INTO batch_history (process_type, started_at, ended_at, time_spent, total_data, done_data, status, error_message, file_name, file_path)
+              VALUES (:process_type, NOW(), :ended_at, :time_spent, :total_data, :done_data, :status, :error_message, :file_name, :file_path)
               RETURNING id`
 	rows, err := sqlx.NamedQueryContext(ctx, r.db, query, b)
 	if err != nil {
@@ -48,6 +48,17 @@ func (r *BatchRepo) UpdateTotal(ctx context.Context, id int64, total int) error 
 func (r *BatchRepo) UpdateStatus(ctx context.Context, id int64, status, msg string) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE batch_history SET status=$2, error_message=$3 WHERE id=$1`,
+		id, status, msg)
+	return err
+}
+
+// UpdateStatusWithEndTime updates the status and sets the end time and time spent.
+func (r *BatchRepo) UpdateStatusWithEndTime(ctx context.Context, id int64, status, msg string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE batch_history 
+		 SET status=$2, error_message=$3, ended_at=NOW(), 
+		     time_spent=(NOW() - started_at)
+		 WHERE id=$1`,
 		id, status, msg)
 	return err
 }

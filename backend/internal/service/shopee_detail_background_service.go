@@ -144,7 +144,7 @@ func (s *ShopeeDetailBackgroundService) processBatch(ctx context.Context, batchI
 	if successCount == 0 {
 		status = "failed"
 	}
-	if err := s.batchService.UpdateStatus(ctx, batchID, status, ""); err != nil {
+	if err := s.batchService.UpdateStatusWithEndTime(ctx, batchID, status, ""); err != nil {
 		logutil.Errorf("Failed to update batch final status: %v", err)
 	}
 

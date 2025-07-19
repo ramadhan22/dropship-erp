@@ -80,12 +80,12 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 		err := json.Unmarshal([]byte(batch.FilePath), &syncRequest)
 		if err != nil {
 			logutil.Errorf("Failed to parse sync request for batch %d: %v", batch.ID, err)
-			s.batch.UpdateStatus(ctx, batch.ID, "failed", "Failed to parse sync request")
+			s.batch.UpdateStatusWithEndTime(ctx, batch.ID, "failed", "Failed to parse sync request")
 			return
 		}
 	} else {
 		logutil.Errorf("No sync request data found for batch %d", batch.ID)
-		s.batch.UpdateStatus(ctx, batch.ID, "failed", "No sync request data found")
+		s.batch.UpdateStatusWithEndTime(ctx, batch.ID, "failed", "No sync request data found")
 		return
 	}
 
@@ -95,12 +95,12 @@ func (s *AdsPerformanceBatchScheduler) processBatch(ctx context.Context, batch m
 	err = s.svc.SyncHistoricalAdsPerformance(ctx, syncRequest.StoreID)
 	if err != nil {
 		logutil.Errorf("Failed to sync historical ads performance for batch %d, store %d: %v", batch.ID, syncRequest.StoreID, err)
-		s.batch.UpdateStatus(ctx, batch.ID, "failed", err.Error())
+		s.batch.UpdateStatusWithEndTime(ctx, batch.ID, "failed", err.Error())
 		return
 	}
 
 	// Update batch status to completed
-	err = s.batch.UpdateStatus(ctx, batch.ID, "completed", "Ads performance sync completed successfully")
+	err = s.batch.UpdateStatusWithEndTime(ctx, batch.ID, "completed", "Ads performance sync completed successfully")
 	if err != nil {
 		logutil.Errorf("Failed to update batch completion status for batch %d: %v", batch.ID, err)
 	}

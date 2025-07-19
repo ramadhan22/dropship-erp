@@ -157,13 +157,13 @@ func (p *StreamingImportProcessor) processFileWithStreaming(ctx context.Context,
 	// Process file in chunks
 	if err := p.processFileInChunks(ctx, filePath, channel, batchID); err != nil {
 		if p.service.batchSvc != nil && batchID != 0 {
-			p.service.batchSvc.UpdateStatus(ctx, batchID, "failed", err.Error())
+			p.service.batchSvc.UpdateStatusWithEndTime(ctx, batchID, "failed", err.Error())
 		}
 		return err
 	}
 
 	if p.service.batchSvc != nil && batchID != 0 {
-		p.service.batchSvc.UpdateStatus(ctx, batchID, "completed", "")
+		p.service.batchSvc.UpdateStatusWithEndTime(ctx, batchID, "completed", "")
 	}
 
 	return nil

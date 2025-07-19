@@ -96,6 +96,10 @@ func (f *fakeBatchSvc) UpdateStatus(ctx context.Context, id int64, status, msg s
 	return nil
 }
 
+func (f *fakeBatchSvc) UpdateStatusWithEndTime(ctx context.Context, id int64, status, msg string) error {
+	return nil
+}
+
 func (f *fakeBatchSvc) CreateDetail(ctx context.Context, d *models.BatchHistoryDetail) error {
 	return nil
 }
