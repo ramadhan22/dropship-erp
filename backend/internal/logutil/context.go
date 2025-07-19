@@ -11,16 +11,16 @@ type ContextKey string
 const (
 	// CorrelationIDKey is the key for correlation ID in context
 	CorrelationIDKey ContextKey = "correlation_id"
-	
+
 	// UserIDKey is the key for user ID in context
 	UserIDKey ContextKey = "user_id"
-	
+
 	// RequestIDKey is the key for request ID in context
 	RequestIDKey ContextKey = "request_id"
-	
+
 	// ShopKey is the key for shop name in context
 	ShopKey ContextKey = "shop"
-	
+
 	// OperationKey is the key for operation name in context
 	OperationKey ContextKey = "operation"
 )

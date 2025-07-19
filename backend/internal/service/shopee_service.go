@@ -958,7 +958,7 @@ func (s *ShopeeService) WithdrawShopeeBalance(ctx context.Context, store string,
 
 	// Create a Shopee client with rate limiting
 	client := NewShopeeClient(cfg)
-	
+
 	// Apply rate limiting
 	if err := client.rateLimiter.Wait(ctx); err != nil {
 		return fmt.Errorf("rate limit timeout: %w", err)

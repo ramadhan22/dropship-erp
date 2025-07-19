@@ -484,7 +484,7 @@ func (c *ShopeeClient) FetchShopeeOrderDetails(ctx context.Context, accessToken,
 	if len(orderSNs) == 0 {
 		return nil, nil
 	}
-	
+
 	// Apply rate limiting
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit timeout: %w", err)
@@ -706,7 +706,7 @@ func (c *ShopeeClient) GetOrderDetail(ctx context.Context, orderSn string) (stri
 	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return "", err
 	}
-	
+
 	// Apply rate limiting
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return "", fmt.Errorf("rate limit timeout: %w", err)
@@ -757,7 +757,7 @@ func (c *ShopeeClient) getOrderDetailExt(ctx context.Context, orderSn string) (*
 	if _, err := c.RefreshAccessToken(ctx); err != nil {
 		return nil, err
 	}
-	
+
 	// Apply rate limiting
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit timeout: %w", err)
@@ -817,7 +817,7 @@ func (c *ShopeeClient) GetPendingBalance(ctx context.Context, store string) (flo
 		if _, err := c.RefreshAccessToken(ctx); err != nil {
 			return 0, err
 		}
-		
+
 		// Apply rate limiting
 		if err := c.rateLimiter.Wait(ctx); err != nil {
 			return 0, fmt.Errorf("rate limit timeout: %w", err)

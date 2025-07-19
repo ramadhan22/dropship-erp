@@ -10,15 +10,15 @@ import (
 
 // MemoryOptimizer manages memory usage during large import operations
 type MemoryOptimizer struct {
-	maxMemoryUsage     int64         // Maximum memory usage in bytes
-	checkInterval      time.Duration // How often to check memory usage
-	forceGCThreshold   float64       // Force GC when memory usage exceeds this percentage
-	mu                 sync.RWMutex
-	isMonitoring       bool
-	stopChan          chan struct{}
-	memoryStats       MemoryStats
-	lastGCTime        time.Time
-	gcCount           int
+	maxMemoryUsage   int64         // Maximum memory usage in bytes
+	checkInterval    time.Duration // How often to check memory usage
+	forceGCThreshold float64       // Force GC when memory usage exceeds this percentage
+	mu               sync.RWMutex
+	isMonitoring     bool
+	stopChan         chan struct{}
+	memoryStats      MemoryStats
+	lastGCTime       time.Time
+	gcCount          int
 }
 
 // MemoryStats tracks memory usage statistics
@@ -194,7 +194,7 @@ func (m *MemoryOptimizer) RestoreNormalSettings() {
 // GetOptimalChunkSize returns optimal chunk size based on current memory usage
 func (m *MemoryOptimizer) GetOptimalChunkSize(baseChunkSize int) int {
 	pressure := m.GetMemoryPressure()
-	
+
 	// Reduce chunk size when memory pressure is high
 	if pressure >= 0.8 {
 		return baseChunkSize / 4 // Reduce to 25% of base size
@@ -203,7 +203,7 @@ func (m *MemoryOptimizer) GetOptimalChunkSize(baseChunkSize int) int {
 	} else if pressure >= 0.4 {
 		return int(float64(baseChunkSize) * 0.75) // Reduce to 75% of base size
 	}
-	
+
 	return baseChunkSize
 }
 
@@ -219,7 +219,7 @@ func (m *MemoryOptimizer) WaitForMemoryAvailable(ctx context.Context, maxWait ti
 	}
 
 	fmt.Println("Memory pressure high, waiting for memory to become available...")
-	
+
 	timeout := time.After(maxWait)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()

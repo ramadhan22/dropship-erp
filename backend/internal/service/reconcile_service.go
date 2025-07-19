@@ -164,13 +164,13 @@ func (s *ReconcileService) MatchAndJournal(
 	defer timer.Finish("Reconciliation completed")
 
 	ctx = logutil.WithShop(ctx, shop)
-	
+
 	logger.Info(ctx, "MatchAndJournal", "Starting reconciliation", map[string]interface{}{
 		"purchase_id": purchaseID,
 		"order_id":    orderID,
 		"shop":        shop,
 	})
-	
+
 	var tx *sqlx.Tx
 	dropRepo := s.dropRepo
 	jrRepo := s.journalRepo
@@ -279,14 +279,14 @@ func (s *ReconcileService) MatchAndJournal(
 		})
 		return fmt.Errorf("insert ReconciledTransaction: %w", err)
 	}
-	
+
 	if tx != nil {
 		if err := tx.Commit(); err != nil {
 			logger.Error(ctx, "MatchAndJournal", "Failed to commit transaction", err)
 			return err
 		}
 	}
-	
+
 	logger.Info(ctx, "MatchAndJournal", "Reconciliation completed successfully", map[string]interface{}{
 		"purchase_id": purchaseID,
 		"order_id":    orderID,
@@ -294,7 +294,7 @@ func (s *ReconcileService) MatchAndJournal(
 		"cogs_amount": dp.TotalTransaksi,
 		"cash_amount": so.NetIncome,
 	})
-	
+
 	return nil
 }
 
@@ -389,44 +389,219 @@ func (s *ReconcileService) ListCandidates(ctx context.Context, shop, order, stat
 		if err != nil {
 			return nil, 0, err
 		}
-		for i := range list {
-			log.Printf("Fetching Shopee order detail for %s", list[i].KodeInvoiceChannel)
 
-			var statusStr string
-			if s.detailRepo != nil {
-				if row, _, _, err := s.detailRepo.GetOrderDetail(ctx, list[i].KodeInvoiceChannel); err == nil && row != nil {
-					if row.OrderStatus != nil {
-						statusStr = *row.OrderStatus
-					} else if row.Status != nil {
-						statusStr = *row.Status
-					}
-				}
-			}
-
-			if statusStr == "" {
-				detail, err := s.GetShopeeOrderDetail(ctx, list[i].KodeInvoiceChannel)
-				if err != nil {
-					logutil.Errorf("GetShopeeOrderDetail %s: %v", list[i].KodeInvoiceChannel, err)
-					list[i].ShopeeOrderStatus = "Not Found"
-					continue
-				}
-				status := (*detail)["order_status"]
-				if status == nil {
-					status = (*detail)["status"]
-				}
-				if str, ok := status.(string); ok {
-					statusStr = str
-				}
-			}
-
-			if statusStr == "" {
-				statusStr = "Not Found"
-			}
-			list[i].ShopeeOrderStatus = statusStr
+		// Process order details in batches by store
+		err = s.updateCandidatesOrderStatus(ctx, list)
+		if err != nil {
+			logutil.Errorf("updateCandidatesOrderStatus: %v", err)
+			// Don't fail the entire request if order status update fails
 		}
+
 		return list, total, nil
 	}
 	return nil, 0, fmt.Errorf("not implemented")
+}
+
+// updateCandidatesOrderStatus fetches Shopee order details in batches for the given candidates
+func (s *ReconcileService) updateCandidatesOrderStatus(ctx context.Context, candidates []models.ReconcileCandidate) error {
+	if s.detailRepo == nil || s.storeRepo == nil || s.client == nil {
+		// If required repos/client not available, fall back to individual fetching
+		return s.updateCandidatesOrderStatusIndividual(ctx, candidates)
+	}
+
+	// First, check for cached order statuses
+	for i := range candidates {
+		var statusStr string
+		if row, _, _, err := s.detailRepo.GetOrderDetail(ctx, candidates[i].KodeInvoiceChannel); err == nil && row != nil {
+			if row.OrderStatus != nil {
+				statusStr = *row.OrderStatus
+			} else if row.Status != nil {
+				statusStr = *row.Status
+			}
+			if statusStr != "" {
+				candidates[i].ShopeeOrderStatus = statusStr
+			}
+		}
+	}
+
+	// Group remaining candidates (without cached status) by store
+	storeGroups := make(map[string][]int)
+	for i, candidate := range candidates {
+		if candidate.ShopeeOrderStatus == "" {
+			storeGroups[candidate.NamaToko] = append(storeGroups[candidate.NamaToko], i)
+		}
+	}
+
+	// Process each store's candidates in batches
+	for storeName, indices := range storeGroups {
+		if err := s.processCandidateBatchForStore(ctx, candidates, storeName, indices); err != nil {
+			logutil.Errorf("processCandidateBatchForStore %s: %v", storeName, err)
+			// Continue processing other stores
+		}
+	}
+
+	return nil
+}
+
+// processCandidateBatchForStore processes candidates for a specific store in batches of 49
+func (s *ReconcileService) processCandidateBatchForStore(ctx context.Context, candidates []models.ReconcileCandidate, storeName string, indices []int) error {
+	st, err := s.storeRepo.GetStoreByName(ctx, storeName)
+	if err != nil || st == nil || st.AccessToken == nil || st.ShopID == nil {
+		logutil.Errorf("fetch store %s: %v", storeName, err)
+		// Fall back to individual processing for this store
+		return s.updateCandidatesOrderStatusIndividualForStore(ctx, candidates, indices)
+	}
+
+	if err := s.ensureStoreTokenValid(ctx, st); err != nil {
+		logutil.Errorf("ensure token %s: %v", storeName, err)
+		return s.updateCandidatesOrderStatusIndividualForStore(ctx, candidates, indices)
+	}
+
+	// Process in batches of 49 (Shopee's limit)
+	const batchSize = 49
+	for i := 0; i < len(indices); i += batchSize {
+		end := i + batchSize
+		if end > len(indices) {
+			end = len(indices)
+		}
+
+		batchIndices := indices[i:end]
+		orderSNs := make([]string, len(batchIndices))
+		for j, idx := range batchIndices {
+			orderSNs[j] = candidates[idx].KodeInvoiceChannel
+		}
+
+		log.Printf("Fetching Shopee order details in batch for store %s: %v", storeName, orderSNs)
+
+		details, err := s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, orderSNs)
+		if err != nil && strings.Contains(err.Error(), "invalid_access_token") {
+			if e := s.ensureStoreTokenValid(ctx, st); e == nil {
+				details, err = s.client.FetchShopeeOrderDetails(ctx, *st.AccessToken, *st.ShopID, orderSNs)
+			}
+		}
+
+		if err != nil {
+			logutil.Errorf("FetchShopeeOrderDetails %s batch: %v", storeName, err)
+			// Fall back to individual processing for this batch
+			s.updateCandidatesOrderStatusIndividualForStore(ctx, candidates, batchIndices)
+			continue
+		}
+
+		// Create a map for quick lookup of order details by order_sn
+		detailMap := make(map[string]ShopeeOrderDetail)
+		for _, detail := range details {
+			if sn, ok := detail["order_sn"].(string); ok {
+				detailMap[sn] = detail
+			}
+		}
+
+		// Update candidates with fetched details
+		for _, idx := range batchIndices {
+			orderSN := candidates[idx].KodeInvoiceChannel
+			if detail, found := detailMap[orderSN]; found {
+				statusStr := ""
+				if statusVal, ok := detail["order_status"].(string); ok {
+					statusStr = statusVal
+				} else if statusVal, ok := detail["status"].(string); ok {
+					statusStr = statusVal
+				}
+
+				if statusStr == "" {
+					statusStr = "Not Found"
+				}
+				candidates[idx].ShopeeOrderStatus = statusStr
+
+				// Cache the order detail
+				if s.detailRepo != nil {
+					row, items, packages := normalizeOrderDetail(orderSN, storeName, detail)
+					if err := s.detailRepo.SaveOrderDetail(ctx, row, items, packages); err != nil {
+						log.Printf("save order detail %s: %v", orderSN, err)
+					}
+				}
+			} else {
+				candidates[idx].ShopeeOrderStatus = "Not Found"
+			}
+		}
+	}
+
+	return nil
+}
+
+// updateCandidatesOrderStatusIndividual falls back to individual fetching for all candidates
+func (s *ReconcileService) updateCandidatesOrderStatusIndividual(ctx context.Context, candidates []models.ReconcileCandidate) error {
+	for i := range candidates {
+		if candidates[i].ShopeeOrderStatus != "" {
+			continue // Already has status
+		}
+
+		log.Printf("Fetching Shopee order detail for %s", candidates[i].KodeInvoiceChannel)
+
+		var statusStr string
+		if s.detailRepo != nil {
+			if row, _, _, err := s.detailRepo.GetOrderDetail(ctx, candidates[i].KodeInvoiceChannel); err == nil && row != nil {
+				if row.OrderStatus != nil {
+					statusStr = *row.OrderStatus
+				} else if row.Status != nil {
+					statusStr = *row.Status
+				}
+			}
+		}
+
+		if statusStr == "" {
+			detail, err := s.GetShopeeOrderDetail(ctx, candidates[i].KodeInvoiceChannel)
+			if err != nil {
+				logutil.Errorf("GetShopeeOrderDetail %s: %v", candidates[i].KodeInvoiceChannel, err)
+				candidates[i].ShopeeOrderStatus = "Not Found"
+				continue
+			}
+			status := (*detail)["order_status"]
+			if status == nil {
+				status = (*detail)["status"]
+			}
+			if str, ok := status.(string); ok {
+				statusStr = str
+			}
+		}
+
+		if statusStr == "" {
+			statusStr = "Not Found"
+		}
+		candidates[i].ShopeeOrderStatus = statusStr
+	}
+	return nil
+}
+
+// updateCandidatesOrderStatusIndividualForStore falls back to individual fetching for specific candidates
+func (s *ReconcileService) updateCandidatesOrderStatusIndividualForStore(ctx context.Context, candidates []models.ReconcileCandidate, indices []int) error {
+	for _, idx := range indices {
+		if candidates[idx].ShopeeOrderStatus != "" {
+			continue // Already has status
+		}
+
+		log.Printf("Fetching Shopee order detail for %s", candidates[idx].KodeInvoiceChannel)
+
+		detail, err := s.GetShopeeOrderDetail(ctx, candidates[idx].KodeInvoiceChannel)
+		if err != nil {
+			logutil.Errorf("GetShopeeOrderDetail %s: %v", candidates[idx].KodeInvoiceChannel, err)
+			candidates[idx].ShopeeOrderStatus = "Not Found"
+			continue
+		}
+
+		status := (*detail)["order_status"]
+		if status == nil {
+			status = (*detail)["status"]
+		}
+
+		statusStr := ""
+		if str, ok := status.(string); ok {
+			statusStr = str
+		}
+		if statusStr == "" {
+			statusStr = "Not Found"
+		}
+		candidates[idx].ShopeeOrderStatus = statusStr
+	}
+	return nil
 }
 
 // BulkReconcile simply loops MatchAndJournal over pairs.
@@ -2001,7 +2176,7 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 	return result, nil
 }
 
-// ProcessReconcileBatchCreation processes a master batch by doing the actual candidate 
+// ProcessReconcileBatchCreation processes a master batch by doing the actual candidate
 // fetching and creating reconcile batches in the background.
 func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, masterBatchID int64) {
 	if s.batchSvc == nil {
@@ -2029,7 +2204,7 @@ func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, ma
 	from := params["from"]
 	to := params["to"]
 
-	log.Printf("ProcessReconcileBatchCreation %d: parsed parameters shop=%s, order=%s, status=%s, from=%s, to=%s", 
+	log.Printf("ProcessReconcileBatchCreation %d: parsed parameters shop=%s, order=%s, status=%s, from=%s, to=%s",
 		masterBatchID, shop, order, status, from, to)
 
 	// Update status to processing and clear the metadata from error_message
@@ -2046,7 +2221,7 @@ func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, ma
 	// Update master batch with results
 	duration := time.Since(start)
 	completionMsg := fmt.Sprintf("Created %d batches for %d transactions in %v", result.BatchCount, result.TotalTransactions, duration)
-	
+
 	// Update the master batch to reflect the total data processed
 	s.batchSvc.UpdateBatchData(ctx, masterBatchID, result.TotalTransactions, result.TotalTransactions)
 	s.batchSvc.UpdateStatusWithEndTime(ctx, masterBatchID, "completed", completionMsg)
@@ -2060,7 +2235,7 @@ func parseMetadata(metadata string) map[string]string {
 	if metadata == "" {
 		return result
 	}
-	
+
 	pairs := strings.Split(metadata, ",")
 	for _, pair := range pairs {
 		if kv := strings.SplitN(pair, "=", 2); len(kv) == 2 {
