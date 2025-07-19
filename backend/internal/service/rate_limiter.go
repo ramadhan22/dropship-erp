@@ -33,7 +33,7 @@ func (rl *RateLimiter) Allow(ctx context.Context) bool {
 	defer rl.mu.Unlock()
 
 	currentMinute := time.Now().Unix() / 60
-	
+
 	// Reset counter if we've moved to a new minute
 	if currentMinute != rl.currentMinute {
 		rl.currentMinute = currentMinute
@@ -75,19 +75,19 @@ func (rl *RateLimiter) Wait(ctx context.Context) error {
 func (rl *RateLimiter) GetStats() (availableRequests int, maxRequests int) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	currentMinute := time.Now().Unix() / 60
-	
+
 	// Reset counter if we've moved to a new minute
 	if currentMinute != rl.currentMinute {
 		rl.currentMinute = currentMinute
 		rl.requestCount = 0
 	}
-	
+
 	available := rl.maxRequests - rl.requestCount
 	if available < 0 {
 		available = 0
 	}
-	
+
 	return available, rl.maxRequests
 }

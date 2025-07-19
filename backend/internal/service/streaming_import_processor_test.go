@@ -94,7 +94,7 @@ func TestStreamingImportProcessor_ChunkReading(t *testing.T) {
 	// Create a mock service
 	repo := &mockDropshipRepo{purchases: make(map[string]bool)}
 	journalRepo := &mockJournalRepo{}
-	
+
 	service := &DropshipService{
 		repo:        repo,
 		journalRepo: journalRepo,

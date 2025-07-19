@@ -40,16 +40,16 @@ func (l LogLevel) String() string {
 
 // LogEntry represents a structured log entry
 type LogEntry struct {
-	Level       LogLevel
-	Message     string
-	Timestamp   time.Time
-	Service     string
-	Operation   string
+	Level         LogLevel
+	Message       string
+	Timestamp     time.Time
+	Service       string
+	Operation     string
 	CorrelationID string
-	UserID      string
-	Duration    *time.Duration
-	Error       error
-	Fields      map[string]interface{}
+	UserID        string
+	Duration      *time.Duration
+	Error         error
+	Fields        map[string]interface{}
 }
 
 // Logger provides structured logging functionality
@@ -96,46 +96,46 @@ func getCaller(skip int) string {
 // formatLogEntry formats a log entry for output
 func (l *Logger) formatLogEntry(entry *LogEntry) string {
 	var parts []string
-	
+
 	// Timestamp
 	parts = append(parts, entry.Timestamp.Format("2006-01-02 15:04:05.000"))
-	
+
 	// Level
 	parts = append(parts, fmt.Sprintf("[%s]", entry.Level.String()))
-	
+
 	// Service
 	if entry.Service != "" {
 		parts = append(parts, fmt.Sprintf("[%s]", entry.Service))
 	}
-	
+
 	// Operation
 	if entry.Operation != "" {
 		parts = append(parts, fmt.Sprintf("[%s]", entry.Operation))
 	}
-	
+
 	// Correlation ID
 	if entry.CorrelationID != "" {
 		parts = append(parts, fmt.Sprintf("[%s]", entry.CorrelationID))
 	}
-	
+
 	// Duration
 	if entry.Duration != nil {
 		parts = append(parts, fmt.Sprintf("[%s]", entry.Duration.String()))
 	}
-	
+
 	// Message
 	parts = append(parts, entry.Message)
-	
+
 	// Error
 	if entry.Error != nil {
 		parts = append(parts, fmt.Sprintf("error=%v", entry.Error))
 	}
-	
+
 	// Additional fields
 	for k, v := range entry.Fields {
 		parts = append(parts, fmt.Sprintf("%s=%v", k, v))
 	}
-	
+
 	return strings.Join(parts, " ")
 }
 
@@ -149,11 +149,11 @@ func (l *Logger) log(entry *LogEntry) {
 	if !l.shouldLog(entry.Level) {
 		return
 	}
-	
+
 	if entry.Service == "" {
 		entry.Service = l.service
 	}
-	
+
 	formatted := l.formatLogEntry(entry)
 	log.Println(formatted)
 }
@@ -170,14 +170,14 @@ func (l *Logger) Debug(ctx context.Context, operation, message string, fields ..
 		UserID:        getUserID(ctx),
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	l.log(entry)
 }
 
@@ -193,14 +193,14 @@ func (l *Logger) Info(ctx context.Context, operation, message string, fields ...
 		UserID:        getUserID(ctx),
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	l.log(entry)
 }
 
@@ -216,14 +216,14 @@ func (l *Logger) Warn(ctx context.Context, operation, message string, fields ...
 		UserID:        getUserID(ctx),
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	l.log(entry)
 }
 
@@ -240,17 +240,17 @@ func (l *Logger) Error(ctx context.Context, operation, message string, err error
 		Error:         err,
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	// Add caller information for errors
 	entry.Fields["caller"] = getCaller(2)
-	
+
 	l.log(entry)
 }
 
@@ -267,17 +267,17 @@ func (l *Logger) Fatal(ctx context.Context, operation, message string, err error
 		Error:         err,
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	// Add caller information for fatal errors
 	entry.Fields["caller"] = getCaller(2)
-	
+
 	l.log(entry)
 	Fatalf("Fatal error: %s", message)
 }
@@ -348,14 +348,14 @@ func (tl *TimerLogger) Finish(message string, fields ...map[string]interface{}) 
 		Duration:      &duration,
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	tl.logger.log(entry)
 }
 
@@ -374,17 +374,17 @@ func (tl *TimerLogger) FinishWithError(message string, err error, fields ...map[
 		Error:         err,
 		Fields:        make(map[string]interface{}),
 	}
-	
+
 	// Merge fields
 	for _, f := range fields {
 		for k, v := range f {
 			entry.Fields[k] = v
 		}
 	}
-	
+
 	// Add caller information for errors
 	entry.Fields["caller"] = getCaller(2)
-	
+
 	tl.logger.log(entry)
 }
 

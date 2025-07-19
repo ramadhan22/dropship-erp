@@ -26,32 +26,32 @@ func NewReconcileStreamHandler(reconcileService *service.ReconcileService) *Reco
 
 // StreamReconcileAllRequest represents the request body for streaming reconciliation
 type StreamReconcileAllRequest struct {
-	Shop           string `json:"shop" binding:"required"`
-	ChunkSize      int    `json:"chunk_size,omitempty"`
-	MaxConcurrency int    `json:"max_concurrency,omitempty"`
-	MemoryThreshold int64 `json:"memory_threshold,omitempty"`
+	Shop            string `json:"shop" binding:"required"`
+	ChunkSize       int    `json:"chunk_size,omitempty"`
+	MaxConcurrency  int    `json:"max_concurrency,omitempty"`
+	MemoryThreshold int64  `json:"memory_threshold,omitempty"`
 }
 
 // StreamReconcileAllResponse represents the response for streaming reconciliation
 type StreamReconcileAllResponse struct {
-	Success           bool                              `json:"success"`
-	Message           string                            `json:"message"`
-	TotalProcessed    int64                             `json:"total_processed"`
-	TotalSuccessful   int64                             `json:"total_successful"`
-	TotalFailed       int64                             `json:"total_failed"`
-	Duration          string                            `json:"duration"`
-	ErrorRate         float64                           `json:"error_rate"`
-	ProcessingStarted time.Time                         `json:"processing_started"`
-	ProcessingEnded   time.Time                         `json:"processing_ended"`
-	FailureCategories map[string]int                    `json:"failure_categories,omitempty"`
-	CorrelationID     string                            `json:"correlation_id"`
+	Success           bool           `json:"success"`
+	Message           string         `json:"message"`
+	TotalProcessed    int64          `json:"total_processed"`
+	TotalSuccessful   int64          `json:"total_successful"`
+	TotalFailed       int64          `json:"total_failed"`
+	Duration          string         `json:"duration"`
+	ErrorRate         float64        `json:"error_rate"`
+	ProcessingStarted time.Time      `json:"processing_started"`
+	ProcessingEnded   time.Time      `json:"processing_ended"`
+	FailureCategories map[string]int `json:"failure_categories,omitempty"`
+	CorrelationID     string         `json:"correlation_id"`
 }
 
 // HandleStreamReconcileAll handles streaming reconciliation of all records
 func (h *ReconcileStreamHandler) HandleStreamReconcileAll(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID := logutil.GetCorrelationID(ctx)
-	
+
 	timer := h.logger.WithTimer(ctx, "HandleStreamReconcileAll")
 	defer timer.Finish("Stream reconcile all request completed")
 
@@ -61,8 +61,8 @@ func (h *ReconcileStreamHandler) HandleStreamReconcileAll(c *gin.Context) {
 			"error": err.Error(),
 		})
 		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid request body: " + err.Error(),
+			"success":        false,
+			"message":        "Invalid request body: " + err.Error(),
 			"correlation_id": correlationID,
 		})
 		return
@@ -93,8 +93,8 @@ func (h *ReconcileStreamHandler) HandleStreamReconcileAll(c *gin.Context) {
 			"shop": req.Shop,
 		})
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Stream reconciliation failed: " + err.Error(),
+			"success":        false,
+			"message":        "Stream reconciliation failed: " + err.Error(),
 			"correlation_id": correlationID,
 		})
 		return
@@ -140,7 +140,7 @@ func (h *ReconcileStreamHandler) HandleStreamReconcileAll(c *gin.Context) {
 func (h *ReconcileStreamHandler) HandleReconcileProgress(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID := logutil.GetCorrelationID(ctx)
-	
+
 	batchIDParam := c.Param("batch_id")
 	batchID, err := strconv.ParseInt(batchIDParam, 10, 64)
 	if err != nil {
@@ -148,8 +148,8 @@ func (h *ReconcileStreamHandler) HandleReconcileProgress(c *gin.Context) {
 			"batch_id_param": batchIDParam,
 		})
 		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid batch ID",
+			"success":        false,
+			"message":        "Invalid batch ID",
 			"correlation_id": correlationID,
 		})
 		return
@@ -158,9 +158,9 @@ func (h *ReconcileStreamHandler) HandleReconcileProgress(c *gin.Context) {
 	// Note: This would need to be implemented in the service layer
 	// For now, return a placeholder response
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Progress monitoring not yet implemented",
-		"batch_id": batchID,
+		"success":        true,
+		"message":        "Progress monitoring not yet implemented",
+		"batch_id":       batchID,
 		"correlation_id": correlationID,
 	})
 }
@@ -169,15 +169,15 @@ func (h *ReconcileStreamHandler) HandleReconcileProgress(c *gin.Context) {
 func (h *ReconcileStreamHandler) HandleReconcileHealthCheck(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID := logutil.GetCorrelationID(ctx)
-	
+
 	h.logger.Info(ctx, "HandleReconcileHealthCheck", "Health check requested")
-	
+
 	// Basic health check - in production, this would check database connectivity,
 	// memory usage, active processes, etc.
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Reconciliation service is healthy",
-		"timestamp": time.Now(),
+		"success":        true,
+		"message":        "Reconciliation service is healthy",
+		"timestamp":      time.Now(),
 		"correlation_id": correlationID,
 	})
 }
