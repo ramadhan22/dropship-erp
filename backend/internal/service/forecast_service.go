@@ -48,19 +48,16 @@ type ForecastResponse struct {
 // ForecastService provides forecasting capabilities using historical data
 type ForecastService struct {
 	dropshipRepo MetricServiceDropshipRepo
-	shopeeRepo   MetricServiceShopeeRepo
 	journalRepo  MetricServiceJournalRepo
 }
 
 // NewForecastService creates a new ForecastService
 func NewForecastService(
 	dr MetricServiceDropshipRepo,
-	sr MetricServiceShopeeRepo,
 	jr MetricServiceJournalRepo,
 ) *ForecastService {
 	return &ForecastService{
 		dropshipRepo: dr,
-		shopeeRepo:   sr,
 		journalRepo:  jr,
 	}
 }
@@ -226,7 +223,7 @@ func (fs *ForecastService) calculateProfitForecast(sales, expenses *ForecastResu
 	}
 }
 
-// getHistoricalSalesData aggregates sales data from dropship and Shopee sources
+// getHistoricalSalesData gets sales data from dropship sources only
 func (fs *ForecastService) getHistoricalSalesData(ctx context.Context, req ForecastRequest) ([]ForecastDataPoint, error) {
 	var dataPoints []ForecastDataPoint
 
@@ -249,13 +246,8 @@ func (fs *ForecastService) getHistoricalSalesData(ctx context.Context, req Forec
 			return nil, fmt.Errorf("failed to get dropship sales: %w", err)
 		}
 
-		// Get Shopee sales for this period
-		shopeeSales, err := fs.getShopeeSalesForPeriod(ctx, req.Shop, current, periodEnd)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get Shopee sales: %w", err)
-		}
-
-		totalSales := dropshipSales + shopeeSales
+		// Only use dropship sales data (ignore obsolete shopee_settled_orders)
+		totalSales := dropshipSales
 		if totalSales > 0 {
 			dataPoints = append(dataPoints, ForecastDataPoint{
 				Date:   current,
@@ -318,22 +310,6 @@ func (fs *ForecastService) getDropshipSalesForPeriod(ctx context.Context, shop s
 	var total float64
 	for _, purchase := range purchases {
 		total += purchase.TotalTransaksi
-	}
-
-	return total, nil
-}
-
-// getShopeeSalesForPeriod gets Shopee sales total for a period
-func (fs *ForecastService) getShopeeSalesForPeriod(ctx context.Context, shop string, start, end time.Time) (float64, error) {
-	orders, err := fs.shopeeRepo.ListShopeeOrdersByShopAndDate(ctx, shop, 
-		start.Format("2006-01-02"), end.Format("2006-01-02"))
-	if err != nil {
-		return 0, err
-	}
-
-	var total float64
-	for _, order := range orders {
-		total += order.NetIncome
 	}
 
 	return total, nil

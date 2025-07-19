@@ -29,22 +29,6 @@ func (m *mockForecastDropshipRepo) ListDropshipPurchasesByShopAndDate(ctx contex
 	}, nil
 }
 
-type mockForecastShopeeRepo struct{}
-
-func (m *mockForecastShopeeRepo) ListShopeeOrdersByShopAndDate(ctx context.Context, shop, from, to string) ([]models.ShopeeSettledOrder, error) {
-	// Return some sample data for testing
-	return []models.ShopeeSettledOrder{
-		{
-			OrderID:   "SHOPEE1",
-			NetIncome: 800000, // 800K IDR
-		},
-		{
-			OrderID:   "SHOPEE2",
-			NetIncome: 900000, // 900K IDR
-		},
-	}, nil
-}
-
 type mockForecastJournalRepo struct{}
 
 func (m *mockForecastJournalRepo) GetAccountBalancesAsOf(ctx context.Context, shop string, asOfDate time.Time) ([]repository.AccountBalance, error) {
@@ -62,12 +46,11 @@ func (m *mockForecastJournalRepo) GetAccountBalancesAsOf(ctx context.Context, sh
 }
 
 func TestForecastService_GenerateForecast(t *testing.T) {
-	// Initialize the forecast service with mock repositories
+	// Initialize the forecast service with mock repositories (without obsolete shopee repo)
 	dropshipRepo := &mockForecastDropshipRepo{}
-	shopeeRepo := &mockForecastShopeeRepo{}
 	journalRepo := &mockForecastJournalRepo{}
 	
-	forecastSvc := NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := NewForecastService(dropshipRepo, journalRepo)
 	
 	// Create a forecast request
 	now := time.Now()
@@ -135,12 +118,11 @@ func TestForecastService_GenerateForecast(t *testing.T) {
 }
 
 func TestForecastService_EmptyData(t *testing.T) {
-	// Create empty mock repositories
+	// Create empty mock repositories (without obsolete shopee repo)
 	dropshipRepo := &mockForecastDropshipRepo{}
-	shopeeRepo := &mockForecastShopeeRepo{}
 	journalRepo := &mockForecastJournalRepo{}
 	
-	forecastSvc := NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := NewForecastService(dropshipRepo, journalRepo)
 	
 	// Create a forecast request for an empty shop
 	now := time.Now()

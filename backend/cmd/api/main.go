@@ -162,9 +162,9 @@ func main() {
 	adsPerformanceBatchScheduler := service.NewAdsPerformanceBatchScheduler(batchSvc, adsPerformanceSvc, time.Minute)
 	adsPerformanceBatchScheduler.Start(context.Background())
 	
-	// Initialize forecast service
+	// Initialize forecast service (without obsolete shopee repo)
 	forecastSvc := service.NewForecastService(
-		repo.DropshipRepo, repo.ShopeeRepo, repo.JournalRepo,
+		repo.DropshipRepo, repo.JournalRepo,
 	)
 	// 4) Setup performance monitoring
 	if cfg.Performance.EnableMetrics {

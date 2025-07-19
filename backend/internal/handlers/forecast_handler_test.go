@@ -27,17 +27,6 @@ func (m *mockHandlerDropshipRepo) ListDropshipPurchasesByShopAndDate(ctx context
 	}, nil
 }
 
-type mockHandlerShopeeRepo struct{}
-
-func (m *mockHandlerShopeeRepo) ListShopeeOrdersByShopAndDate(ctx context.Context, shop, from, to string) ([]models.ShopeeSettledOrder, error) {
-	return []models.ShopeeSettledOrder{
-		{
-			OrderID:   "SHOPEE1",
-			NetIncome: 800000,
-		},
-	}, nil
-}
-
 type mockHandlerJournalRepo struct{}
 
 func (m *mockHandlerJournalRepo) GetAccountBalancesAsOf(ctx context.Context, shop string, asOfDate time.Time) ([]repository.AccountBalance, error) {
@@ -53,11 +42,10 @@ func TestForecastHandler_HandleGenerateForecast(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	
-	// Create mock services
+	// Create mock services (without obsolete shopee repo)
 	dropshipRepo := &mockHandlerDropshipRepo{}
-	shopeeRepo := &mockHandlerShopeeRepo{}
 	journalRepo := &mockHandlerJournalRepo{}
-	forecastSvc := service.NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := service.NewForecastService(dropshipRepo, journalRepo)
 	handler := NewForecastHandler(forecastSvc)
 	
 	// Create test request
@@ -125,11 +113,10 @@ func TestForecastHandler_HandleGetForecastParams(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	
-	// Create mock services  
+	// Create mock services (without obsolete shopee repo)
 	dropshipRepo := &mockHandlerDropshipRepo{}
-	shopeeRepo := &mockHandlerShopeeRepo{}
 	journalRepo := &mockHandlerJournalRepo{}
-	forecastSvc := service.NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := service.NewForecastService(dropshipRepo, journalRepo)
 	handler := NewForecastHandler(forecastSvc)
 	
 	// Create HTTP request
@@ -180,11 +167,10 @@ func TestForecastHandler_HandleGetForecastSummary(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	
-	// Create mock services
+	// Create mock services (without obsolete shopee repo)
 	dropshipRepo := &mockHandlerDropshipRepo{}
-	shopeeRepo := &mockHandlerShopeeRepo{}
 	journalRepo := &mockHandlerJournalRepo{}
-	forecastSvc := service.NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := service.NewForecastService(dropshipRepo, journalRepo)
 	handler := NewForecastHandler(forecastSvc)
 	
 	// Create HTTP request
@@ -235,11 +221,10 @@ func TestForecastHandler_BadRequest(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	
-	// Create mock services
+	// Create mock services (without obsolete shopee repo)
 	dropshipRepo := &mockHandlerDropshipRepo{}
-	shopeeRepo := &mockHandlerShopeeRepo{}
 	journalRepo := &mockHandlerJournalRepo{}
-	forecastSvc := service.NewForecastService(dropshipRepo, shopeeRepo, journalRepo)
+	forecastSvc := service.NewForecastService(dropshipRepo, journalRepo)
 	handler := NewForecastHandler(forecastSvc)
 	
 	// Create invalid JSON request
