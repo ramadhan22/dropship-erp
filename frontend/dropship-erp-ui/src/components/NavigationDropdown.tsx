@@ -18,7 +18,8 @@ import {
   Campaign as AdsIcon,
   Payment as TransactionIcon,
   Business as BusinessIcon,
-  Payment as PaymentIcon
+  Payment as PaymentIcon,
+  TrendingUp as ForecastIcon
 } from '@mui/icons-material';
 
 interface NavigationItem {
@@ -141,6 +142,7 @@ export const navigationSections = [
       { label: 'Balance Sheet', path: '/balance', icon: <FinancialIcon fontSize="small" /> },
       { label: 'General Ledger', path: '/gl', icon: <BusinessIcon fontSize="small" /> },
       { label: 'Metrics', path: '/metrics', icon: <DashboardIcon fontSize="small" /> },
+      { label: 'Forecast', path: '/forecast', icon: <ForecastIcon fontSize="small" /> },
     ]
   },
   {
