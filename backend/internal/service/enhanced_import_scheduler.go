@@ -42,15 +42,15 @@ type ImportJob struct {
 
 // ImportJobStatus represents the status of an import job
 type ImportJobStatus struct {
-	BatchID         int64     `json:"batch_id"`
-	FileName        string    `json:"file_name"`
-	Status          string    `json:"status"`
-	Progress        float64   `json:"progress"`
-	RowsProcessed   int       `json:"rows_processed"`
-	TotalRows       int       `json:"total_rows"`
-	StartedAt       time.Time `json:"started_at"`
-	EstimatedETA    string    `json:"estimated_eta"`
-	Error           string    `json:"error,omitempty"`
+	BatchID       int64     `json:"batch_id"`
+	FileName      string    `json:"file_name"`
+	Status        string    `json:"status"`
+	Progress      float64   `json:"progress"`
+	RowsProcessed int       `json:"rows_processed"`
+	TotalRows     int       `json:"total_rows"`
+	StartedAt     time.Time `json:"started_at"`
+	EstimatedETA  string    `json:"estimated_eta"`
+	Error         string    `json:"error,omitempty"`
 }
 
 // NewEnhancedImportScheduler creates a new enhanced scheduler
@@ -69,7 +69,7 @@ func NewEnhancedImportScheduler(
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &EnhancedImportScheduler{
 		batch:              batch,
 		dropshipService:    dropshipService,
@@ -91,7 +91,7 @@ func (s *EnhancedImportScheduler) Start() {
 	}
 
 	log.Printf("Starting enhanced import scheduler with %d workers", s.workers)
-	
+
 	// Start worker goroutines
 	for i := 0; i < s.workers; i++ {
 		go s.worker(i)
@@ -114,7 +114,7 @@ func (s *EnhancedImportScheduler) Stop() {
 // worker processes import jobs from the queue
 func (s *EnhancedImportScheduler) worker(workerID int) {
 	log.Printf("Worker %d started", workerID)
-	
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -286,7 +286,7 @@ func (s *EnhancedImportScheduler) cleanupCompletedJobs() {
 	defer s.mu.Unlock()
 
 	cutoff := time.Now().Add(-30 * time.Minute)
-	
+
 	for batchID, job := range s.activeJobs {
 		if (job.Status == "completed" || job.Status == "failed") && job.CompletedAt.Before(cutoff) {
 			delete(s.activeJobs, batchID)
@@ -300,7 +300,7 @@ func (s *EnhancedImportScheduler) GetActiveJobs() []ImportJobStatus {
 	defer s.mu.RUnlock()
 
 	jobs := make([]ImportJobStatus, 0, len(s.activeJobs))
-	
+
 	for _, job := range s.activeJobs {
 		status := ImportJobStatus{
 			BatchID:       job.BatchID,
@@ -321,7 +321,7 @@ func (s *EnhancedImportScheduler) GetActiveJobs() []ImportJobStatus {
 				status.Progress = float64(stats.ProcessedRows) / float64(stats.TotalRows) * 100
 				status.TotalRows = stats.TotalRows
 				status.RowsProcessed = stats.ProcessedRows
-				
+
 				if eta := s.streamingProcessor.EstimateRemainingTime(); eta > 0 {
 					status.EstimatedETA = eta.String()
 				}
@@ -340,10 +340,10 @@ func (s *EnhancedImportScheduler) GetQueueStatus() map[string]interface{} {
 	defer s.mu.RUnlock()
 
 	return map[string]interface{}{
-		"queue_length":     len(s.jobQueue),
-		"active_jobs":      len(s.activeJobs),
-		"max_workers":      s.workers,
-		"queue_capacity":   cap(s.jobQueue),
+		"queue_length":   len(s.jobQueue),
+		"active_jobs":    len(s.activeJobs),
+		"max_workers":    s.workers,
+		"queue_capacity": cap(s.jobQueue),
 	}
 }
 

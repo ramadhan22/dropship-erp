@@ -45,14 +45,14 @@ func (s *ShopeeDetailBackgroundService) QueueOrderDetailFetch(ctx context.Contex
 
 	// Create a batch job for this fetch operation
 	batch := &models.BatchHistory{
-		ProcessType: "shopee_order_detail_fetch",
-		StartedAt:   time.Now(),
-		TotalData:   1,
-		DoneData:    0,
-		Status:      "pending",
+		ProcessType:  "shopee_order_detail_fetch",
+		StartedAt:    time.Now(),
+		TotalData:    1,
+		DoneData:     0,
+		Status:       "pending",
 		ErrorMessage: "",
-		FileName:    "",
-		FilePath:    "",
+		FileName:     "",
+		FilePath:     "",
 	}
 
 	batchID, err := s.batchService.Create(ctx, batch)

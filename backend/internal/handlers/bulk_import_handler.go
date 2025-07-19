@@ -16,10 +16,10 @@ import (
 
 // BulkImportHandler handles bulk import operations with enhanced performance
 type BulkImportHandler struct {
-	dropshipService       *service.DropshipService
-	batchService          *service.BatchService
-	streamingProcessor    *service.StreamingImportProcessor
-	enhancedScheduler     *service.EnhancedImportScheduler
+	dropshipService    *service.DropshipService
+	batchService       *service.BatchService
+	streamingProcessor *service.StreamingImportProcessor
+	enhancedScheduler  *service.EnhancedImportScheduler
 }
 
 // NewBulkImportHandler creates a new bulk import handler
@@ -133,11 +133,11 @@ func (h *BulkImportHandler) HandleBulkImport(c *gin.Context) {
 	}
 
 	response := gin.H{
-		"queued_files":        len(files),
-		"batch_ids":          batchIDs,
-		"use_streaming":      useStreaming,
+		"queued_files":         len(files),
+		"batch_ids":            batchIDs,
+		"use_streaming":        useStreaming,
 		"process_concurrently": processConcurrently,
-		"estimated_time":     h.estimateProcessingTime(len(files)),
+		"estimated_time":       h.estimateProcessingTime(len(files)),
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -187,15 +187,15 @@ func (h *BulkImportHandler) HandleImportStatus(c *gin.Context) {
 	}
 
 	response := gin.H{
-		"batch_id":          targetBatch.ID,
-		"file_name":         targetBatch.FileName,
-		"status":            targetBatch.Status,
-		"progress":          progress,
-		"rows_processed":    targetBatch.DoneData,
-		"total_rows":        targetBatch.TotalData,
-		"created_at":        targetBatch.CreatedAt,
-		"updated_at":        targetBatch.UpdatedAt,
-		"estimated_eta":     etaStr,
+		"batch_id":       targetBatch.ID,
+		"file_name":      targetBatch.FileName,
+		"status":         targetBatch.Status,
+		"progress":       progress,
+		"rows_processed": targetBatch.DoneData,
+		"total_rows":     targetBatch.TotalData,
+		"created_at":     targetBatch.CreatedAt,
+		"updated_at":     targetBatch.UpdatedAt,
+		"estimated_eta":  etaStr,
 	}
 
 	if targetBatch.ErrorMessage != "" {
@@ -213,18 +213,18 @@ func (h *BulkImportHandler) HandleBulkImportStatus(c *gin.Context) {
 	if h.enhancedScheduler != nil {
 		activeJobs := h.enhancedScheduler.GetActiveJobs()
 		queueStatus := h.enhancedScheduler.GetQueueStatus()
-		
+
 		response = gin.H{
-			"active_jobs":    activeJobs,
-			"queue_status":   queueStatus,
-			"total_active":   len(activeJobs),
+			"active_jobs":  activeJobs,
+			"queue_status": queueStatus,
+			"total_active": len(activeJobs),
 		}
 	} else {
 		// Fallback to batch service
-		batches, err := h.batchService.ListFiltered(context.Background(), 
-			[]string{"dropship_import", "streaming_dropship_import"}, 
+		batches, err := h.batchService.ListFiltered(context.Background(),
+			[]string{"dropship_import", "streaming_dropship_import"},
 			[]string{"pending", "processing"})
-		
+
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get batch status"})
 			return
@@ -296,19 +296,19 @@ func (h *BulkImportHandler) HandleImportRecommendations(c *gin.Context) {
 func (h *BulkImportHandler) estimateProcessingTime(fileCount int) string {
 	// Base estimates (these could be made more sophisticated)
 	baseTimePerFile := 30 * time.Second // 30 seconds per file
-	
+
 	// Adjust for concurrency if streaming processor is available
 	if h.streamingProcessor != nil {
 		// With streaming and concurrency, reduce time significantly
 		baseTimePerFile = 10 * time.Second
-		
+
 		// Account for concurrent processing
 		concurrentFiles := 5 // Default concurrent files
 		estimatedTime := time.Duration(fileCount/concurrentFiles) * baseTimePerFile
 		if fileCount%concurrentFiles > 0 {
 			estimatedTime += baseTimePerFile
 		}
-		
+
 		return estimatedTime.String()
 	}
 

@@ -18,18 +18,18 @@ import (
 )
 
 const (
-	DefaultChunkSize         = 1000  // Process 1000 rows at a time
-	DefaultMaxConcurrentFiles = 5    // Process 5 files concurrently
-	DefaultMaxFileSize       = 100 * 1024 * 1024 // 100MB max file size
-	DefaultProgressUpdateInterval = 100 // Update progress every 100 rows
+	DefaultChunkSize              = 1000              // Process 1000 rows at a time
+	DefaultMaxConcurrentFiles     = 5                 // Process 5 files concurrently
+	DefaultMaxFileSize            = 100 * 1024 * 1024 // 100MB max file size
+	DefaultProgressUpdateInterval = 100               // Update progress every 100 rows
 )
 
 // StreamingImportConfig contains configuration for streaming import processing
 type StreamingImportConfig struct {
 	ChunkSize                int
-	MaxConcurrentFiles      int
-	MaxFileSize             int64
-	ProgressUpdateInterval  int
+	MaxConcurrentFiles       int
+	MaxFileSize              int64
+	ProgressUpdateInterval   int
 	EnableMemoryOptimization bool
 }
 
@@ -37,9 +37,9 @@ type StreamingImportConfig struct {
 func DefaultStreamingImportConfig() *StreamingImportConfig {
 	return &StreamingImportConfig{
 		ChunkSize:                DefaultChunkSize,
-		MaxConcurrentFiles:      DefaultMaxConcurrentFiles,
-		MaxFileSize:             DefaultMaxFileSize,
-		ProgressUpdateInterval:  DefaultProgressUpdateInterval,
+		MaxConcurrentFiles:       DefaultMaxConcurrentFiles,
+		MaxFileSize:              DefaultMaxFileSize,
+		ProgressUpdateInterval:   DefaultProgressUpdateInterval,
 		EnableMemoryOptimization: true,
 	}
 }
@@ -95,7 +95,7 @@ func (p *StreamingImportProcessor) ProcessMultipleFiles(ctx context.Context, fil
 		wg.Add(1)
 		go func(path string) {
 			defer wg.Done()
-			sem <- struct{}{} // Acquire semaphore
+			sem <- struct{}{}        // Acquire semaphore
 			defer func() { <-sem }() // Release semaphore
 
 			if err := p.processFileWithStreaming(ctx, path, channel); err != nil {
@@ -116,14 +116,14 @@ func (p *StreamingImportProcessor) ProcessMultipleFiles(ctx context.Context, fil
 	}
 
 	wg.Wait()
-	
+
 	p.mu.Lock()
 	duration := time.Since(p.stats.StartTime)
 	p.mu.Unlock()
 
-	log.Printf("Streaming import completed. Files: %d processed, %d failed. Duration: %v", 
+	log.Printf("Streaming import completed. Files: %d processed, %d failed. Duration: %v",
 		p.stats.ProcessedFiles, p.stats.FailedFiles, duration)
-	
+
 	return globalErr
 }
 
@@ -146,7 +146,7 @@ func (p *StreamingImportProcessor) processFileWithStreaming(ctx context.Context,
 			FileName:    filename,
 			FilePath:    filePath,
 		}
-		
+
 		var err error
 		batchID, err = p.service.batchSvc.Create(ctx, batch)
 		if err != nil {
@@ -215,7 +215,7 @@ func (p *StreamingImportProcessor) processFileInChunks(ctx context.Context, file
 	// Process file in chunks
 	chunkNum := 0
 	processedRows := 0
-	
+
 	for {
 		chunk, err := p.readChunk(reader, p.config.ChunkSize)
 		if err != nil {
@@ -240,7 +240,7 @@ func (p *StreamingImportProcessor) processFileInChunks(ctx context.Context, file
 		}
 
 		processedRows += rowsProcessed
-		
+
 		// Update progress
 		p.mu.Lock()
 		p.stats.ProcessedRows += rowsProcessed
@@ -266,7 +266,7 @@ func (p *StreamingImportProcessor) processFileInChunks(ctx context.Context, file
 // readChunk reads up to chunkSize rows from the CSV reader
 func (p *StreamingImportProcessor) readChunk(reader *csv.Reader, chunkSize int) ([][]string, error) {
 	var chunk [][]string
-	
+
 	for i := 0; i < chunkSize; i++ {
 		record, err := reader.Read()
 		if err != nil {
@@ -416,7 +416,7 @@ func (p *StreamingImportProcessor) countTotalRows(filePath string) (int, error) 
 	defer file.Close()
 
 	reader := csv.NewReader(file)
-	
+
 	// Skip header
 	if _, err := reader.Read(); err != nil {
 		return 0, err
@@ -442,7 +442,7 @@ func (p *StreamingImportProcessor) validateHeader(header []string) error {
 	if len(header) < 20 {
 		return fmt.Errorf("header too short: expected at least 20 columns, got %d", len(header))
 	}
-	
+
 	// Could add more specific header validation here
 	return nil
 }
@@ -465,7 +465,7 @@ func (p *StreamingImportProcessor) EstimateRemainingTime() time.Duration {
 
 	elapsed := time.Since(p.stats.StartTime)
 	rowsPerSecond := float64(p.stats.ProcessedRows) / elapsed.Seconds()
-	
+
 	if rowsPerSecond == 0 {
 		return 0
 	}

@@ -35,12 +35,12 @@ func (s *ReconcileBatchScheduler) Start(ctx context.Context) {
 	if s == nil {
 		return
 	}
-	
+
 	ctx = logutil.WithNewCorrelationID(ctx)
 	s.logger.Info(ctx, "Start", "Starting reconcile batch scheduler", map[string]interface{}{
 		"interval": s.interval,
 	})
-	
+
 	go func() {
 		ticker := time.NewTicker(s.interval)
 		defer ticker.Stop()
@@ -59,46 +59,46 @@ func (s *ReconcileBatchScheduler) Start(ctx context.Context) {
 func (s *ReconcileBatchScheduler) run(ctx context.Context) {
 	runCtx := logutil.WithNewCorrelationID(ctx)
 	timer := s.logger.WithTimer(runCtx, "ProcessBatches")
-	
+
 	list, err := s.batch.ListPendingByType(runCtx, "reconcile_batch")
 	if err != nil {
 		timer.FinishWithError("Failed to list pending batches", err)
 		s.logger.Error(runCtx, "ProcessBatches", "Failed to list pending batches", err)
 		return
 	}
-	
+
 	if len(list) == 0 {
 		s.logger.Debug(runCtx, "ProcessBatches", "No pending batches found")
 		return
 	}
-	
+
 	s.logger.Info(runCtx, "ProcessBatches", "Found pending batches", map[string]interface{}{
 		"batch_count": len(list),
 	})
-	
+
 	limit := s.svc.maxThreads
 	if limit <= 0 {
 		limit = 5
 	}
 	sem := make(chan struct{}, limit)
 	var wg sync.WaitGroup
-	
+
 	for _, b := range list {
 		batch := b
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(bb models.BatchHistory) {
 			defer func() { <-sem; wg.Done() }()
-			
+
 			batchCtx := logutil.WithNewCorrelationID(runCtx)
-			
+
 			s.logger.Info(batchCtx, "ProcessSingleBatch", "Processing batch", map[string]interface{}{
 				"batch_id":   bb.ID,
 				"batch_type": bb.ProcessType,
 				"total_data": bb.TotalData,
 				"done_data":  bb.DoneData,
 			})
-			
+
 			s.svc.ProcessReconcileBatch(batchCtx, bb.ID)
 			s.logger.Info(batchCtx, "ProcessSingleBatch", "Batch processed successfully", map[string]interface{}{
 				"batch_id": bb.ID,
@@ -106,7 +106,7 @@ func (s *ReconcileBatchScheduler) run(ctx context.Context) {
 		}(batch)
 	}
 	wg.Wait()
-	
+
 	timer.Finish("All batches processed")
 	s.logger.Info(runCtx, "ProcessBatches", "Completed processing all batches", map[string]interface{}{
 		"processed_count": len(list),
