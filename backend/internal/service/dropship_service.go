@@ -265,6 +265,8 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 		apiAmount float64
 	}
 	agg := make(map[string]*totals)
+	// Track SKUs per order to detect potential duplicates
+	orderSKUs := make(map[string]map[string]bool)
 	count := 0
 
 	for _, record := range allRecords {
@@ -355,6 +357,41 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 
 			apiAmt := apiTotals[header.KodePesanan]
 
+			// Enhanced validation for header fields
+			missingFields := []string{}
+			if header.KodePesanan == "" {
+				missingFields = append(missingFields, "KodePesanan")
+			}
+			if header.DibuatOleh == "" {
+				missingFields = append(missingFields, "DibuatOleh")
+			}
+			if header.JenisChannel == "" {
+				missingFields = append(missingFields, "JenisChannel")
+			}
+			if header.NamaToko == "" {
+				missingFields = append(missingFields, "NamaToko")
+			}
+			
+			if len(missingFields) > 0 {
+				logutil.Errorf("VALIDATION: Missing required header fields for order %s: %v", header.KodePesanan, missingFields)
+				if s.batchSvc != nil && batchID != 0 {
+					d := &models.BatchHistoryDetail{
+						BatchID:   batchID,
+						Reference: header.KodeInvoiceChannel,
+						Store:     header.NamaToko,
+						Status:    "failed",
+						ErrorMsg:  fmt.Sprintf("Missing required fields: %v", missingFields),
+					}
+					_ = s.batchSvc.CreateDetail(ctx, d)
+				}
+				skipped[header.KodePesanan] = true
+				continue
+			}
+			
+			// Log header data for audit trail  
+			log.Printf("Processing header: order=%s, store=%s, channel=%s, created_by=%s", 
+				header.KodePesanan, header.NamaToko, header.JenisChannel, header.DibuatOleh)
+
 			if err := repoTx.InsertDropshipPurchase(ctx, header); err != nil {
 				log.Printf("ImportFromCSV insert purchase %s error: %v", header.KodePesanan, err)
 				if s.batchSvc != nil && batchID != 0 {
@@ -370,6 +407,8 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 				skipped[header.KodePesanan] = true
 				continue
 			}
+			
+			log.Printf("Successfully inserted header: order=%s", header.KodePesanan)
 			inserted[header.KodePesanan] = true
 			headersMap[header.KodePesanan] = header
 			if s.batchSvc != nil && batchID != 0 {
@@ -406,6 +445,37 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			TotalHargaProdukChannel: totalHargaChannel,
 			PotensiKeuntungan:       potensi,
 		}
+		
+		// Enhanced validation and logging for data integrity
+		if detail.SKU == "" {
+			logutil.Errorf("VALIDATION: Empty SKU detected for order %s, row data: %v", header.KodePesanan, record)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: header.KodeInvoiceChannel,
+					Store:     header.NamaToko,
+					Status:    "failed",
+					ErrorMsg:  "Empty SKU field",
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			continue
+		}
+		
+		// Check for duplicate SKUs within the same order
+		if orderSKUs[header.KodePesanan] == nil {
+			orderSKUs[header.KodePesanan] = make(map[string]bool)
+		}
+		if orderSKUs[header.KodePesanan][detail.SKU] {
+			logutil.Errorf("WARNING: Duplicate SKU detected for order %s, SKU %s - this should not happen!", header.KodePesanan, detail.SKU)
+			logutil.Errorf("Previous SKUs for this order: %v", orderSKUs[header.KodePesanan])
+			// Continue processing but log the issue for investigation
+		}
+		orderSKUs[header.KodePesanan][detail.SKU] = true
+		
+		// Log detail insertion for audit trail
+		log.Printf("Processing detail: order=%s, SKU=%s, product=%s", header.KodePesanan, detail.SKU, detail.NamaProduk)
+		
 		if err := repoTx.InsertDropshipPurchaseDetail(ctx, detail); err != nil {
 			if s.batchSvc != nil && batchID != 0 {
 				d := &models.BatchHistoryDetail{
@@ -421,6 +491,9 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			logutil.Errorf("Failed to insert detail for order %s, SKU %s: %v", header.KodePesanan, detail.SKU, err)
 			continue
 		}
+		
+		// Log successful insertion
+		log.Printf("Successfully inserted detail: order=%s, SKU=%s", header.KodePesanan, detail.SKU)
 		// accumulate totals for journal creation later
 		t, ok := agg[header.KodePesanan]
 		if !ok {

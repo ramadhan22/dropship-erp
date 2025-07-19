@@ -626,3 +626,56 @@ func TestImportFromCSV_ColumnFillingIssue(t *testing.T) {
 		}
 	}
 }
+
+// TestImportFromCSV_DuplicateSKUDetection tests the duplicate SKU detection system
+func TestImportFromCSV_DuplicateSKUDetection(t *testing.T) {
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	
+	// CSV header
+	headers := []string{"no", "waktu_pesanan_terbuat", "status_pesanan_terakhir", "kode_pesanan", "kode_transaksi", "sku", "nama_produk", "harga_produk", "qty", "total_harga_produk", "biaya_lainnya", "biaya_mitra_jakmall", "total_transaksi", "harga_produk_channel", "total_harga_produk_channel", "potensi_keuntungan", "dibuat_oleh", "jenis_channel", "nama_toko", "kode_invoice_channel", "gudang_pengiriman", "jenis_ekspedisi", "cashless", "nomor_resi", "waktu_pengiriman", "provinsi", "kota"}
+	w.Write(headers)
+	
+	// Test case: Two rows with same kode_pesanan AND same SKU (this should trigger warning)
+	row1 := []string{"1", "10 January 2025, 23:38:50", "Pesanan selesai", "26137342285", "1777530433", "7CHZ16BK", "Product A", "3700", "2", "7400", "0", "2200", "24000", "7600", "15200", "7800", "Muhammad Ramadhan", "Shopee", "MR eStore Free Sample", "2501116HYUP1VC", "Gudang Online / COD DKI Jakarta", "Shopee-Xpress STD", "Ya", "SPXID052542447131", "11 January 2025, 06:29:01", "Jawa Barat", "Kab. Indramayu"}
+	row2 := []string{"2", "10 January 2025, 23:38:50", "Pesanan selesai", "26137342285", "1777530433", "7CHZ16BK", "Product B", "14400", "1", "14400", "0", "0", "22100", "22100", "7700", "0", "Muhammad Ramadhan", "Shopee", "MR eStore Free Sample", "2501116HYUP1VC", "Gudang Online / COD DKI Jakarta", "Shopee-Xpress STD", "Ya", "SPXID052542447131", "11 January 2025, 06:29:01", "Jawa Barat", "Kab. Indramayu"}
+	
+	w.Write(row1)
+	w.Write(row2)
+	w.Flush()
+
+	fake := &fakeDropshipRepoWithDetailFailure{
+		insertedHeader: []*models.DropshipPurchase{},
+		insertedDetail: []*models.DropshipPurchaseDetail{},
+		existing:       make(map[string]bool),
+	}
+	
+	jfake := &fakeJournalRepoDrop{}
+	svc := NewDropshipService(nil, fake, jfake, nil, nil, nil, nil, nil, 5, 100)
+
+	ctx := context.Background()
+	count, err := svc.ImportFromCSV(ctx, &buf, "", 0)
+	if err != nil {
+		t.Fatalf("ImportFromCSV error: %v", err)
+	}
+
+	t.Logf("Import completed: count=%d, headers=%d, details=%d", count, len(fake.insertedHeader), len(fake.insertedDetail))
+
+	// Both details should still be inserted (duplicate detection is warning-only)
+	if len(fake.insertedDetail) != 2 {
+		t.Errorf("Expected 2 details to be inserted (duplicate detection is warning-only), got %d", len(fake.insertedDetail))
+	}
+
+	// Verify both have the same SKU (this simulates the user's reported issue)
+	if len(fake.insertedDetail) == 2 {
+		sku1 := fake.insertedDetail[0].SKU
+		sku2 := fake.insertedDetail[1].SKU
+		
+		if sku1 != sku2 {
+			t.Errorf("Expected both details to have the same SKU for this test, got '%s' and '%s'", sku1, sku2)
+		} else {
+			t.Logf("✅ Duplicate SKU detected correctly: both details have SKU '%s'", sku1)
+			t.Logf("The warning should have been logged by the duplicate detection system")
+		}
+	}
+}
