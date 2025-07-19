@@ -161,6 +161,11 @@ func main() {
 	adsPerformanceSvc := service.NewAdsPerformanceService(repo.DB, cfg.Shopee, repo)
 	adsPerformanceBatchScheduler := service.NewAdsPerformanceBatchScheduler(batchSvc, adsPerformanceSvc, time.Minute)
 	adsPerformanceBatchScheduler.Start(context.Background())
+	
+	// Initialize forecast service (without obsolete shopee repo)
+	forecastSvc := service.NewForecastService(
+		repo.DropshipRepo, repo.JournalRepo,
+	)
 	// 4) Setup performance monitoring
 	if cfg.Performance.EnableMetrics {
 		// Set slow query threshold
@@ -292,6 +297,12 @@ func main() {
 		handlers.NewConfigHandler(cfg).RegisterRoutes(apiGroup)
 		dashSvc := service.NewDashboardService(repo.DropshipRepo, repo.JournalRepo, plReportSvc)
 		handlers.NewDashboardHandler(dashSvc).RegisterRoutes(apiGroup)
+
+		// Forecast endpoints
+		forecastHandler := handlers.NewForecastHandler(forecastSvc)
+		apiGroup.POST("/forecast/generate", forecastHandler.HandleGenerateForecast)
+		apiGroup.GET("/forecast/params", forecastHandler.HandleGetForecastParams)
+		apiGroup.GET("/forecast/summary", forecastHandler.HandleGetForecastSummary)
 
 		// Performance metrics endpoint (system monitoring)
 		// Note: /api/performance is already registered above at line 214

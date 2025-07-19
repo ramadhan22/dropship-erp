@@ -155,6 +155,7 @@ export const navigationSections = [
       { label: 'Balance Sheet', path: '/balance', icon: <FinancialIcon fontSize="small" /> },
       { label: 'General Ledger', path: '/gl', icon: <BusinessIcon fontSize="small" /> },
       { label: 'Metrics', path: '/metrics', icon: <DashboardIcon fontSize="small" /> },
+      { label: 'Forecast', path: '/forecast', icon: <TrendingUpIcon fontSize="small" /> },
     ]
   },
   {
