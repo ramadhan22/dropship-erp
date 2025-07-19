@@ -109,6 +109,20 @@ func (f *fakeBatchSvc) ListPendingByType(ctx context.Context, typ string) ([]mod
 	return []models.BatchHistory{}, nil
 }
 
+func (f *fakeBatchSvc) GetByID(ctx context.Context, id int64) (*models.BatchHistory, error) {
+	// Return a mock batch for testing
+	return &models.BatchHistory{
+		ID:           id,
+		ProcessType:  "reconcile_batch_creation",
+		Status:       "pending",
+		ErrorMessage: "shop=test,order=,status=,from=,to=",
+	}, nil
+}
+
+func (f *fakeBatchSvc) UpdateBatchData(ctx context.Context, id int64, total, done int) error {
+	return nil
+}
+
 func TestProcessShopeeStatusBatch_Escrow(t *testing.T) {
 	dp1 := &models.DropshipPurchase{KodePesanan: "DP1", KodeInvoiceChannel: "INV1", NamaToko: "ShopA"}
 	dp2 := &models.DropshipPurchase{KodePesanan: "DP2", KodeInvoiceChannel: "INV2", NamaToko: "ShopA"}

@@ -415,8 +415,9 @@ type ShopeeOrderPackageRow struct {
 
 // ReconcileBatchInfo contains information about created reconcile batches
 type ReconcileBatchInfo struct {
-	BatchCount        int `json:"batch_count"`
-	TotalTransactions int `json:"total_transactions"`
+	BatchCount        int    `json:"batch_count"`
+	TotalTransactions int    `json:"total_transactions"`
+	MasterBatchID     *int64 `json:"master_batch_id,omitempty"`
 }
 
 // ReconciliationReport provides a summary of reconciliation results
