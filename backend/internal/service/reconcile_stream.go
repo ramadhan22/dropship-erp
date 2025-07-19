@@ -16,22 +16,22 @@ import (
 type ReconcileStreamConfig struct {
 	// ChunkSize is the number of records to process in each chunk
 	ChunkSize int
-	
+
 	// MaxConcurrency is the maximum number of concurrent chunk processors
 	MaxConcurrency int
-	
+
 	// MemoryThreshold is the memory limit in bytes before forcing garbage collection
 	MemoryThreshold int64
-	
+
 	// ProgressReportInterval is how often to report progress
 	ProgressReportInterval time.Duration
-	
+
 	// RetryAttempts is the number of retry attempts for failed chunks
 	RetryAttempts int
-	
+
 	// RetryDelay is the delay between retry attempts
 	RetryDelay time.Duration
-	
+
 	// TimeoutPerChunk is the timeout for processing each chunk
 	TimeoutPerChunk time.Duration
 }
@@ -91,14 +91,14 @@ type ReconcileStreamResult struct {
 
 // ReconcileStreamProcessor handles streaming reconciliation of large datasets
 type ReconcileStreamProcessor struct {
-	service        *ReconcileService
-	config         *ReconcileStreamConfig
-	logger         *logutil.Logger
-	progressMu     sync.RWMutex
-	progress       *ReconcileProgress
-	progressChan   chan ReconcileProgress
-	stopChan       chan struct{}
-	resultChan     chan ReconcileChunkResult
+	service      *ReconcileService
+	config       *ReconcileStreamConfig
+	logger       *logutil.Logger
+	progressMu   sync.RWMutex
+	progress     *ReconcileProgress
+	progressChan chan ReconcileProgress
+	stopChan     chan struct{}
+	resultChan   chan ReconcileChunkResult
 }
 
 // NewReconcileStreamProcessor creates a new streaming reconciliation processor
@@ -106,7 +106,7 @@ func NewReconcileStreamProcessor(service *ReconcileService, config *ReconcileStr
 	if config == nil {
 		config = DefaultReconcileStreamConfig()
 	}
-	
+
 	return &ReconcileStreamProcessor{
 		service:      service,
 		config:       config,
@@ -123,7 +123,7 @@ func (p *ReconcileStreamProcessor) StreamReconcileAll(ctx context.Context, shop 
 	defer timer.Finish("Stream reconciliation completed")
 
 	ctx = logutil.WithShop(ctx, shop)
-	
+
 	// Initialize progress tracking
 	p.initializeProgress(ctx)
 	defer p.cleanup()
@@ -139,10 +139,10 @@ func (p *ReconcileStreamProcessor) StreamReconcileAll(ctx context.Context, shop 
 	}
 
 	p.logger.Info(ctx, "StreamReconcileAll", "Starting stream reconciliation", map[string]interface{}{
-		"shop":         shop,
-		"total_count":  totalCount,
-		"chunk_size":   p.config.ChunkSize,
-		"concurrency":  p.config.MaxConcurrency,
+		"shop":        shop,
+		"total_count": totalCount,
+		"chunk_size":  p.config.ChunkSize,
+		"concurrency": p.config.MaxConcurrency,
 	})
 
 	// Update progress with total count
@@ -188,7 +188,7 @@ func (p *ReconcileStreamProcessor) processChunks(ctx context.Context, shop strin
 
 	// Channel to collect results
 	resultCollector := make(chan ReconcileChunkResult, p.config.MaxConcurrency*2)
-	
+
 	// Start result collector goroutine
 	go func() {
 		defer close(resultCollector)
@@ -204,7 +204,7 @@ func (p *ReconcileStreamProcessor) processChunks(ctx context.Context, shop strin
 	// Process chunks
 	chunkIndex := 0
 	offset := 0
-	
+
 	for {
 		select {
 		case <-egCtx.Done():
@@ -255,7 +255,7 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 	defer chunkTimer.Finish("Chunk processing completed")
 
 	chunkCtx := logutil.WithOperation(ctx, fmt.Sprintf("chunk-%d", chunkIndex))
-	
+
 	p.logger.Debug(chunkCtx, "ProcessChunk", "Starting chunk processing", map[string]interface{}{
 		"chunk_index": chunkIndex,
 		"offset":      offset,
@@ -278,7 +278,7 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 	}
 
 	result.ProcessedRows = len(candidates)
-	
+
 	if len(candidates) == 0 {
 		result.Duration = time.Since(startTime)
 		p.resultChan <- result
@@ -313,7 +313,7 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 	}
 
 	result.Duration = time.Since(startTime)
-	
+
 	// Update progress
 	p.updateProgress(func(progress *ReconcileProgress) {
 		progress.ProcessedRecords += int64(result.ProcessedRows)
@@ -321,7 +321,7 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 		progress.FailedRecords += int64(result.FailedRows)
 		progress.CurrentChunk = chunkIndex + 1
 		progress.LastUpdate = time.Now()
-		
+
 		// Calculate rate and ETA
 		elapsed := progress.LastUpdate.Sub(progress.StartTime)
 		if elapsed > 0 {
@@ -331,18 +331,18 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 				progress.EstimatedTimeLeft = time.Duration(float64(remaining)/progress.CurrentRate) * time.Second
 			}
 		}
-		
+
 		if progress.ProcessedRecords > 0 {
 			progress.ErrorRate = float64(progress.FailedRecords) / float64(progress.ProcessedRecords) * 100
 		}
 	})
 
 	p.logger.Info(chunkCtx, "ProcessChunk", "Chunk processing completed", map[string]interface{}{
-		"chunk_index":    chunkIndex,
-		"processed_rows": result.ProcessedRows,
-		"success_rows":   result.SuccessRows,
-		"failed_rows":    result.FailedRows,
-		"duration":       result.Duration,
+		"chunk_index":     chunkIndex,
+		"processed_rows":  result.ProcessedRows,
+		"success_rows":    result.SuccessRows,
+		"failed_rows":     result.FailedRows,
+		"duration":        result.Duration,
 		"records_per_sec": float64(result.ProcessedRows) / result.Duration.Seconds(),
 	})
 
@@ -355,7 +355,7 @@ func (p *ReconcileStreamProcessor) processChunk(ctx context.Context, shop string
 func (p *ReconcileStreamProcessor) initializeProgress(ctx context.Context) {
 	p.progressMu.Lock()
 	defer p.progressMu.Unlock()
-	
+
 	p.progress = &ReconcileProgress{
 		StartTime:  time.Now(),
 		LastUpdate: time.Now(),
@@ -365,9 +365,9 @@ func (p *ReconcileStreamProcessor) initializeProgress(ctx context.Context) {
 func (p *ReconcileStreamProcessor) updateProgress(updateFunc func(*ReconcileProgress)) {
 	p.progressMu.Lock()
 	defer p.progressMu.Unlock()
-	
+
 	updateFunc(p.progress)
-	
+
 	// Send progress update to channel (non-blocking)
 	select {
 	case p.progressChan <- *p.progress:
@@ -378,7 +378,7 @@ func (p *ReconcileStreamProcessor) updateProgress(updateFunc func(*ReconcileProg
 func (p *ReconcileStreamProcessor) getProgress() ReconcileProgress {
 	p.progressMu.RLock()
 	defer p.progressMu.RUnlock()
-	
+
 	return *p.progress
 }
 
@@ -433,14 +433,14 @@ func (p *ReconcileStreamProcessor) getChunkData(ctx context.Context, shop string
 
 func (p *ReconcileStreamProcessor) createChunkBatch(ctx context.Context, shop string, chunkIndex, recordCount int) (int64, error) {
 	batch := &models.BatchHistory{
-		ProcessType: "reconcile_chunk",
-		Status:      "pending",
-		TotalData:   recordCount,
-		DoneData:    0,
-		ErrorMsg:    fmt.Sprintf("Chunk %d reconciliation", chunkIndex),
-		StartedAt:   time.Now().Format(time.RFC3339),
+		ProcessType:  "reconcile_chunk",
+		Status:       "pending",
+		TotalData:    recordCount,
+		DoneData:     0,
+		ErrorMessage: fmt.Sprintf("Chunk %d reconciliation", chunkIndex),
+		StartedAt:    time.Now(),
 	}
-	
+
 	return p.service.batchSvc.Create(ctx, batch)
 }
 
@@ -459,7 +459,7 @@ func (p *ReconcileStreamProcessor) buildFinalReport(result *ReconcileStreamResul
 	for _, chunkResult := range result.ChunkResults {
 		for _, failed := range chunkResult.FailedRecords {
 			report.FailedTransactionList = append(report.FailedTransactionList, failed)
-			
+
 			// Count failure categories
 			if failed.ErrorType != "" {
 				report.FailureCategories[failed.ErrorType]++
