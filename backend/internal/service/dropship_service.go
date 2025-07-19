@@ -413,11 +413,12 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 					Reference: header.KodeInvoiceChannel,
 					Store:     header.NamaToko,
 					Status:    "failed",
-					ErrorMsg:  err.Error(),
+					ErrorMsg:  fmt.Sprintf("Detail insert failed for SKU %s: %v", detail.SKU, err),
 				}
 				_ = s.batchSvc.CreateDetail(ctx, d)
 			}
-			skipped[header.KodePesanan] = true
+			// Log the specific detail failure but continue processing other details for this order
+			logutil.Errorf("Failed to insert detail for order %s, SKU %s: %v", header.KodePesanan, detail.SKU, err)
 			continue
 		}
 		// accumulate totals for journal creation later
@@ -443,6 +444,28 @@ func (s *DropshipService) ImportFromCSV(ctx context.Context, r io.Reader, channe
 			prodCh = sum.prodCh
 			apiAmt = sum.apiAmount
 		}
+		
+		// Validate transaction totals before creating journal entries
+		expectedTotal := prod + h.BiayaLainnya + h.BiayaMitraJakmall
+		actualTotal := h.TotalTransaksi
+		tolerance := 0.01
+		diff := actualTotal - expectedTotal
+		if diff < -tolerance || diff > tolerance {
+			logutil.Errorf("WARNING: Transaction total validation failed for order %s: expected %.2f (products: %.2f + biaya_lain: %.2f + biaya_mitra: %.2f), got %.2f", 
+				kode, expectedTotal, prod, h.BiayaLainnya, h.BiayaMitraJakmall, actualTotal)
+			if s.batchSvc != nil && batchID != 0 {
+				d := &models.BatchHistoryDetail{
+					BatchID:   batchID,
+					Reference: h.KodeInvoiceChannel,
+					Store:     h.NamaToko,
+					Status:    "warning",
+					ErrorMsg:  fmt.Sprintf("Total validation warning: expected %.2f, got %.2f", expectedTotal, actualTotal),
+				}
+				_ = s.batchSvc.CreateDetail(ctx, d)
+			}
+			// Continue with journal creation but log the discrepancy
+		}
+		
 		pending := prodCh
 		if apiAmt > 0 {
 			pending = apiAmt
