@@ -59,6 +59,8 @@ type ReconcileServiceBatchSvc interface {
 	ListDetails(ctx context.Context, batchID int64) ([]models.BatchHistoryDetail, error)
 	UpdateDetailStatus(ctx context.Context, id int64, status, msg string) error
 	ListPendingByType(ctx context.Context, typ string) ([]models.BatchHistory, error)
+	GetByID(ctx context.Context, id int64) (*models.BatchHistory, error)
+	UpdateBatchData(ctx context.Context, id int64, total, done int) error
 }
 
 type ReconcileServiceFailedRepo interface {
@@ -1895,9 +1897,46 @@ func (s *ReconcileService) processShopeeStatusBatch(ctx context.Context, store s
 	}
 }
 
+// CreateReconcileBatchesAsync creates a master batch immediately and queues the actual
+// batch creation work to be processed in the background. Returns immediately with batch ID.
+func (s *ReconcileService) CreateReconcileBatchesAsync(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error) {
+	if s.batchSvc == nil {
+		return nil, fmt.Errorf("batch service not configured")
+	}
+
+	log.Printf("CreateReconcileBatchesAsync: creating master batch for shop=%s, order=%s, status=%s, from=%s, to=%s", shop, order, status, from, to)
+
+	// Create a master batch immediately to track the batch creation process
+	// Store parameters in ErrorMessage field temporarily (will be cleared when processing starts)
+	metadata := fmt.Sprintf("shop=%s,order=%s,status=%s,from=%s,to=%s", shop, order, status, from, to)
+	masterBatch := &models.BatchHistory{
+		ProcessType:  "reconcile_batch_creation",
+		TotalData:    0, // Will be updated when candidates are counted
+		DoneData:     0,
+		Status:       "pending",
+		ErrorMessage: metadata, // Temporarily store parameters here
+	}
+
+	masterBatchID, err := s.batchSvc.Create(ctx, masterBatch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create master batch: %w", err)
+	}
+
+	log.Printf("CreateReconcileBatchesAsync: created master batch %d, work will be processed in background", masterBatchID)
+
+	result := &models.ReconcileBatchInfo{
+		BatchCount:        1, // Master batch
+		TotalTransactions: 0, // Will be determined during processing
+		MasterBatchID:     &masterBatchID,
+	}
+
+	return result, nil
+}
+
 // CreateReconcileBatches groups reconciliation candidates by store and records
 // them as batch_history rows with associated details. Each batch contains at
 // most 50 invoices. Returns information about the created batches.
+// This is the synchronous version kept for backward compatibility.
 func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error) {
 	if s.batchSvc == nil {
 		return nil, fmt.Errorf("batch service not configured")
@@ -1959,6 +1998,75 @@ func (s *ReconcileService) CreateReconcileBatches(ctx context.Context, shop, ord
 
 	log.Printf("CreateReconcileBatches: created %d batches for %d total transactions", result.BatchCount, result.TotalTransactions)
 	return result, nil
+}
+
+// ProcessReconcileBatchCreation processes a master batch by doing the actual candidate 
+// fetching and creating reconcile batches in the background.
+func (s *ReconcileService) ProcessReconcileBatchCreation(ctx context.Context, masterBatchID int64) {
+	if s.batchSvc == nil {
+		log.Printf("ProcessReconcileBatchCreation %d: batch service not configured", masterBatchID)
+		return
+	}
+
+	start := time.Now()
+	log.Printf("ProcessReconcileBatchCreation %d: starting batch creation processing", masterBatchID)
+
+	// Get the master batch to extract parameters
+	masterBatch, err := s.batchSvc.GetByID(ctx, masterBatchID)
+	if err != nil {
+		log.Printf("ProcessReconcileBatchCreation %d: failed to get master batch: %v", masterBatchID, err)
+		s.batchSvc.UpdateStatus(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to get master batch: %v", err))
+		return
+	}
+
+	// Parse metadata from ErrorMessage field to extract search parameters
+	// Format: "shop=value,order=value,status=value,from=value,to=value"
+	params := parseMetadata(masterBatch.ErrorMessage)
+	shop := params["shop"]
+	order := params["order"]
+	status := params["status"]
+	from := params["from"]
+	to := params["to"]
+
+	log.Printf("ProcessReconcileBatchCreation %d: parsed parameters shop=%s, order=%s, status=%s, from=%s, to=%s", 
+		masterBatchID, shop, order, status, from, to)
+
+	// Update status to processing and clear the metadata from error_message
+	s.batchSvc.UpdateStatus(ctx, masterBatchID, "processing", "")
+
+	// Do the actual work (same as the synchronous CreateReconcileBatches)
+	result, err := s.CreateReconcileBatches(ctx, shop, order, status, from, to)
+	if err != nil {
+		log.Printf("ProcessReconcileBatchCreation %d: failed to create batches: %v", masterBatchID, err)
+		s.batchSvc.UpdateStatus(ctx, masterBatchID, "failed", fmt.Sprintf("Failed to create batches: %v", err))
+		return
+	}
+
+	// Update master batch with results
+	duration := time.Since(start)
+	completionMsg := fmt.Sprintf("Created %d batches for %d transactions in %v", result.BatchCount, result.TotalTransactions, duration)
+	
+	// Update the master batch to reflect the total data processed
+	s.batchSvc.UpdateBatchData(ctx, masterBatchID, result.TotalTransactions, result.TotalTransactions)
+	s.batchSvc.UpdateStatus(ctx, masterBatchID, "completed", completionMsg)
+
+	log.Printf("ProcessReconcileBatchCreation %d: completed successfully - %s", masterBatchID, completionMsg)
+}
+
+// parseMetadata parses metadata string in format "key1=value1,key2=value2,..."
+func parseMetadata(metadata string) map[string]string {
+	result := make(map[string]string)
+	if metadata == "" {
+		return result
+	}
+	
+	pairs := strings.Split(metadata, ",")
+	for _, pair := range pairs {
+		if kv := strings.SplitN(pair, "=", 2); len(kv) == 2 {
+			result[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		}
+	}
+	return result
 }
 
 // ProcessReconcileBatch processes a batch of reconciliation tasks with optimizations and robust error handling.

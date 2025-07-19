@@ -25,6 +25,7 @@ type ReconcileExtraService interface {
 	UpdateShopeeStatus(ctx context.Context, invoice string) error
 	UpdateShopeeStatuses(ctx context.Context, invoices []string) error
 	CreateReconcileBatches(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error)
+	CreateReconcileBatchesAsync(ctx context.Context, shop, order, status, from, to string) (*models.ReconcileBatchInfo, error)
 	GetBackgroundJobStatus(ctx context.Context, batchID int64) (string, error)
 }
 
@@ -235,19 +236,26 @@ func (h *ReconcileExtraHandler) createBatch(c *gin.Context) {
 		return
 	}
 
-	// Call the service which will return batch information
-	batchInfo, err := h.svc.CreateReconcileBatches(context.Background(), req.Shop, req.Order, req.Status, req.From, req.To)
+	// Use the async version for immediate response
+	batchInfo, err := h.svc.CreateReconcileBatchesAsync(context.Background(), req.Shop, req.Order, req.Status, req.From, req.To)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":            "Reconcile batches created successfully",
+	response := gin.H{
+		"message":            "Reconcile batch creation started successfully",
 		"batches_created":    batchInfo.BatchCount,
 		"total_transactions": batchInfo.TotalTransactions,
 		"status":             "processing will begin shortly",
-	})
+	}
+
+	// Include master_batch_id if available for tracking
+	if batchInfo.MasterBatchID != nil {
+		response["master_batch_id"] = *batchInfo.MasterBatchID
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *ReconcileExtraHandler) jobStatus(c *gin.Context) {

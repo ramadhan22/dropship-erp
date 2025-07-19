@@ -130,6 +130,9 @@ func main() {
 	)
 	service.NewReconcileBatchScheduler(batchSvc, reconSvc, time.Minute).Start(context.Background())
 
+	// Start background scheduler for reconcile batch creation
+	service.NewReconcileBatchCreationScheduler(batchSvc, reconSvc, time.Minute).Start(context.Background())
+
 	// Start background scheduler for Shopee detail fetching
 	shopeeDetailBgSvc := service.NewShopeeDetailBackgroundService(reconSvc, batchSvc, repo.OrderDetailRepo, repo.DropshipRepo, repo.ChannelRepo, shClient)
 	service.NewShopeeDetailBackgroundScheduler(shopeeDetailBgSvc, time.Minute).Start(context.Background())

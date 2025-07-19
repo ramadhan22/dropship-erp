@@ -71,3 +71,16 @@ func (s *BatchService) UpdateDetailStatus(ctx context.Context, id int64, status,
 func (s *BatchService) ListPendingByType(ctx context.Context, typ string) ([]models.BatchHistory, error) {
 	return s.repo.ListByProcessAndStatus(ctx, typ, "pending")
 }
+
+// GetByID retrieves a batch record by its ID.
+func (s *BatchService) GetByID(ctx context.Context, id int64) (*models.BatchHistory, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+// UpdateBatchData updates both total_data and done_data for a batch.
+func (s *BatchService) UpdateBatchData(ctx context.Context, id int64, total, done int) error {
+	if err := s.repo.UpdateTotal(ctx, id, total); err != nil {
+		return err
+	}
+	return s.repo.UpdateDone(ctx, id, done)
+}

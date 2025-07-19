@@ -106,3 +106,13 @@ func (r *BatchRepo) ListFiltered(ctx context.Context, types, statuses []string) 
 	}
 	return list, err
 }
+
+// GetByID retrieves a batch record by its ID.
+func (r *BatchRepo) GetByID(ctx context.Context, id int64) (*models.BatchHistory, error) {
+	var batch models.BatchHistory
+	err := r.db.GetContext(ctx, &batch, `SELECT * FROM batch_history WHERE id=$1`, id)
+	if err != nil {
+		return nil, err
+	}
+	return &batch, nil
+}
